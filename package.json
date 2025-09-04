@@ -33,7 +33,7 @@
     "@platformatic/runtime": "^3.0.1",
     "@platformatic/slicer-interceptor": "^0.3.0",
     "@platformatic/undici-cache-redis": "^0.7.1",
-    "@platformatic/undici-trafficante-interceptor": "0.1.1",
+    "undici-traffic-interceptor": "^0.1.4",
     "avvio": "^9.1.0",
     "chalk": "^4.1.2",
     "commist": "^3.2.0",

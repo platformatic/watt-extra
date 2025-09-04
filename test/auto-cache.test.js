@@ -48,7 +48,7 @@ test('should spawn an app with auto caching', async (t) => {
     applicationName,
     iccConfig,
     enableSlicerInterceptor: true,
-    enableTrafficanteInterceptor: true,
+    enableTrafficInterceptor: true,
     saveRequestHash: (data) => { savedRequestHashes.push(data) },
     saveRequest: (data) => { savedRequests.push(data) }
   })
@@ -313,7 +313,7 @@ test('should not set auto cache if it is disabled', async (t) => {
     applicationName,
     iccConfig,
     enableSlicerInterceptor: false,
-    enableTrafficanteInterceptor: false,
+    enableTrafficInterceptor: false,
     saveRequestHash: (data) => { savedRequestHashes.push(data) },
     saveRequest: (data) => { savedRequests.push(data) }
   })

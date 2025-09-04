@@ -41,7 +41,7 @@ async function startICC (t, opts = {}) {
     iccConfig = {},
     enableOpenTelemetry = false,
     enableSlicerInterceptor = false,
-    enableTrafficanteInterceptor = false,
+    enableTrafficInterceptor = false,
     controlPlaneResponse
   } = opts
 
@@ -115,7 +115,7 @@ async function startICC (t, opts = {}) {
         config: iccConfig,
         enableOpenTelemetry,
         enableSlicerInterceptor,
-        enableTrafficanteInterceptor
+        enableTrafficInterceptor
       }
     })
 
@@ -149,13 +149,13 @@ async function startICC (t, opts = {}) {
   // Trafficante
   await icc.register(async (icc) => {
     icc.post('/requests/hash', async (req) => {
-      const { taxonomyId, applicationId } = JSON.parse(req.headers['x-trafficante-labels'])
+      const { taxonomyId, applicationId } = JSON.parse(req.headers['x-labels'])
       const { timestamp, request, response } = req.body
       opts.saveRequestHash?.({ taxonomyId, applicationId, timestamp, request, response })
     })
 
     icc.post('/requests', async (req) => {
-      const { taxonomyId, applicationId } = JSON.parse(req.headers['x-trafficante-labels'])
+      const { taxonomyId, applicationId } = JSON.parse(req.headers['x-labels'])
       const request = JSON.parse(req.headers['x-request-data'])
       const response = JSON.parse(req.headers['x-response-data'])
       response.body = req.body

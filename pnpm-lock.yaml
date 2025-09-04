@@ -23,9 +23,6 @@ importers:
       '@platformatic/undici-cache-redis':
         specifier: ^0.7.1
         version: 0.7.1
-      '@platformatic/undici-trafficante-interceptor':
-        specifier: 0.1.1
-        version: 0.1.1
       avvio:
         specifier: ^9.1.0
         version: 9.1.0
@@ -56,6 +53,9 @@ importers:
       undici:
         specifier: ^7.11.0
         version: 7.14.0
+      undici-traffic-interceptor:
+        specifier: ^0.1.4
+        version: 0.1.4
       ws:
         specifier: ^8.18.3
         version: 8.18.3
@@ -516,9 +516,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@napi-rs/wasm-runtime@0.2.10':
-    resolution: {integrity: sha512-bCsCyeZEwVErsGmyPNSzwfwFn4OdxBj0mmv6hOFucB/k81Ojdu68RbZdxYsRQUPc9l6SU5F/cG+bXgWs3oUgsQ==}
-
   '@napi-rs/wasm-runtime@0.2.12':
     resolution: {integrity: sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ==}
 
@@ -955,10 +952,6 @@ packages:
   '@platformatic/undici-cache-redis@0.7.1':
     resolution: {integrity: sha512-fhPD8yDJX/AgTzhXgt9B/acPNEBfKf2GA2oZlHNPBgFyJJq8dOKsq5PYAyg9FyoDHuv0fVxZAc/+U+8j6rOAsw==}
 
-  '@platformatic/undici-trafficante-interceptor@0.1.1':
-    resolution: {integrity: sha512-0VuiMXLdrd0BjbgZ8sAZ8AjtCAO1nuaBZyh+0/C/bDPiDtC6Y9/v03SOw2uSR3waDezFZZa25liy8AKlKDtKHA==}
-    engines: {node: '>=20.0.0'}
-
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
 
@@ -1060,9 +1053,6 @@ packages:
 
   '@tybys/wasm-util@0.10.0':
     resolution: {integrity: sha512-VyyPYFlOMNylG45GoAe0xDoLwWuowvf92F9kySqzYh8vmYm7D2u4iUJKa1tOUpS70Ku13ASrOkS4ScXFsTaCNQ==}
-
-  '@tybys/wasm-util@0.9.0':
-    resolution: {integrity: sha512-6+7nlbMVX/PVDCwaIQ8nTOPveOcFLSt8GcXdx8hD0bt39uWxYT88uXzqTd4fTvqta7oeUJqudepapKNt2DYJFw==}
 
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
@@ -3351,6 +3341,10 @@ packages:
   undici-thread-interceptor@0.14.0:
     resolution: {integrity: sha512-ln6lMA/cSbnXgBEib8sy+4TG3Ys6+pHr1E+/XZ22VfhES42QNrmZWcX2niWb4e8Doye1EXK8Lptf4YQvnTq9Pw==}
 
+  undici-traffic-interceptor@0.1.4:
+    resolution: {integrity: sha512-qX6Ye+VAVjgPuS8LA1WT3RmEnAwmZonwhVoWLbilSZEdmzuIdiGbQf5J+Ax1EbpYVcBXnnbPi5Kf6DVs168X4Q==}
+    engines: {node: '>=20.0.0'}
+
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
@@ -3945,13 +3939,6 @@ snapshots:
   '@msgpackr-extract/msgpackr-extract-win32-x64@3.0.3':
     optional: true
 
-  '@napi-rs/wasm-runtime@0.2.10':
-    dependencies:
-      '@emnapi/core': 1.4.3
-      '@emnapi/runtime': 1.4.3
-      '@tybys/wasm-util': 0.9.0
-    optional: true
-
   '@napi-rs/wasm-runtime@0.2.12':
     dependencies:
       '@emnapi/core': 1.4.3
@@ -4017,7 +4004,7 @@ snapshots:
 
   '@node-rs/xxhash-wasm32-wasi@1.7.6':
     dependencies:
-      '@napi-rs/wasm-runtime': 0.2.10
+      '@napi-rs/wasm-runtime': 0.2.12
     optional: true
 
   '@node-rs/xxhash-win32-arm64-msvc@1.7.6':
@@ -4646,12 +4633,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@platformatic/undici-trafficante-interceptor@0.1.1':
-    dependencies:
-      '@node-rs/xxhash': 1.7.6
-      cookie: 1.0.2
-      undici: 7.14.0
-
   '@protobufjs/aspromise@1.1.2': {}
 
   '@protobufjs/base64@1.1.2': {}
@@ -4781,11 +4762,6 @@ snapshots:
       tslib: 2.8.1
 
   '@tybys/wasm-util@0.10.0':
-    dependencies:
-      tslib: 2.8.1
-    optional: true
-
-  '@tybys/wasm-util@0.9.0':
     dependencies:
       tslib: 2.8.1
     optional: true
@@ -7434,6 +7410,12 @@ snapshots:
     dependencies:
       hyperid: 3.3.0
       light-my-request: 6.6.0
+      undici: 7.14.0
+
+  undici-traffic-interceptor@0.1.4:
+    dependencies:
+      '@node-rs/xxhash': 1.7.6
+      cookie: 1.0.2
       undici: 7.14.0
 
   undici-types@6.21.0: {}

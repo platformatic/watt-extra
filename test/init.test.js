@@ -71,7 +71,7 @@ test('init plugin with optional PLT_APP_NAME - uses ICC response', async (t) => 
       config: {},
       enableOpenTelemetry: false,
       enableSlicerInterceptor: false,
-      enableTrafficanteInterceptor: false
+      enableTrafficInterceptor: false
     }
   })
 
