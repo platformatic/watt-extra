@@ -1,37 +1,36 @@
 {
   "name": "@platformatic/watt-extra",
-  "version": "3.0.0-alpha.6",
+  "version": "1.0.0",
   "description": "The Platformatic runtime manager",
   "type": "module",
   "scripts": {
     "lint": "eslint",
-    "test": "pnpm run lint && node --test --test-reporter=cleaner-spec-reporter --test-concurrency=1 --test-timeout=2000000 test/*.test.js test/**/*.test.js",
-    "start": "node index.js",
-    "cleanall": "rm pnpm-lock.yaml && rm -rf node_modules && rm -rf services/*/node_modules",
-    "clean": "rm -rf node_modules && rm -rf services/*/node_modules"
+    "test": "pnpm run lint && borp -c 1 --timeout=180000 ./test/*.test.js",
+    "start": "node index.js"
   },
   "bin": {
     "watt-extra": "./cli.js"
   },
   "devDependencies": {
     "@fastify/websocket": "^11.1.0",
-    "platformatic": "workspace:*",
-    "@platformatic/composer": "workspace:*",
-    "@platformatic/next": "workspace:*",
-    "@platformatic/node": "workspace:*",
-    "@platformatic/service": "workspace:*",
+    "@platformatic/composer": "^3.0.1",
+    "@platformatic/next": "^3.0.1",
+    "@platformatic/node": "^3.0.1",
+    "@platformatic/service": "^3.0.1",
     "borp": "^0.20.0",
-    "fastify": "^5.4.0",
-    "pprof-format": "^2.1.0",
-    "next": "^15.3.4",
     "eslint": "9",
+    "fastify": "^5.4.0",
+    "fastify-plugin": "^5.0.1",
     "neostandard": "^0.12.0",
+    "next": "^15.3.4",
+    "platformatic": "^3.0.1",
+    "pprof-format": "^2.1.0",
     "why-is-node-running": "^2.3.0"
   },
   "dependencies": {
     "@datadog/pprof": "^5.9.0",
     "@fastify/error": "^4.2.0",
-    "@platformatic/runtime": "workspace:*",
+    "@platformatic/runtime": "^3.0.1",
     "@platformatic/slicer-interceptor": "^0.3.0",
     "@platformatic/undici-cache-redis": "^0.7.1",
     "@platformatic/undici-trafficante-interceptor": "0.1.1",
@@ -44,14 +43,7 @@
     "minimist": "^1.2.8",
     "pino": "^9.7.0",
     "pino-pretty": "^13.0.0",
-    "undici": "^7.11.0"
-  },
-  "engines": {
-    "node": "20.x || 22.x"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3"
-    ]
+    "undici": "^7.11.0",
+    "ws": "^8.18.3"
   }
 }

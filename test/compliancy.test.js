@@ -1,9 +1,8 @@
-import { readFileSync } from 'node:fs'
 import assert from 'node:assert'
 import { test } from 'node:test'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-
+import { createRequire } from 'node:module'
 import { randomUUID } from 'node:crypto'
 import { start } from '../index.js'
 import {
@@ -15,7 +14,8 @@ import {
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const platformaticVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version
+const require = createRequire(import.meta.url)
+const platformaticVersion = require('@platformatic/runtime/package.json').version
 
 test('should retrieve and send compliancy metadata', async (t) => {
   const applicationName = 'test-app'
