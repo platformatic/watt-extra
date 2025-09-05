@@ -6,7 +6,6 @@ async function alerts (app, _opts) {
     app.instanceConfig?.config?.scaler?.podHealthWindow || 60 * 1000
   const alertRetentionWindow =
     app.instanceConfig?.config?.scaler?.alertRetentionWindow || 30 * 1000
-  const isFlamegraphsDisabled = app.env.PLT_DISABLE_FLAMEGRAPHS
 
   let lastAlertTime = 0
   async function setupAlerts () {
@@ -98,18 +97,14 @@ async function alerts (app, _opts) {
 
         const alert = await body.json()
         const serviceId = healthInfo.id
-        const podId = app.instanceId
 
-        if (!isFlamegraphsDisabled) {
-          await runtime
-            .sendCommandToApplication(serviceId, 'sendFlamegraph', {
-              url: `${scalerUrl}/pods/${podId}/services/${serviceId}/flamegraph`,
-              headers: authHeaders,
-              alertId: alert.id,
-            })
-            .catch(() => {
-              app.log.error('Failed to send a flamegraph')
-            })
+        try {
+          await app.sendFlamegraphs({
+            serviceIds: [serviceId],
+            alertId: alert.id
+          })
+        } catch (err) {
+          app.log.error({ err }, 'Failed to send a flamegraph')
         }
       }
     })

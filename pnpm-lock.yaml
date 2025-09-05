@@ -23,6 +23,9 @@ importers:
       '@platformatic/undici-cache-redis':
         specifier: ^0.7.1
         version: 0.7.1
+      '@platformatic/wattpm-pprof-capture':
+        specifier: ^3.0.1
+        version: 3.0.1
       avvio:
         specifier: ^9.1.0
         version: 9.1.0
@@ -951,6 +954,10 @@ packages:
 
   '@platformatic/undici-cache-redis@0.7.1':
     resolution: {integrity: sha512-fhPD8yDJX/AgTzhXgt9B/acPNEBfKf2GA2oZlHNPBgFyJJq8dOKsq5PYAyg9FyoDHuv0fVxZAc/+U+8j6rOAsw==}
+
+  '@platformatic/wattpm-pprof-capture@3.0.1':
+    resolution: {integrity: sha512-/laYd7NPrhJmuLA8ToKWqMlVcXWHVrx0tZLhwUVvE4C4rBjIJfTRGAK0MZG3iwyi73o+KYfTkJFcc4fXkqX7VQ==}
+    engines: {node: '>=22.18.0'}
 
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -4632,6 +4639,12 @@ snapshots:
       lru_map: 0.4.1
     transitivePeerDependencies:
       - supports-color
+
+  '@platformatic/wattpm-pprof-capture@3.0.1':
+    dependencies:
+      '@datadog/pprof': 5.9.0
+      '@fastify/error': 4.2.0
+      undici: 6.21.3
 
   '@protobufjs/aspromise@1.1.2': {}
 

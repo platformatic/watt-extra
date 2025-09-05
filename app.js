@@ -8,6 +8,7 @@ import scheduler from './plugins/scheduler.js'
 import auth from './plugins/auth.js'
 import update from './plugins/update.js'
 import alert from './plugins/alerts.js'
+import flamegraphs from './plugins/flamegraphs.js'
 
 async function buildApp (logger) {
   const app = {
@@ -25,6 +26,7 @@ async function buildApp (logger) {
     .use(compliancy)
     .use(scheduler)
     .use(update)
+    .use(flamegraphs)
 
   await app.ready()
 

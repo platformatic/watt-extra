@@ -5,6 +5,7 @@ import { setTimeout as sleep } from 'node:timers/promises'
 import { WebSocketServer } from 'ws'
 import { setUpEnvironment } from './helper.js'
 import updatePlugin from '../plugins/update.js'
+import flamegraphsPlugin from '../plugins/flamegraphs.js'
 
 function setupMockIccServer (wss, receivedMessages, validateAuth = false) {
   let ws = null
@@ -37,8 +38,8 @@ function setupMockIccServer (wss, receivedMessages, validateAuth = false) {
 function createMockApp (port, includeScalerUrl = true) {
   const mockWattPro = {
     runtime: {
-      getRuntimeConfig: () => ({
-        services: [{ id: 'service-1' }, { id: 'service-2' }],
+      getApplications: () => ({
+        applications: [{ id: 'service-1' }, { id: 'service-2' }],
       }),
     },
   }
@@ -61,6 +62,8 @@ function createMockApp (port, includeScalerUrl = true) {
       PLT_APP_NAME: 'test-app',
       PLT_APP_DIR: '/path/to/app',
       PLT_ICC_URL: `http://localhost:${port}`,
+      PLT_DISABLE_FLAMEGRAPHS: false,
+      PLT_FLAMEGRAPHS_INTERVAL_SEC: 1
     },
     wattpro: mockWattPro,
   }
@@ -82,7 +85,7 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
   setUpEnvironment()
 
   const receivedMessages = []
-  const uploadedFlamegraphs = []
+  const getFlamegraphReqs = []
   let uploadResolve
   const allUploadsComplete = new Promise((resolve) => {
     uploadResolve = resolve
@@ -101,16 +104,11 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
 
   app.wattpro.runtime.sendCommandToApplication = async (
     serviceId,
-    command,
-    options
+    command
   ) => {
-    if (command === 'sendFlamegraph' && options.url && options.headers) {
-      uploadedFlamegraphs.push({
-        serviceId,
-        url: options.url,
-        headers: options.headers,
-      })
-      if (uploadedFlamegraphs.length === 2) {
+    if (command === 'getLastProfile') {
+      getFlamegraphReqs.push({ serviceId })
+      if (getFlamegraphReqs.length === 2) {
         uploadResolve()
       }
       return { success: true }
@@ -119,7 +117,11 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
   }
 
   await updatePlugin(app)
+  await flamegraphsPlugin(app)
+
   await app.connectToUpdates()
+  await app.setupFlamegraphs()
+
   await waitForClientSubscription
 
   const triggerFlamegraphMessage = {
@@ -130,28 +132,17 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
 
   await allUploadsComplete
 
-  equal(uploadedFlamegraphs.length, 2)
+  equal(getFlamegraphReqs.length, 2)
 
-  const service1Upload = uploadedFlamegraphs.find(
+  const service1Req = getFlamegraphReqs.find(
     (f) => f.serviceId === 'service-1'
   )
-  const service2Upload = uploadedFlamegraphs.find(
+  const service2Req = getFlamegraphReqs.find(
     (f) => f.serviceId === 'service-2'
   )
 
-  equal(service1Upload.serviceId, 'service-1')
-  equal(
-    service1Upload.url,
-    'http://localhost:14000/scaler/pods/test-pod-123/services/service-1/flamegraph'
-  )
-  equal(service1Upload.headers.Authorization, 'Bearer test-token')
-
-  equal(service2Upload.serviceId, 'service-2')
-  equal(
-    service2Upload.url,
-    'http://localhost:14000/scaler/pods/test-pod-123/services/service-2/flamegraph'
-  )
-  equal(service2Upload.headers.Authorization, 'Bearer test-token')
+  equal(service1Req.serviceId, 'service-1')
+  equal(service2Req.serviceId, 'service-2')
 
   await app.closeUpdates()
 })
@@ -204,7 +195,7 @@ test('should handle trigger-flamegraph when flamegraph upload fails', async (t) 
 
   const app = createMockApp(port + 2)
 
-  app.wattpro.runtime.sendCommandToApplicaiton = async (
+  app.wattpro.runtime.sendCommandToApplication = async (
     serviceId,
     command,
     options
@@ -216,7 +207,11 @@ test('should handle trigger-flamegraph when flamegraph upload fails', async (t) 
   }
 
   await updatePlugin(app)
+  await flamegraphsPlugin(app)
+
   await app.connectToUpdates()
+  await app.setupFlamegraphs()
+
   await waitForClientSubscription
 
   const triggerFlamegraphMessage = {

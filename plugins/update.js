@@ -23,7 +23,7 @@ async function updatePlugin (app) {
       // Handle trigger-flamegraph command from ICC
       if (command === 'trigger-flamegraph') {
         app.log.info({ command }, 'Received trigger-flamegraph command from ICC')
-        await app.triggerFlamegraphs(message)
+        await app.sendFlamegraphs()
         return
       }
 
@@ -113,54 +113,6 @@ async function updatePlugin (app) {
 
   app.updateConfig = async (message) => {
     await app.wattpro.applyIccConfigUpdates(message.data)
-  }
-
-  app.triggerFlamegraphs = async (message) => {
-    try {
-      app.log.info('Triggering flamegraph collection and upload from all services')
-
-      const runtime = app.wattpro.runtime
-      if (!runtime) {
-        app.log.error('Runtime not available for flamegraph collection')
-        return
-      }
-
-      const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
-      if (!scalerUrl) {
-        app.log.warn('No scaler URL found in ICC services, cannot upload flamegraphs')
-        return
-      }
-
-      const config = runtime.getRuntimeConfig()
-      const authHeaders = await app.getAuthorizationHeader()
-      const podId = app.instanceId
-
-      if (!podId) {
-        app.log.warn('No podId available, cannot upload flamegraphs')
-        return
-      }
-
-      // Trigger flamegraphs upload from all services in parallel
-      const uploadPromises = (config.services || []).map(async (service) => {
-        try {
-          await runtime.sendCommandToApplication(service.id, 'sendFlamegraph', {
-            url: `${scalerUrl}/pods/${podId}/services/${service.id}/flamegraph`,
-            headers: authHeaders
-          })
-          app.log.debug({ serviceId: service.id, podId }, 'Trigger flamegraph upload from service')
-          return { serviceId: service.id, status: 'fulfilled' }
-        } catch (err) {
-          app.log.warn({ err, serviceId: service.id, podId }, 'Failed to upload flamegraph from service')
-          return { serviceId: service.id, status: 'rejected', reason: err }
-        }
-      })
-
-      await Promise.allSettled(uploadPromises)
-
-      app.log.info('Completed flamegraph collection and upload for all services')
-    } catch (err) {
-      app.log.error({ err }, 'Error handling watt-requests')
-    }
   }
 
   app.connectToUpdates = connectToUpdates
