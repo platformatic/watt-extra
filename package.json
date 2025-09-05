@@ -1,0 +1,50 @@
+{
+  "name": "@platformatic/watt-extra",
+  "version": "1.0.0",
+  "description": "The Platformatic runtime manager",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint",
+    "test": "pnpm run lint && borp -c 1 --timeout=180000 ./test/*.test.js",
+    "start": "node index.js"
+  },
+  "bin": {
+    "watt-extra": "./cli.js"
+  },
+  "devDependencies": {
+    "@fastify/websocket": "^11.1.0",
+    "@platformatic/composer": "^3.0.1",
+    "@platformatic/next": "^3.0.1",
+    "@platformatic/node": "^3.0.1",
+    "@platformatic/service": "^3.0.1",
+    "borp": "^0.20.0",
+    "eslint": "9",
+    "fastify": "^5.4.0",
+    "fastify-plugin": "^5.0.1",
+    "neostandard": "^0.12.0",
+    "next": "^15.3.4",
+    "platformatic": "^3.0.1",
+    "pprof-format": "^2.1.0",
+    "why-is-node-running": "^2.3.0"
+  },
+  "dependencies": {
+    "@datadog/pprof": "^5.9.0",
+    "@fastify/error": "^4.2.0",
+    "@platformatic/runtime": "^3.0.1",
+    "@platformatic/slicer-interceptor": "^0.3.0",
+    "@platformatic/undici-cache-redis": "^0.7.1",
+    "@platformatic/wattpm-pprof-capture": "^3.0.1",
+    "undici-traffic-interceptor": "^0.1.4",
+    "avvio": "^9.1.0",
+    "chalk": "^4.1.2",
+    "commist": "^3.2.0",
+    "env-schema": "^6.0.1",
+    "execa": "^9.6.0",
+    "help-me": "^5.0.0",
+    "minimist": "^1.2.8",
+    "pino": "^9.7.0",
+    "pino-pretty": "^13.0.0",
+    "undici": "^7.11.0",
+    "ws": "^8.18.3"
+  }
+}
