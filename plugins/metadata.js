@@ -36,7 +36,7 @@ async function metadata (app, _opts) {
           runtime.getRuntimeMetadata()
         ])
 
-        const applications = await Promise.all(
+        const services = await Promise.all(
           runtimeConfig.applications.map((application) =>
             runtime.getApplicationDetails(application.id)
           )
@@ -49,7 +49,7 @@ async function metadata (app, _opts) {
           setDefaultHeaders(await app.getAuthorizationHeader())
           await controlPlaneClient.saveApplicationInstanceState({
             id: app.instanceId,
-            applications,
+            services,
             metadata: runtimeMetadata
           }, {
             headers: await app.getAuthorizationHeader()
