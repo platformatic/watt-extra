@@ -35,7 +35,7 @@ test('should spawn a service app settings labels for metrics', async (t) => {
     await icc.close()
   })
 
-  const mainConfig = app.wattpro.runtime.getRuntimeConfig(true)
+  const mainConfig = app.watt.runtime.getRuntimeConfig(true)
 
   const { metrics, telemetry } = mainConfig
 
@@ -122,7 +122,7 @@ test('should configure system resources', async (t) => {
     await app.close()
     await icc.close()
   })
-  const config = await app.wattpro.runtime.getRuntimeConfig(true)
+  const config = await app.watt.runtime.getRuntimeConfig(true)
 
   // Check generic resources
   assert.strictEqual(config.workers, 1)
@@ -162,13 +162,13 @@ test('should remove server https configs', async (t) => {
   })
 
   {
-    const mainConfig = app.wattpro.runtime.getRuntimeConfig(true)
+    const mainConfig = app.watt.runtime.getRuntimeConfig(true)
     const { server } = mainConfig
     assert.strictEqual(server.https, undefined)
   }
 
   {
-    const runtimeConfig = await app.wattpro.runtime.getRuntimeConfig(true)
+    const runtimeConfig = await app.watt.runtime.getRuntimeConfig(true)
 
     const { server } = runtimeConfig
     assert.strictEqual(server.https, undefined)
@@ -199,7 +199,7 @@ test('should configure health options', async (t) => {
     await icc.close()
   })
 
-  const runtimeConfig = await app.wattpro.runtime.getRuntimeConfig(true)
+  const runtimeConfig = await app.watt.runtime.getRuntimeConfig(true)
 
   const { health } = runtimeConfig
   assert.strictEqual(health.enabled, true)
@@ -233,12 +233,12 @@ test('should call updateServicesResources with maxHeapTotal', async (t) => {
 
   const updateCalls = []
   const originalUpdateServicesResources =
-    app.wattpro.runtime.updateServicesResources
-  app.wattpro.runtime.updateServicesResources = async (resourceUpdates) => {
+    app.watt.runtime.updateServicesResources
+  app.watt.runtime.updateServicesResources = async (resourceUpdates) => {
     updateCalls.push(resourceUpdates)
     if (originalUpdateServicesResources) {
       return originalUpdateServicesResources.call(
-        app.wattpro.runtime,
+        app.watt.runtime,
         resourceUpdates
       )
     }
@@ -253,7 +253,7 @@ test('should call updateServicesResources with maxHeapTotal', async (t) => {
     },
   }
 
-  await app.wattpro.applyIccConfigUpdates(config)
+  await app.watt.applyIccConfigUpdates(config)
 
   assert.strictEqual(
     updateCalls.length,
@@ -302,7 +302,7 @@ test('should handle updateServicesResources with different heap sizes', async (t
   })
 
   const updateCalls = []
-  app.wattpro.runtime.updateServicesResources = async (resourceUpdates) => {
+  app.watt.runtime.updateServicesResources = async (resourceUpdates) => {
     updateCalls.push(resourceUpdates)
   }
 
@@ -318,7 +318,7 @@ test('should handle updateServicesResources with different heap sizes', async (t
   ]
 
   for (const config of configs) {
-    await app.wattpro.applyIccConfigUpdates(config)
+    await app.watt.applyIccConfigUpdates(config)
   }
 
   assert.strictEqual(updateCalls.length, 1)
@@ -353,7 +353,7 @@ test('should handle updateServicesResources error gracefully', async (t) => {
   })
 
   let errorThrown = false
-  app.wattpro.runtime.updateServicesResources = async (resourceUpdates) => {
+  app.watt.runtime.updateServicesResources = async (resourceUpdates) => {
     assert.strictEqual(resourceUpdates[0].health.maxHeapTotal, '256MB')
     errorThrown = true
     throw new Error('Mock update error')
@@ -365,7 +365,7 @@ test('should handle updateServicesResources error gracefully', async (t) => {
     },
   }
 
-  await app.wattpro.applyIccConfigUpdates(config)
+  await app.watt.applyIccConfigUpdates(config)
 
   assert.strictEqual(
     errorThrown,

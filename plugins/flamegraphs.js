@@ -16,7 +16,7 @@ async function flamegraphs (app, _opts) {
 
     app.log.info('Start profiling services')
 
-    const runtime = app.wattpro.runtime
+    const runtime = app.watt.runtime
     const { applications } = await runtime.getApplications()
 
     const promises = []
@@ -52,7 +52,7 @@ async function flamegraphs (app, _opts) {
     }
 
     const podId = app.instanceId
-    const runtime = app.wattpro.runtime
+    const runtime = app.watt.runtime
 
     if (!serviceIds) {
       const { applications } = await runtime.getApplications()

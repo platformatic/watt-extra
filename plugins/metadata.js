@@ -15,7 +15,7 @@ async function metadata (app, _opts) {
     }
 
     const applicationId = app.instanceConfig?.applicationId
-    const runtime = app.wattpro.runtime
+    const runtime = app.watt.runtime
     if (!applicationId) {
       app.log.warn('Cannot process metadata: no applicationId available')
       throw new MetadataAppIdError()

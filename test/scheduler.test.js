@@ -42,7 +42,7 @@ test('should spawn a runtime disabling all the scheduler jobs', async (t) => {
     await icc.close()
   })
 
-  const config = await app.wattpro.runtime.getRuntimeConfig()
+  const config = await app.watt.runtime.getRuntimeConfig()
 
   const { scheduler } = config
 

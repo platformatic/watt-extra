@@ -8,7 +8,7 @@ async function scheduler (app, _opts) {
 
     try {
       const applicationId = app.instanceConfig?.applicationId
-      const runtime = app.wattpro.runtime
+      const runtime = app.watt.runtime
       const config = await runtime.getRuntimeConfig()
       const { default: build, setDefaultHeaders } = await import('../clients/cron/cron.mjs')
 

@@ -112,7 +112,7 @@ async function updatePlugin (app) {
   }
 
   app.updateConfig = async (message) => {
-    await app.wattpro.applyIccConfigUpdates(message.data)
+    await app.watt.applyIccConfigUpdates(message.data)
   }
 
   app.connectToUpdates = connectToUpdates

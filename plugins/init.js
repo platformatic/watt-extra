@@ -1,4 +1,4 @@
-import WattPro from '../lib/wattpro.js'
+import Watt from '../lib/watt.js'
 import os from 'node:os'
 
 async function initPlugin (app) {
@@ -17,13 +17,13 @@ async function initPlugin (app) {
   }
 
   async function initApplication () {
-    app.log.info('Starting WattPro runtime manager')
+    app.log.info('Starting Watt-Extra runtime manager')
 
     let applicationName = app.env.PLT_APP_NAME
     const applicationDir = app.env.PLT_APP_DIR
     const instanceId = os.hostname()
 
-    app.log.info({ applicationName, applicationDir }, 'Loading wattpro application')
+    app.log.info({ applicationName, applicationDir }, 'Loading watt-extra application')
 
     // Skip ICC initialization if PLT_ICC_URL is not set
     if (!app.env.PLT_ICC_URL) {
@@ -59,12 +59,12 @@ async function initPlugin (app) {
       app.instanceId = os.hostname()
     }
   }
-  const wattpro = new WattPro(app)
-  app.wattpro = wattpro
+  const watt = new Watt(app)
+  app.watt = watt
   app.initApplication = initApplication
 
   const headers = await app.getAuthorizationHeader()
-  await app.wattpro.updateSharedContext({ iccAuthHeaders: headers })
+  await app.watt.updateSharedContext({ iccAuthHeaders: headers })
 }
 
 export default initPlugin
