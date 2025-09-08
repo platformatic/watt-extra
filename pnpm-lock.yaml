@@ -19,7 +19,7 @@ importers:
         version: 3.0.1
       '@platformatic/wattpm-pprof-capture':
         specifier: ^3.0.1
-        version: 3.0.1
+        version: 3.0.2
       avvio:
         specifier: ^9.1.0
         version: 9.1.0
@@ -946,8 +946,8 @@ packages:
   '@platformatic/undici-cache-memory@0.8.3':
     resolution: {integrity: sha512-N9gY8bb4bw/O5lON8cAxtVN8vg9qEQWB0T/iLWwYsZSJx95sDadv5X+c8tn5CczaXSthqbv8L5h0ObW4moDfUQ==}
 
-  '@platformatic/wattpm-pprof-capture@3.0.1':
-    resolution: {integrity: sha512-/laYd7NPrhJmuLA8ToKWqMlVcXWHVrx0tZLhwUVvE4C4rBjIJfTRGAK0MZG3iwyi73o+KYfTkJFcc4fXkqX7VQ==}
+  '@platformatic/wattpm-pprof-capture@3.0.2':
+    resolution: {integrity: sha512-9sfHt1Yesrc6xbtW2PcgqmgDix+JsUu63Rdsuq4+LTPN+Q+3M4ouDlinhWYp4kxcyxIXbpc0UWlkzb1SPJjDrA==}
     engines: {node: '>=22.18.0'}
 
   '@protobufjs/aspromise@1.1.2':
@@ -1791,8 +1791,8 @@ packages:
       eslint-plugin-import-x:
         optional: true
 
-  eslint-module-utils@2.12.0:
-    resolution: {integrity: sha512-wALZ0HFoytlyh/1+4wuZ9FJCD/leWHQzzrxJ8+rebyReSLk7LApMyd3WJaLVoN+D5+WIdJyDK1c6JnE65V4Zyg==}
+  eslint-module-utils@2.12.1:
+    resolution: {integrity: sha512-L8jSWTze7K2mTg0vos/RuLRS5soomksDPoJLXIslC7c8Wmut3bx7CPpJijDcBZtxQ5lrbUdM+s0OlNbz0DCDNw==}
     engines: {node: '>=4'}
     peerDependencies:
       '@typescript-eslint/parser': '*'
@@ -4617,7 +4617,7 @@ snapshots:
 
   '@platformatic/undici-cache-memory@0.8.3': {}
 
-  '@platformatic/wattpm-pprof-capture@3.0.1':
+  '@platformatic/wattpm-pprof-capture@3.0.2':
     dependencies:
       '@datadog/pprof': 5.9.0
       '@fastify/error': 4.2.0
@@ -5601,7 +5601,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.0(@typescript-eslint/parser@8.42.0(eslint@9.34.0)(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint@9.34.0):
+  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.42.0(eslint@9.34.0)(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint@9.34.0):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
@@ -5648,7 +5648,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.34.0
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.0(@typescript-eslint/parser@8.42.0(eslint@9.34.0)(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint@9.34.0)
+      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.42.0(eslint@9.34.0)(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint@9.34.0)
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
