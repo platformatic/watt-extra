@@ -52,7 +52,7 @@ async function authPlugin (app) {
       app.log.info('JWT token expired, reloading')
       app.token = await loadToken()
 
-      app.wattpro?.updateSharedContext({
+      app.watt?.updateSharedContext({
         iccAuthHeaders: { authorization: `Bearer ${app.token}` }
       }).catch((err) => {
         app.log.error({ err }, 'Failed to update jwt token in shared context')

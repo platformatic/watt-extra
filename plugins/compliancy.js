@@ -14,7 +14,7 @@ async function compliancy (app, _opts) {
       return
     }
 
-    const runtime = app.wattpro.runtime
+    const runtime = app.watt.runtime
     const applicationId = app.instanceConfig?.applicationId
     const appDir = app.env.PLT_APP_DIR
 

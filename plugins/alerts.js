@@ -16,7 +16,7 @@ async function alerts (app, _opts) {
     }
 
     const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
-    const runtime = app.wattpro.runtime
+    const runtime = app.watt.runtime
 
     if (!scalerUrl) {
       app.log.warn(

@@ -36,7 +36,7 @@ function setupMockIccServer (wss, receivedMessages, validateAuth = false) {
 }
 
 function createMockApp (port, includeScalerUrl = true) {
-  const mockWattPro = {
+  const mockWatt = {
     runtime: {
       getApplications: () => ({
         applications: [{ id: 'service-1' }, { id: 'service-2' }],
@@ -65,7 +65,7 @@ function createMockApp (port, includeScalerUrl = true) {
       PLT_DISABLE_FLAMEGRAPHS: false,
       PLT_FLAMEGRAPHS_INTERVAL_SEC: 1
     },
-    wattpro: mockWattPro,
+    watt: mockWatt,
   }
 
   if (includeScalerUrl) {
@@ -102,7 +102,7 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
 
   const app = createMockApp(port)
 
-  app.wattpro.runtime.sendCommandToApplication = async (
+  app.watt.runtime.sendCommandToApplication = async (
     serviceId,
     command
   ) => {
@@ -162,7 +162,7 @@ test('should handle trigger-flamegraph when no runtime is available', async (t) 
   )
 
   const app = createMockApp(port + 1)
-  app.wattpro.runtime = null
+  app.watt.runtime = null
 
   await updatePlugin(app)
   await app.connectToUpdates()
@@ -195,7 +195,7 @@ test('should handle trigger-flamegraph when flamegraph upload fails', async (t) 
 
   const app = createMockApp(port + 2)
 
-  app.wattpro.runtime.sendCommandToApplication = async (
+  app.watt.runtime.sendCommandToApplication = async (
     serviceId,
     command,
     options

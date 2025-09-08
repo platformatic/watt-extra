@@ -34,7 +34,7 @@ async function buildApp (logger) {
     app.log.info('Starting Runtime -app')
     try {
       app.log.info('Spawning the app')
-      await app.wattpro.spawn()
+      await app.watt.spawn()
     } catch (err) {
       app.log.error(err, 'Failed to spawn the app')
       throw new Error('Failed to spawn the app: ' + err.message)
@@ -48,7 +48,7 @@ async function buildApp (logger) {
       return
     }
 
-    if (!app.wattpro.runtime) {
+    if (!app.watt.runtime) {
       throw new Error('Runtime not started, cannot send to ICC')
     }
     try {
@@ -112,8 +112,8 @@ async function buildApp (logger) {
 
   app.close = async function close () {
     app.log.info('Closing runtime')
-    if (app.wattpro.runtime) {
-      await app.wattpro.close()
+    if (app.watt.runtime) {
+      await app.watt.close()
     }
     await app.closeUpdates()
   }

@@ -35,7 +35,7 @@ test('check that health is configured in runtime', async (t) => {
     await icc.close()
   })
 
-  const runtimeConfig = await app.wattpro.runtime.getRuntimeConfig()
+  const runtimeConfig = await app.watt.runtime.getRuntimeConfig()
 
   assert.ok(runtimeConfig.health, 'Health configuration should be present')
   assert.strictEqual(runtimeConfig.health.enabled, true, 'Health monitoring should be enabled')
