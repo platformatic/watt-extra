@@ -19,9 +19,6 @@ setGlobalDispatcher(new Agent({
 
 function setUpEnvironment (env = {}) {
   const defaultEnv = {
-    PLT_ZIO_HOSTNAME: '127.0.0.1',
-    PLT_ZIO_PORT: 4042,
-    PLT_ZIO_LOG_LEVEL: 'debug',
     PLT_APP_HOSTNAME: '127.0.0.1',
     PLT_APP_PORT: 3042,
     PLT_METRICS_PORT: 9090,
