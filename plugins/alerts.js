@@ -25,7 +25,7 @@ async function alerts (app, _opts) {
       return
     }
 
-    runtime.on('health', async (healthInfo) => {
+    runtime.on('application:worker:health', async (healthInfo) => {
       if (!healthInfo) {
         app.log.error('No health info received')
         return

@@ -82,7 +82,7 @@ test('should send alert when service becomes unhealthy', async (t) => {
     }
   }
 
-  app.watt.runtime.emit('health', healthInfo)
+  app.watt.runtime.emit('application:worker:health', healthInfo)
 
   await sleep(200)
 
@@ -158,7 +158,7 @@ test('should not send alert when service is healthy', async (t) => {
     }
   }
 
-  app.watt.runtime.emit('health', healthInfo)
+  app.watt.runtime.emit('application:worker:health', healthInfo)
 
   await sleep(200)
 
@@ -227,7 +227,7 @@ test('should cache health data and include it in alerts', async (t) => {
       }
     }
 
-    app.watt.runtime.emit('health', healthyInfo)
+    app.watt.runtime.emit('application:worker:health', healthyInfo)
     await sleep(100) // Small delay between events
   }
 
@@ -252,7 +252,7 @@ test('should cache health data and include it in alerts', async (t) => {
     }
   }
 
-  app.watt.runtime.emit('health', unhealthyInfo)
+  app.watt.runtime.emit('application:worker:health', unhealthyInfo)
   await sleep(200)
 
   assert.ok(alertReceived, 'Alert should have been received')
@@ -320,7 +320,7 @@ test('should not fail when health info is missing', async (t) => {
     await icc.close()
   })
 
-  app.watt.runtime.emit('health', null)
+  app.watt.runtime.emit('application:worker:health', null)
 
   await sleep(200)
 
@@ -393,11 +393,11 @@ test('should respect alert retention window', async (t) => {
   })
 
   // Send first unhealthy event - should trigger alert
-  app.watt.runtime.emit('health', createHealthInfo(true))
+  app.watt.runtime.emit('application:worker:health', createHealthInfo(true))
   await sleep(100)
 
   // Send second unhealthy event immediately - should be ignored due to retention window
-  app.watt.runtime.emit('health', createHealthInfo(true))
+  app.watt.runtime.emit('application:worker:health', createHealthInfo(true))
   await sleep(100)
 
   assert.strictEqual(alertsReceived.length, 1, 'Only one alert should be sent within retention window')
@@ -405,7 +405,7 @@ test('should respect alert retention window', async (t) => {
   await sleep(500)
 
   // Send third unhealthy event - should trigger second alert
-  app.watt.runtime.emit('health', createHealthInfo(true))
+  app.watt.runtime.emit('application:worker:health', createHealthInfo(true))
   await sleep(100)
 
   assert.strictEqual(alertsReceived.length, 2, 'Second alert should be sent after retention window expires')
@@ -514,7 +514,7 @@ test('should send alert when flamegraphs are disabled', async (t) => {
     }
   }
 
-  app.watt.runtime.emit('health', healthInfo)
+  app.watt.runtime.emit('application:worker:health', healthInfo)
 
   await sleep(200)
 
@@ -593,7 +593,7 @@ test('should send alert when failed to send a flamegraph', async (t) => {
     }
   }
 
-  app.watt.runtime.emit('health', healthInfo)
+  app.watt.runtime.emit('application:worker:health', healthInfo)
 
   await sleep(200)
 
