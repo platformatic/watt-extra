@@ -5,9 +5,10 @@ async function alerts (app, _opts) {
   const podHealthWindow =
     app.instanceConfig?.config?.scaler?.podHealthWindow || 60 * 1000
   const alertRetentionWindow =
-    app.instanceConfig?.config?.scaler?.alertRetentionWindow || 30 * 1000
+    app.instanceConfig?.config?.scaler?.alertRetentionWindow || 10 * 1000
 
-  let lastAlertTime = 0
+  const lastServicesAlertTime = {}
+
   async function setupAlerts () {
     // Skip alerts setup if ICC is not configured
     if (!app.env.PLT_ICC_URL) {
@@ -66,12 +67,16 @@ async function alerts (app, _opts) {
 
       if (healthInfo.unhealthy) {
         const currentTime = Date.now()
-        if (currentTime - lastAlertTime < alertRetentionWindow) {
+
+        const serviceId = healthInfo.id
+        const lastAlertTime = lastServicesAlertTime[serviceId]
+
+        if (lastAlertTime && currentTime - lastAlertTime < alertRetentionWindow) {
           app.log.debug('Skipping alert, within retention window')
           return
         }
 
-        lastAlertTime = currentTime
+        lastServicesAlertTime[serviceId] = currentTime
         delete healthInfo.healthConfig
 
         const authHeaders = await app.getAuthorizationHeader()
@@ -96,7 +101,6 @@ async function alerts (app, _opts) {
         }
 
         const alert = await body.json()
-        const serviceId = healthInfo.id
 
         try {
           await app.sendFlamegraphs({
