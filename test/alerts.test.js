@@ -372,9 +372,9 @@ test('should respect alert retention window', async (t) => {
   })
 
   // Create a health info template
-  const createHealthInfo = (unhealthy = true) => ({
-    id: 'service-1',
-    service: 'service-1',
+  const createHealthInfo = (serviceId, unhealthy = true) => ({
+    id: serviceId,
+    service: serviceId,
     currentHealth: {
       elu: unhealthy ? 0.95 : 0.5,
       heapUsed: 76798040,
@@ -393,22 +393,26 @@ test('should respect alert retention window', async (t) => {
   })
 
   // Send first unhealthy event - should trigger alert
-  app.watt.runtime.emit('application:worker:health', createHealthInfo(true))
-  await sleep(100)
+  app.watt.runtime.emit('application:worker:health', createHealthInfo('service-1', true))
+  await sleep(50)
+
+  // Send second unhealthy event immediately - should trigger alert
+  app.watt.runtime.emit('application:worker:health', createHealthInfo('service-2', true))
+  await sleep(50)
 
   // Send second unhealthy event immediately - should be ignored due to retention window
-  app.watt.runtime.emit('application:worker:health', createHealthInfo(true))
+  app.watt.runtime.emit('application:worker:health', createHealthInfo('service-1', true))
   await sleep(100)
 
-  assert.strictEqual(alertsReceived.length, 1, 'Only one alert should be sent within retention window')
+  assert.strictEqual(alertsReceived.length, 2, 'Only one alert should be sent within retention window')
 
   await sleep(500)
 
   // Send third unhealthy event - should trigger second alert
-  app.watt.runtime.emit('application:worker:health', createHealthInfo(true))
+  app.watt.runtime.emit('application:worker:health', createHealthInfo('service-1', true))
   await sleep(100)
 
-  assert.strictEqual(alertsReceived.length, 2, 'Second alert should be sent after retention window expires')
+  assert.strictEqual(alertsReceived.length, 3, 'Second alert should be sent after retention window expires')
 })
 
 test('should not set up alerts when scaler URL is missing', async (t) => {
