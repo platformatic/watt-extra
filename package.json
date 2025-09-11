@@ -1,6 +1,6 @@
 {
   "name": "@platformatic/watt-extra",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "The Platformatic runtime manager",
   "type": "module",
   "scripts": {
