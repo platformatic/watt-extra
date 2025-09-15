@@ -128,7 +128,7 @@ test('should spawn an app with auto caching', async (t) => {
     assert.strictEqual(headers['x-foo-bar'], undefined)
     assert.strictEqual(headers['x-custom-cache-tags'], undefined)
 
-    // Wait for interceptor to send data to the Trafficante
+    // Wait for interceptor to send data to the Traffic Inspector
     await sleep(1000)
 
     assert.strictEqual(savedRequestHashes.length, 1)
