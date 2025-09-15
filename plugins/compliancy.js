@@ -60,7 +60,7 @@ async function compliancy (app, _opts) {
       const { compliant, report } = JSON.parse(res.body)
 
       if (!compliant) {
-        app.log.error(report, 'Compliancy check failed')
+        app.log.warn(report, 'Compliancy check failed')
       }
     }
   }
