@@ -46,8 +46,8 @@ async function startICC (t, opts = {}) {
     riskEngine: {
       url: 'http://127.0.0.1:3000/risk-service'
     },
-    trafficante: {
-      url: 'http://127.0.0.1:3000/trafficante'
+    trafficInspector: {
+      url: 'http://127.0.0.1:3000/traffic-inspector'
     },
     compliance: {
       url: 'http://127.0.0.1:3000/compliance'
@@ -143,7 +143,7 @@ async function startICC (t, opts = {}) {
     })
   }, { prefix: '/compliance' })
 
-  // Trafficante
+  // Traffic Inspector
   await icc.register(async (icc) => {
     icc.post('/requests/hash', async (req) => {
       const { taxonomyId, applicationId } = JSON.parse(req.headers['x-labels'])
@@ -159,7 +159,7 @@ async function startICC (t, opts = {}) {
 
       opts.saveRequest?.({ taxonomyId, applicationId, request, response })
     })
-  }, { prefix: '/trafficante' })
+  }, { prefix: '/traffic-inspector' })
 
   // Risk Service
   await icc.register(async (icc) => {

@@ -63,7 +63,7 @@ test('init plugin with optional PLT_APP_NAME - uses ICC response', async (t) => 
       applicationName, // ICC returns the application name
       iccServices: {
         riskEngine: { url: 'http://127.0.0.1:3000/risk-service' },
-        trafficante: { url: 'http://127.0.0.1:3000/trafficante' },
+        trafficInspector: { url: 'http://127.0.0.1:3000/traffic-inspector' },
         compliance: { url: 'http://127.0.0.1:3000/compliance' },
         cron: { url: 'http://127.0.0.1:3000/cron' },
         scaler: { url: 'http://127.0.0.1:3000/scaler' }
@@ -166,7 +166,7 @@ test('init plugin sends correct request structure when PLT_APP_NAME provided', a
         applicationName,
         iccServices: {
           riskEngine: { url: 'http://127.0.0.1:3000/risk-service' },
-          trafficante: { url: 'http://127.0.0.1:3000/trafficante' },
+          trafficInspector: { url: 'http://127.0.0.1:3000/traffic-inspector' },
           compliance: { url: 'http://127.0.0.1:3000/compliance' },
           cron: { url: 'http://127.0.0.1:3000/cron' },
           scaler: { url: 'http://127.0.0.1:3000/scaler' }
@@ -212,7 +212,7 @@ test('init plugin sends request without applicationName when not provided', asyn
         applicationName, // ICC provides the name
         iccServices: {
           riskEngine: { url: 'http://127.0.0.1:3000/risk-service' },
-          trafficante: { url: 'http://127.0.0.1:3000/trafficante' },
+          trafficInspector: { url: 'http://127.0.0.1:3000/traffic-inspector' },
           compliance: { url: 'http://127.0.0.1:3000/compliance' },
           cron: { url: 'http://127.0.0.1:3000/cron' },
           scaler: { url: 'http://127.0.0.1:3000/scaler' }
