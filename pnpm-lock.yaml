@@ -74,7 +74,7 @@ importers:
         version: 3.2.1
       '@platformatic/node':
         specifier: ^3.0.5
-        version: 3.0.5
+        version: 3.2.1
       '@platformatic/service':
         specifier: ^3.0.5
         version: 3.2.1(typescript@5.9.2)
@@ -933,9 +933,9 @@ packages:
     resolution: {integrity: sha512-ZStjlOwbcbkjDlEojBnXpQhuh6ZIunOpiygiJcNWP9PwIvHGOiCnDDtjuVTIq2Pa7tHiwSKAA++p+fpHT/YOlw==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/node@3.0.5':
-    resolution: {integrity: sha512-61vTcZvszU+SCkkqespKR2u/Z3xw1mcu5oikDqAFxA3Xu+6xSrN1ks3RwzqK5lPOMzhgXoymcA0PnReVhqa0/Q==}
-    engines: {node: '>=22.18.0'}
+  '@platformatic/node@3.2.1':
+    resolution: {integrity: sha512-MP24L0hf7MRcGv4nbhJNWmX+N95fyMpz39dfPVG7inc/yt+Lt9ykvWtzH/Ht6WN2vsjj22H2iQw3Sl2mlXzTkA==}
+    engines: {node: '>=22.19.0'}
 
   '@platformatic/openapi-schema-validator@3.0.0':
     resolution: {integrity: sha512-SHEY5v1Q5EliMaIpXdPCye0QkhFVOoHkEqA8v9qkrO1PqvVOcpii1WqEHYrZZB430sEmrHqEWZInt15EUsR7mw==}
@@ -4490,11 +4490,11 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@platformatic/node@3.0.5':
+  '@platformatic/node@3.2.1':
     dependencies:
-      '@platformatic/basic': 3.0.5
-      '@platformatic/foundation': 3.0.5
-      '@platformatic/generators': 3.0.5
+      '@platformatic/basic': 3.2.1
+      '@platformatic/foundation': 3.2.1
+      '@platformatic/generators': 3.2.1
       json5: 2.2.3
       light-my-request: 6.6.0
     transitivePeerDependencies:
