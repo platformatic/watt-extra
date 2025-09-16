@@ -24,8 +24,8 @@ importers:
         specifier: ^9.1.0
         version: 9.1.0
       chalk:
-        specifier: ^4.1.2
-        version: 4.1.2
+        specifier: ^5.0.0
+        version: 5.6.0
       commist:
         specifier: ^3.2.0
         version: 3.2.0
