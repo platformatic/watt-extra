@@ -98,7 +98,7 @@ importers:
         version: 15.5.3(@opentelemetry/api@1.9.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       platformatic:
         specifier: ^3.0.5
-        version: 3.0.5
+        version: 3.2.1
       pprof-format:
         specifier: ^2.1.0
         version: 2.2.1
@@ -880,9 +880,9 @@ packages:
     resolution: {integrity: sha512-Am8IhMYogzWcegc6D4fvh9RNkbfST8R968qeyOKemeP/ycZnbEjSoQ+RmVXqAVsfh35fvvIH33q4kvTpsvMZ/Q==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/control@3.0.5':
-    resolution: {integrity: sha512-h+7fdGKsrsJPcSxCaCSLRdJk7VGPHvFnG26hJK45kpmJoNnGEI8vzxZ+7uj1ehVTvSuiFd5RobeP5Zntx8ODzA==}
-    engines: {node: '>=22.18.0'}
+  '@platformatic/control@3.2.1':
+    resolution: {integrity: sha512-2WXyxA2vxSJgpitd/bLLdxpPsihr01euFrzTupic7O7BzF4LH8ZdJGDfoliJBLEdlBUVxk543eDJxuHqiKp0aA==}
+    engines: {node: '>=22.19.0'}
 
   '@platformatic/fastify-openapi-glue@5.1.0':
     resolution: {integrity: sha512-R5bHPQast/w5p+I+/Y5X1r+A8Fxqn7z0etWeaSYrFkbLvvGTEFGvldu0QGXnKjHo6XQo0P2o6D6gNr5uc36ZEA==}
@@ -943,6 +943,10 @@ packages:
   '@platformatic/runtime@3.0.5':
     resolution: {integrity: sha512-rf9gwWmwjZ4fd8YFT6QvHnhggWqi8YgssgpnB8yexDpRVqLmtgGs4/Ik4IR/J7iGTfRSe2U8nVqUrCVGThlzDA==}
     engines: {node: '>=22.18.0'}
+
+  '@platformatic/runtime@3.2.1':
+    resolution: {integrity: sha512-EIGWrQg6kmkRnyuiUHq/rvFv1mxENfHXo418Saa9jFnv1cBsALR9oTO9sJ7td0eaeBg+ju32ty6WesK0/NYS6g==}
+    engines: {node: '>=22.19.0'}
 
   '@platformatic/scalar-theme@3.2.1':
     resolution: {integrity: sha512-HS1bx5RTTG3z93JD6mGHco3hnZeCC3KnygJcFAPSKaLUdohZP4JPo3qN+2Y/4SZLci3+lucCGBtJ6UaZMhNROQ==}
@@ -1326,10 +1330,6 @@ packages:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
     engines: {node: '>=8'}
 
-  ansi-regex@6.2.0:
-    resolution: {integrity: sha512-TKY5pyBkHyADOPYlRT9Lx6F544mPl0vS5Ew7BJ45hA08Q+t3GjbueLliBWN3sMICk6+y7HdyxSzC4bWS8baBdg==}
-    engines: {node: '>=12'}
-
   ansi-regex@6.2.2:
     resolution: {integrity: sha512-Bq3SmSpyFHaWjPk8If9yc6svM8c56dB5BAtW4Qbw5jHTwwXXcTLoRMkpDJp6VL0XzlWaCHTXrkFURMYmD0sLqg==}
     engines: {node: '>=12'}
@@ -1338,8 +1338,8 @@ packages:
     resolution: {integrity: sha512-zbB9rCJAT1rbjiVDb2hqKFHNYLxgtk8NURxZ3IZwD3F6NtxbXZQCnnSi1Lkx+IDohdPlFp222wVALIheZJQSEg==}
     engines: {node: '>=8'}
 
-  ansi-styles@6.2.1:
-    resolution: {integrity: sha512-bN798gFfQX+viw3R7yrGWRqnrN2oRkEkUjjl4JNn4E8GxxbjtG3FbrEIIY3l8/hrwUwIeCZvi4QuOTP4MErVug==}
+  ansi-styles@6.2.3:
+    resolution: {integrity: sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg==}
     engines: {node: '>=12'}
 
   argparse@2.0.1:
@@ -2777,9 +2777,9 @@ packages:
     resolution: {integrity: sha512-d1s98p8/4TfYhsJ09r/Azt30aYELRi6NNnZtEbqFw6BoGsdPVf5lKNK3kUwH8BmJJfpTLNuicjUQjaMbd93dVg==}
     hasBin: true
 
-  platformatic@3.0.5:
-    resolution: {integrity: sha512-+quFDVwEWRLR6LW8yoXRNyCTHXQ9kyBQK2tMM3CoLgiXc/Nna3cHA9/Ufxm39TKkyw9vJAk+4GYYwvwToLWTeA==}
-    engines: {node: '>=22.18.0'}
+  platformatic@3.2.1:
+    resolution: {integrity: sha512-GfBco0x0C2HI6QRtPVOdihjUmCM1CnzjAnTGv+o+nW5vNUD9UDyhvqPWASsveYKmPUKVkE7rgJhKsrWHo1Aovw==}
+    engines: {node: '>=22.19.0'}
     hasBin: true
 
   possible-typed-array-names@1.1.0:
@@ -3135,10 +3135,6 @@ packages:
     resolution: {integrity: sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==}
     engines: {node: '>=8'}
 
-  strip-ansi@7.1.0:
-    resolution: {integrity: sha512-iq6eVVI64nQQTRYq2KtEg2d2uU7LElhTJwsH4YzIHZshxlgZms/wIc4VoDQTlG/IvVIrBKG06CrZnp0qv7hkcQ==}
-    engines: {node: '>=12'}
-
   strip-ansi@7.1.2:
     resolution: {integrity: sha512-gmBGslpoQJtgnMAvOVqGZpEz9dyoKTCzy2nfz/n8aIFhN/jCE/rCmcxabB6jOOHV+0WNnylOxaxBQPSvcWklhA==}
     engines: {node: '>=12'}
@@ -3354,9 +3350,9 @@ packages:
       typescript:
         optional: true
 
-  wattpm@3.0.5:
-    resolution: {integrity: sha512-A4HDeFbA2VIh6feKupZOpE5HvWHL25tGG/5HIT+zHqKl8BwVAB+WB9+P56GsX9P0llrhZqSlMrtfWjci39OGDA==}
-    engines: {node: '>=22.18.0'}
+  wattpm@3.2.1:
+    resolution: {integrity: sha512-gS12zkPKuXf8gn6glvugUViAtgIXlLOwc+9qcvPDi6UCal+iYtfgvqaeRo4JM1tQDZ37YH9TD2wjoxvG+a+W4w==}
+    engines: {node: '>=22.19.0'}
     hasBin: true
 
   wcwidth@1.0.1:
@@ -3838,7 +3834,7 @@ snapshots:
     dependencies:
       string-width: 5.1.2
       string-width-cjs: string-width@4.2.3
-      strip-ansi: 7.1.0
+      strip-ansi: 7.1.2
       strip-ansi-cjs: strip-ansi@6.0.1
       wrap-ansi: 8.1.0
       wrap-ansi-cjs: wrap-ansi@7.0.0
@@ -4292,7 +4288,7 @@ snapshots:
       '@platformatic/telemetry': 3.2.1
       execa: 9.6.0
       fast-json-patch: 3.1.1
-      pino: 9.9.4
+      pino: 9.9.5
       pino-abstract-transport: 2.0.0
       semver: 7.7.2
       split2: 4.2.0
@@ -4314,10 +4310,10 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@platformatic/control@3.0.5':
+  '@platformatic/control@3.2.1':
     dependencies:
       '@fastify/error': 4.2.0
-      '@platformatic/foundation': 3.0.5
+      '@platformatic/foundation': 3.2.1
       help-me: 5.0.0
       pino: 9.9.5
       pino-pretty: 13.1.1
@@ -4366,7 +4362,7 @@ snapshots:
       fast-json-patch: 3.1.1
       json5: 2.2.3
       leven: 3.1.0
-      pino: 9.9.4
+      pino: 9.9.5
       pino-pretty: 13.1.1
       semver: 7.7.2
       undici: 7.11.0
@@ -4431,7 +4427,7 @@ snapshots:
       change-case-all: 2.1.0
       execa: 9.6.0
       fastify: 5.6.0
-      pino: 9.9.4
+      pino: 9.9.5
       undici: 7.15.0
 
   '@platformatic/graphql-composer@0.10.0':
@@ -4522,6 +4518,46 @@ snapshots:
       '@platformatic/itc': 3.0.5
       '@platformatic/metrics': 3.0.5
       '@platformatic/telemetry': 3.0.5
+      '@platformatic/undici-cache-memory': 0.8.4
+      '@watchable/unpromise': 1.0.2
+      change-case-all: 2.1.0
+      close-with-grace: 2.2.0
+      colorette: 2.0.20
+      cron: 4.3.3
+      debounce: 2.2.0
+      dotenv: 16.6.1
+      dotenv-tool: 0.1.1
+      fastest-levenshtein: 1.0.16
+      fastify: 5.6.0
+      graphql: 16.11.0
+      help-me: 5.0.0
+      minimist: 1.2.8
+      pino: 9.9.5
+      pino-pretty: 13.1.1
+      prom-client: 15.1.3
+      semgrator: 0.3.0
+      sonic-boom: 4.2.0
+      undici: 7.15.0
+      undici-thread-interceptor: 0.14.1
+      ws: 8.18.3
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
+  '@platformatic/runtime@3.2.1':
+    dependencies:
+      '@fastify/accepts': 5.0.2
+      '@fastify/basic-auth': 6.2.0
+      '@fastify/error': 4.2.0
+      '@fastify/websocket': 11.2.0
+      '@opentelemetry/api': 1.9.0
+      '@platformatic/basic': 3.2.1
+      '@platformatic/foundation': 3.2.1
+      '@platformatic/generators': 3.2.1
+      '@platformatic/itc': 3.2.1
+      '@platformatic/metrics': 3.2.1
+      '@platformatic/telemetry': 3.2.1
       '@platformatic/undici-cache-memory': 0.8.4
       '@watchable/unpromise': 1.0.2
       change-case-all: 2.1.0
@@ -5041,15 +5077,13 @@ snapshots:
 
   ansi-regex@5.0.1: {}
 
-  ansi-regex@6.2.0: {}
-
   ansi-regex@6.2.2: {}
 
   ansi-styles@4.3.0:
     dependencies:
       color-convert: 2.0.1
 
-  ansi-styles@6.2.1: {}
+  ansi-styles@6.2.3: {}
 
   argparse@2.0.1: {}
 
@@ -6713,10 +6747,10 @@ snapshots:
       sonic-boom: 4.2.0
       thread-stream: 3.1.0
 
-  platformatic@3.0.5:
+  platformatic@3.2.1:
     dependencies:
-      '@platformatic/foundation': 3.0.5
-      wattpm: 3.0.5
+      '@platformatic/foundation': 3.2.1
+      wattpm: 3.2.1
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -7094,7 +7128,7 @@ snapshots:
     dependencies:
       eastasianwidth: 0.2.0
       emoji-regex: 9.2.2
-      strip-ansi: 7.1.0
+      strip-ansi: 7.1.2
 
   string.prototype.matchall@4.0.12:
     dependencies:
@@ -7147,10 +7181,6 @@ snapshots:
   strip-ansi@6.0.1:
     dependencies:
       ansi-regex: 5.0.1
-
-  strip-ansi@7.1.0:
-    dependencies:
-      ansi-regex: 6.2.0
 
   strip-ansi@7.1.2:
     dependencies:
@@ -7395,11 +7425,11 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.2
 
-  wattpm@3.0.5:
+  wattpm@3.2.1:
     dependencies:
-      '@platformatic/control': 3.0.5
-      '@platformatic/foundation': 3.0.5
-      '@platformatic/runtime': 3.0.5
+      '@platformatic/control': 3.2.1
+      '@platformatic/foundation': 3.2.1
+      '@platformatic/runtime': 3.2.1
       colorette: 2.0.20
       pino-pretty: 13.1.1
       split2: 4.2.0
@@ -7473,9 +7503,9 @@ snapshots:
 
   wrap-ansi@8.1.0:
     dependencies:
-      ansi-styles: 6.2.1
+      ansi-styles: 6.2.3
       string-width: 5.1.2
-      strip-ansi: 7.1.0
+      strip-ansi: 7.1.2
 
   wrappy@1.0.2: {}
 
