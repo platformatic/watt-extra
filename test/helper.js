@@ -34,6 +34,7 @@ async function startICC (t, opts = {}) {
   let {
     applicationId,
     applicationName,
+    applicationMetricsLabel,
     iccServices,
     iccConfig = {},
     enableOpenTelemetry = false,
@@ -108,6 +109,7 @@ async function startICC (t, opts = {}) {
       return controlPlaneResponse || {
         applicationId,
         applicationName,
+        applicationMetricsLabel,
         iccServices,
         config: iccConfig,
         enableOpenTelemetry,
