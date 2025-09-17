@@ -80,6 +80,7 @@ test('should spawn a service app settings labels for metrics', async (t) => {
       instanceId: app.instanceId,
       applicationId,
     },
+    applicationLabel: 'serviceId'
   }
   assert.deepStrictEqual(metrics, expectedMetrics)
 })
