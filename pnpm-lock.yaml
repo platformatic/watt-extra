@@ -58,7 +58,7 @@ importers:
         version: 0.4.1
       undici-traffic-interceptor:
         specifier: ^0.1.4
-        version: 0.1.4
+        version: 0.1.5
       ws:
         specifier: ^8.18.3
         version: 8.18.3
@@ -1020,8 +1020,8 @@ packages:
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
 
-  '@tybys/wasm-util@0.10.0':
-    resolution: {integrity: sha512-VyyPYFlOMNylG45GoAe0xDoLwWuowvf92F9kySqzYh8vmYm7D2u4iUJKa1tOUpS70Ku13ASrOkS4ScXFsTaCNQ==}
+  '@tybys/wasm-util@0.10.1':
+    resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
 
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
@@ -3247,8 +3247,8 @@ packages:
   undici-thread-interceptor@0.14.1:
     resolution: {integrity: sha512-B8g94/e/OfHCs1h+WsFO/7WghybALiWGWPiIs+vDMhK5Q3z4veEUuOicMwhS/Xi9+IY52PxeNLN86Ta5x2mTqg==}
 
-  undici-traffic-interceptor@0.1.4:
-    resolution: {integrity: sha512-qX6Ye+VAVjgPuS8LA1WT3RmEnAwmZonwhVoWLbilSZEdmzuIdiGbQf5J+Ax1EbpYVcBXnnbPi5Kf6DVs168X4Q==}
+  undici-traffic-interceptor@0.1.5:
+    resolution: {integrity: sha512-9izneE6dHQPOItr51n5IPdW5Lt1QSkQG+kiGeX/Dg6vIoNerJMEc6L/xMOB3wnSEaez+lGJkZUa+D6Zb89TtLA==}
     engines: {node: '>=20.0.0'}
 
   undici-types@6.21.0:
@@ -3846,7 +3846,7 @@ snapshots:
     dependencies:
       '@emnapi/core': 1.5.0
       '@emnapi/runtime': 1.5.0
-      '@tybys/wasm-util': 0.10.0
+      '@tybys/wasm-util': 0.10.1
     optional: true
 
   '@next/env@15.5.3': {}
@@ -4621,7 +4621,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@tybys/wasm-util@0.10.0':
+  '@tybys/wasm-util@0.10.1':
     dependencies:
       tslib: 2.8.1
     optional: true
@@ -7180,7 +7180,7 @@ snapshots:
       light-my-request: 6.6.0
       undici: 7.15.0
 
-  undici-traffic-interceptor@0.1.4:
+  undici-traffic-interceptor@0.1.5:
     dependencies:
       '@node-rs/xxhash': 1.7.6
       cookie: 1.0.2
