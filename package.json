@@ -1,6 +1,6 @@
 {
   "name": "@platformatic/watt-extra",
-  "version": "0.1.8",
+  "version": "1.0.0",
   "description": "The Platformatic runtime manager",
   "type": "module",
   "scripts": {
@@ -10,6 +10,12 @@
   },
   "bin": {
     "watt-extra": "./cli.js"
+  },
+  "author": "Platformatic Team",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/platformatic/desk.git"
   },
   "devDependencies": {
     "@fastify/websocket": "^11.1.0",
