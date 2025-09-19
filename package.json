@@ -15,7 +15,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/platformatic/desk.git"
+    "url": "git+https://github.com/platformatic/watt-extra.git"
   },
   "devDependencies": {
     "@fastify/websocket": "^11.1.0",
