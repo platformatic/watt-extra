@@ -86,7 +86,7 @@ importers:
         version: 9.35.0
       fastify:
         specifier: ^5.4.0
-        version: 5.6.0
+        version: 5.6.1
       fastify-plugin:
         specifier: ^5.0.1
         version: 5.0.1
@@ -1898,8 +1898,8 @@ packages:
   fastify-plugin@5.0.1:
     resolution: {integrity: sha512-HCxs+YnRaWzCl+cWRYFnHmeRFyR5GVnJTAaCJQiYzQSDwK9MgJdyAsuL3nh0EWRCYMgQ5MeziymvmAhUHYHDUQ==}
 
-  fastify@5.6.0:
-    resolution: {integrity: sha512-9j2r9TnwNsfGiCKGYT0Voqy244qwcoYM9qvNi/i+F8sNNWDnqUEVuGYNc9GyjldhXmMlJmVPS6gI1LdvjYGRJw==}
+  fastify@5.6.1:
+    resolution: {integrity: sha512-WjjlOciBF0K8pDUPZoGPhqhKrQJ02I8DKaDIfO51EL0kbSMwQFl85cRwhOvmSDWoukNOdTo27gLN549pLCcH7Q==}
 
   fastparallel@2.4.1:
     resolution: {integrity: sha512-qUmhxPgNHmvRjZKBFUNI0oZuuH9OlSIOXmJ98lhKPxMZZ7zS/Fi0wRHOihDSz0R1YiIOjxzOY4bq65YTcdBi2Q==}
@@ -4314,7 +4314,7 @@ snapshots:
       console-table-printer: 2.14.6
       execa: 9.6.0
       fast-deep-equal: 3.1.3
-      fastify: 5.6.0
+      fastify: 5.6.1
       fastify-plugin: 5.0.1
       graphql: 16.11.0
       help-me: 5.0.0
@@ -4342,14 +4342,14 @@ snapshots:
       '@platformatic/foundation': 3.3.0
       change-case-all: 2.1.0
       execa: 9.6.0
-      fastify: 5.6.0
+      fastify: 5.6.1
       pino: 9.9.5
       undici: 7.16.0
 
   '@platformatic/graphql-composer@0.10.0':
     dependencies:
       abstract-logger: 0.2.5
-      fastify: 5.6.0
+      fastify: 5.6.1
       graphql: 16.11.0
       mercurius: 15.1.0(graphql@16.11.0)
       metaline: 1.1.0
@@ -4432,7 +4432,7 @@ snapshots:
       dotenv: 16.6.1
       dotenv-tool: 0.1.1
       fastest-levenshtein: 1.0.16
-      fastify: 5.6.0
+      fastify: 5.6.1
       graphql: 16.11.0
       help-me: 5.0.0
       minimist: 1.2.8
@@ -4479,7 +4479,7 @@ snapshots:
       env-schema: 6.0.1
       execa: 9.6.0
       fast-json-patch: 3.1.1
-      fastify: 5.6.0
+      fastify: 5.6.1
       fastify-plugin: 5.0.1
       graphql: 16.11.0
       help-me: 5.0.0
@@ -5658,7 +5658,7 @@ snapshots:
 
   fastify-plugin@5.0.1: {}
 
-  fastify@5.6.0:
+  fastify@5.6.1:
     dependencies:
       '@fastify/ajv-compiler': 4.0.2
       '@fastify/error': 4.2.0
