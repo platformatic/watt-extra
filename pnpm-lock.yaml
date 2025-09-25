@@ -74,7 +74,7 @@ importers:
         version: 3.3.0
       '@platformatic/node':
         specifier: ^3.3.0
-        version: 3.3.0
+        version: 3.6.0
       '@platformatic/service':
         specifier: ^3.3.0
         version: 3.6.0(typescript@5.9.2)
@@ -937,8 +937,8 @@ packages:
     resolution: {integrity: sha512-auNcwG7bxbKxwcO1gRvhRSY4HBcc6rMZv/TgUSSsDXaJKckA4uWiLL5aVYuKiVeGWoc0hIg/v3IZmo+XPNOj1Q==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/node@3.3.0':
-    resolution: {integrity: sha512-BTek4hrPzzs+TOxred8cFAyFCVBSbRlhDlqkRBbsfxfitFVtOdD4Wu6Fqu/7G5rrDz3cAdMxU9O9eibIDSuTrw==}
+  '@platformatic/node@3.6.0':
+    resolution: {integrity: sha512-qx7IrMllwgot6O4a5NvpEDhS2gChCyaImwK8+elFehL3BEytp6paiRBhxNgQTmo1eMZK1EZ6rfmw65FebkRWSQ==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/openapi-schema-validator@3.0.0':
@@ -4323,6 +4323,26 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@platformatic/basic@3.6.0':
+    dependencies:
+      '@fastify/error': 4.2.0
+      '@platformatic/foundation': 3.6.0
+      '@platformatic/itc': 3.6.0
+      '@platformatic/metrics': 3.6.0
+      '@platformatic/telemetry': 3.6.0
+      execa: 9.6.0
+      fast-json-patch: 3.1.1
+      pino: 9.9.5
+      pino-abstract-transport: 2.0.0
+      semver: 7.7.2
+      split2: 4.2.0
+      undici: 7.15.0
+      ws: 8.18.3
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
   '@platformatic/composer@3.3.0(typescript@5.9.2)':
     dependencies:
       '@platformatic/foundation': 3.3.0
@@ -4368,6 +4388,25 @@ snapshots:
       json5: 2.2.3
       leven: 3.1.0
       pino: 9.11.0
+      pino-pretty: 13.1.1
+      semver: 7.7.2
+      undici: 7.11.0
+      yaml: 2.8.1
+
+  '@platformatic/foundation@3.6.0':
+    dependencies:
+      '@fastify/deepmerge': 2.0.2
+      '@fastify/error': 4.2.0
+      '@iarna/toml': 2.2.5
+      '@watchable/unpromise': 1.0.2
+      ajv: 8.17.1
+      boring-name-generator: 1.0.3
+      colorette: 2.0.20
+      dotenv: 16.6.1
+      fast-json-patch: 3.1.1
+      json5: 2.2.3
+      leven: 3.1.0
+      pino: 9.9.5
       pino-pretty: 13.1.1
       semver: 7.7.2
       undici: 7.11.0
@@ -4483,6 +4522,16 @@ snapshots:
       pino: 9.9.5
       undici: 7.15.0
 
+  '@platformatic/generators@3.6.0':
+    dependencies:
+      '@fastify/error': 4.2.0
+      '@platformatic/foundation': 3.6.0
+      change-case-all: 2.1.0
+      execa: 9.6.0
+      fastify: 5.6.0
+      pino: 9.9.5
+      undici: 7.15.0
+
   '@platformatic/graphql-composer@0.10.0':
     dependencies:
       abstract-logger: 0.2.5
@@ -4537,11 +4586,11 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@platformatic/node@3.3.0':
+  '@platformatic/node@3.6.0':
     dependencies:
-      '@platformatic/basic': 3.3.0
-      '@platformatic/foundation': 3.3.0
-      '@platformatic/generators': 3.3.0
+      '@platformatic/basic': 3.6.0
+      '@platformatic/foundation': 3.6.0
+      '@platformatic/generators': 3.6.0
       json5: 2.2.3
       light-my-request: 6.6.0
     transitivePeerDependencies:
