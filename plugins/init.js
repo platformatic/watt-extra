@@ -9,7 +9,10 @@ async function initPlugin (app) {
     // every time, because the token might be expired
     // And we cannot set the global dispatcher because it's shared with the runtime main thread.
     setDefaultHeaders(await app.getAuthorizationHeader())
-    const request = { podId }
+    const request = {
+      podId,
+      apiVersion: 'v3'
+    }
     if (applicationName) {
       request.applicationName = applicationName
     }
