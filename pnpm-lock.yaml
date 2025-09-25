@@ -52,7 +52,7 @@ importers:
         version: 7.16.0
       undici-cache-redis:
         specifier: ^1.0.0
-        version: 1.0.0
+        version: 1.0.1
       undici-slicer-interceptor:
         specifier: ^0.4.1
         version: 0.4.1
@@ -3225,8 +3225,8 @@ packages:
     resolution: {integrity: sha512-nWJ91DjeOkej/TA8pXQ3myruKpKEYgqvpw9lz4OPHj/NWFNluYrjbz9j01CJ8yKQd2g4jFoOkINCTW2I5LEEyw==}
     engines: {node: '>= 0.4'}
 
-  undici-cache-redis@1.0.0:
-    resolution: {integrity: sha512-pzbCpQCwHRzsPKNITOqPNim/HsdlHT3WjbTksMD++OwMgcsQYQR8QZkc+i+0c+JDMz92hmioio/r4qwxqXVajA==}
+  undici-cache-redis@1.0.1:
+    resolution: {integrity: sha512-WPggGOAmthr48gaBgZLltgEUp2g+1Ej0P2DFo48MNHbVw6GeHysr/4gDtl7k5BvmAj9391J+d5b0uGrTHaYArw==}
 
   undici-slicer-interceptor@0.4.1:
     resolution: {integrity: sha512-picEWNqX+xZoBPqJJV8aFhvDWtpwkRXyz0jHtJQ2CxlY3B2u7ES+fLJQ6g2DhW4P7+pSsRHDiBsekfjlhHInfQ==}
@@ -7126,9 +7126,8 @@ snapshots:
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
 
-  undici-cache-redis@1.0.0:
+  undici-cache-redis@1.0.1:
     dependencies:
-      atomic-sleep: 1.0.0
       iovalkey: 0.3.3
       lru_map: 0.4.1
     transitivePeerDependencies:
