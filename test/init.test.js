@@ -191,6 +191,7 @@ test('init plugin sends correct request structure when PLT_APP_NAME provided', a
   equal(capturedRequest.params.podId, instanceId)
   equal(capturedRequest.body.applicationName, applicationName)
   equal(capturedRequest.body.podId, instanceId)
+  equal(capturedRequest.body.apiVersion, 'v3')
 })
 
 test('init plugin sends request without applicationName when not provided', async (t) => {
@@ -237,6 +238,7 @@ test('init plugin sends request without applicationName when not provided', asyn
   equal(capturedRequest.params.podId, instanceId)
   equal(capturedRequest.body.podId, instanceId)
   equal(capturedRequest.body.applicationName, undefined)
+  equal(capturedRequest.body.apiVersion, 'v3')
 
   // But app should have the name from ICC response
   equal(app.applicationName, applicationName)
