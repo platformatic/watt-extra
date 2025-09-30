@@ -30,8 +30,8 @@ test('should retrieve and send compliancy metadata', async (t) => {
 
   const icc = await startICC(t, {
     applicationId,
-    saveComplianceMetadata: async (applicationId, data) => {
-      receivedMetadata.push({ applicationId, data })
+    saveComplianceMetadata: async (metadata) => {
+      receivedMetadata.push(metadata)
     },
     getComplianceReport: async () => {
       return { compliant: true }
@@ -56,6 +56,7 @@ test('should retrieve and send compliancy metadata', async (t) => {
 
   const [metadata] = receivedMetadata
   assert.strictEqual(metadata.applicationId, applicationId)
+  assert.deepStrictEqual(metadata.podId, app.instanceId)
   assert.deepStrictEqual(metadata.data, {
     npmDependencies: {
       runtime: {

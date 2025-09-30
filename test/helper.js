@@ -118,11 +118,6 @@ async function startICC (t, opts = {}) {
       }
     })
 
-    icc.post('/applications/:id/metadata', async (req) => {
-      const { applicationId, data } = req.body
-      return opts.saveComplianceMetadata?.(applicationId, data)
-    })
-
     icc.post('/pods/:id/instance/state', async (req) => {
       const instanceId = req.params.id
       const state = req.body
@@ -135,13 +130,11 @@ async function startICC (t, opts = {}) {
   // Compliance
   await icc.register(async (icc) => {
     icc.post('/metadata', async (req) => {
-      const { applicationId, data } = req.body
-      return opts.saveComplianceMetadata?.(applicationId, data)
+      return opts.saveComplianceMetadata?.(req.body)
     })
 
     icc.post('/compliance', async (req) => {
-      const { applicationId } = req.body
-      return opts.getComplianceReport?.(applicationId)
+      return opts.getComplianceReport?.(req.body)
     })
   }, { prefix: '/compliance' })
 

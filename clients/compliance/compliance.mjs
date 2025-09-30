@@ -4,6 +4,9 @@
 let baseUrl = ''
 // The default headers to send within each request. This can be overridden by calling `setDefaultHeaders`.
 let defaultHeaders = {}
+// The additional parameters you want to pass to the `fetch` instance.
+let defaultFetchParams = {}
+const defaultJsonType = { 'Content-type': 'application/json; charset=utf-8' }
 
 function sanitizeUrl(url) {
   if (url.endsWith('/')) { return url.slice(0, -1) } else { return url }
@@ -14,6 +17,9 @@ export const setBaseUrl = (newUrl) => { baseUrl = sanitizeUrl(newUrl) }
 /**  @type {import('./compliance-types.d.ts').Compliance['setDefaultHeaders']} */
 export const setDefaultHeaders = (headers) => { defaultHeaders = headers }
 
+/**  @type {import('./compliance-types.d.ts').Compliance['setDefaultFetchParams']} */
+export const setDefaultFetchParams = (fetchParams) => { defaultFetchParams = fetchParams }
+
 function headersToJSON(headers) {
   const output = {}
   headers.forEach((value, key) => {
@@ -23,34 +29,45 @@ function headersToJSON(headers) {
 }
 
 async function _getReports (url, request) {
-  const queryParameters = ['limit', 'offset', 'totalCount', 'fields', 'where.applicationId.eq', 'where.applicationId.neq', 'where.applicationId.gt', 'where.applicationId.gte', 'where.applicationId.lt', 'where.applicationId.lte', 'where.applicationId.like', 'where.applicationId.in', 'where.applicationId.nin', 'where.applicationId.contains', 'where.applicationId.contained', 'where.applicationId.overlaps', 'where.bundleId.eq', 'where.bundleId.neq', 'where.bundleId.gt', 'where.bundleId.gte', 'where.bundleId.lt', 'where.bundleId.lte', 'where.bundleId.like', 'where.bundleId.in', 'where.bundleId.nin', 'where.bundleId.contains', 'where.bundleId.contained', 'where.bundleId.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.result.eq', 'where.result.neq', 'where.result.gt', 'where.result.gte', 'where.result.lt', 'where.result.lte', 'where.result.like', 'where.result.in', 'where.result.nin', 'where.result.contains', 'where.result.contained', 'where.result.overlaps', 'where.ruleSet.eq', 'where.ruleSet.neq', 'where.ruleSet.gt', 'where.ruleSet.gte', 'where.ruleSet.lt', 'where.ruleSet.lte', 'where.ruleSet.like', 'where.ruleSet.in', 'where.ruleSet.nin', 'where.ruleSet.contains', 'where.ruleSet.contained', 'where.ruleSet.overlaps', 'where.or', 'orderby.applicationId', 'orderby.bundleId', 'orderby.createdAt', 'orderby.id', 'orderby.result', 'orderby.ruleSet']
+  const queryParameters = ['limit', 'offset', 'totalCount', 'cursor', 'startAfter', 'endBefore', 'fields', 'where.applicationId.eq', 'where.applicationId.neq', 'where.applicationId.gt', 'where.applicationId.gte', 'where.applicationId.lt', 'where.applicationId.lte', 'where.applicationId.like', 'where.applicationId.ilike', 'where.applicationId.in', 'where.applicationId.nin', 'where.applicationId.contains', 'where.applicationId.contained', 'where.applicationId.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.ilike', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.ilike', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.result.eq', 'where.result.neq', 'where.result.gt', 'where.result.gte', 'where.result.lt', 'where.result.lte', 'where.result.like', 'where.result.ilike', 'where.result.in', 'where.result.nin', 'where.result.contains', 'where.result.contained', 'where.result.overlaps', 'where.ruleSet.eq', 'where.ruleSet.neq', 'where.ruleSet.gt', 'where.ruleSet.gte', 'where.ruleSet.lt', 'where.ruleSet.lte', 'where.ruleSet.like', 'where.ruleSet.ilike', 'where.ruleSet.in', 'where.ruleSet.nin', 'where.ruleSet.contains', 'where.ruleSet.contained', 'where.ruleSet.overlaps', 'where.or', 'orderby.applicationId', 'orderby.createdAt', 'orderby.id', 'orderby.result', 'orderby.ruleSet']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
   const headers = {
     ...defaultHeaders
   }
 
   const response = await fetch(`${url}/reports/?${searchParams.toString()}`, {
-    headers
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['getReports']} */
@@ -58,22 +75,50 @@ export const getReports = async (request) => {
   return await _getReports(baseUrl, request)
 }
 async function _createReport (url, request) {
+  const queryParameters = ['fields']
+  const searchParams = new URLSearchParams()
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
+      }
+      delete request.query?.[qp]
+    })
+  }
+
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
-  const response = await fetch(`${url}/reports/`, {
+  const response = await fetch(`${url}/reports/?${searchParams.toString()}`, {
     method: 'POST',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['createReport']} */
@@ -81,37 +126,50 @@ export const createReport = async (request) => {
   return await _createReport(baseUrl, request)
 }
 async function _updateReports (url, request) {
-  const queryParameters = ['fields', 'where.applicationId.eq', 'where.applicationId.neq', 'where.applicationId.gt', 'where.applicationId.gte', 'where.applicationId.lt', 'where.applicationId.lte', 'where.applicationId.like', 'where.applicationId.in', 'where.applicationId.nin', 'where.applicationId.contains', 'where.applicationId.contained', 'where.applicationId.overlaps', 'where.bundleId.eq', 'where.bundleId.neq', 'where.bundleId.gt', 'where.bundleId.gte', 'where.bundleId.lt', 'where.bundleId.lte', 'where.bundleId.like', 'where.bundleId.in', 'where.bundleId.nin', 'where.bundleId.contains', 'where.bundleId.contained', 'where.bundleId.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.result.eq', 'where.result.neq', 'where.result.gt', 'where.result.gte', 'where.result.lt', 'where.result.lte', 'where.result.like', 'where.result.in', 'where.result.nin', 'where.result.contains', 'where.result.contained', 'where.result.overlaps', 'where.ruleSet.eq', 'where.ruleSet.neq', 'where.ruleSet.gt', 'where.ruleSet.gte', 'where.ruleSet.lt', 'where.ruleSet.lte', 'where.ruleSet.like', 'where.ruleSet.in', 'where.ruleSet.nin', 'where.ruleSet.contains', 'where.ruleSet.contained', 'where.ruleSet.overlaps', 'where.or']
+  const queryParameters = ['fields', 'where.applicationId.eq', 'where.applicationId.neq', 'where.applicationId.gt', 'where.applicationId.gte', 'where.applicationId.lt', 'where.applicationId.lte', 'where.applicationId.like', 'where.applicationId.ilike', 'where.applicationId.in', 'where.applicationId.nin', 'where.applicationId.contains', 'where.applicationId.contained', 'where.applicationId.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.ilike', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.ilike', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.result.eq', 'where.result.neq', 'where.result.gt', 'where.result.gte', 'where.result.lt', 'where.result.lte', 'where.result.like', 'where.result.ilike', 'where.result.in', 'where.result.nin', 'where.result.contains', 'where.result.contained', 'where.result.overlaps', 'where.ruleSet.eq', 'where.ruleSet.neq', 'where.ruleSet.gt', 'where.ruleSet.gte', 'where.ruleSet.lt', 'where.ruleSet.lte', 'where.ruleSet.like', 'where.ruleSet.ilike', 'where.ruleSet.in', 'where.ruleSet.nin', 'where.ruleSet.contains', 'where.ruleSet.contained', 'where.ruleSet.overlaps', 'where.or']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
   const response = await fetch(`${url}/reports/?${searchParams.toString()}`, {
     method: 'PUT',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['updateReports']} */
@@ -121,32 +179,43 @@ export const updateReports = async (request) => {
 async function _getReportById (url, request) {
   const queryParameters = ['fields']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
   const headers = {
     ...defaultHeaders
   }
 
-  const response = await fetch(`${url}/reports/${request['id']}?${searchParams.toString()}`, {
-    headers
+  const response = await fetch(`${url}/reports/${request.path['id']}?${searchParams.toString()}`, {
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['getReportById']} */
@@ -156,35 +225,48 @@ export const getReportById = async (request) => {
 async function _updateReport (url, request) {
   const queryParameters = ['fields']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
-  const response = await fetch(`${url}/reports/${request['id']}?${searchParams.toString()}`, {
+  const response = await fetch(`${url}/reports/${request.path['id']}?${searchParams.toString()}`, {
     method: 'PUT',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['updateReport']} */
@@ -194,35 +276,48 @@ export const updateReport = async (request) => {
 async function _deleteReports (url, request) {
   const queryParameters = ['fields']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
-  const response = await fetch(`${url}/reports/${request['id']}?${searchParams.toString()}`, {
+  const response = await fetch(`${url}/reports/${request.path['id']}?${searchParams.toString()}`, {
     method: 'DELETE',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['deleteReports']} */
@@ -230,22 +325,50 @@ export const deleteReports = async (request) => {
   return await _deleteReports(baseUrl, request)
 }
 async function _createRule (url, request) {
+  const queryParameters = ['fields']
+  const searchParams = new URLSearchParams()
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
+      }
+      delete request.query?.[qp]
+    })
+  }
+
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
-  const response = await fetch(`${url}/rules/`, {
+  const response = await fetch(`${url}/rules/?${searchParams.toString()}`, {
     method: 'POST',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['createRule']} */
@@ -253,37 +376,50 @@ export const createRule = async (request) => {
   return await _createRule(baseUrl, request)
 }
 async function _updateRules (url, request) {
-  const queryParameters = ['fields', 'where.config.eq', 'where.config.neq', 'where.config.gt', 'where.config.gte', 'where.config.lt', 'where.config.lte', 'where.config.like', 'where.config.in', 'where.config.nin', 'where.config.contains', 'where.config.contained', 'where.config.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.description.eq', 'where.description.neq', 'where.description.gt', 'where.description.gte', 'where.description.lt', 'where.description.lte', 'where.description.like', 'where.description.in', 'where.description.nin', 'where.description.contains', 'where.description.contained', 'where.description.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.label.eq', 'where.label.neq', 'where.label.gt', 'where.label.gte', 'where.label.lt', 'where.label.lte', 'where.label.like', 'where.label.in', 'where.label.nin', 'where.label.contains', 'where.label.contained', 'where.label.overlaps', 'where.name.eq', 'where.name.neq', 'where.name.gt', 'where.name.gte', 'where.name.lt', 'where.name.lte', 'where.name.like', 'where.name.in', 'where.name.nin', 'where.name.contains', 'where.name.contained', 'where.name.overlaps', 'where.or']
+  const queryParameters = ['fields', 'where.config.eq', 'where.config.neq', 'where.config.gt', 'where.config.gte', 'where.config.lt', 'where.config.lte', 'where.config.like', 'where.config.ilike', 'where.config.in', 'where.config.nin', 'where.config.contains', 'where.config.contained', 'where.config.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.ilike', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.description.eq', 'where.description.neq', 'where.description.gt', 'where.description.gte', 'where.description.lt', 'where.description.lte', 'where.description.like', 'where.description.ilike', 'where.description.in', 'where.description.nin', 'where.description.contains', 'where.description.contained', 'where.description.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.ilike', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.label.eq', 'where.label.neq', 'where.label.gt', 'where.label.gte', 'where.label.lt', 'where.label.lte', 'where.label.like', 'where.label.ilike', 'where.label.in', 'where.label.nin', 'where.label.contains', 'where.label.contained', 'where.label.overlaps', 'where.name.eq', 'where.name.neq', 'where.name.gt', 'where.name.gte', 'where.name.lt', 'where.name.lte', 'where.name.like', 'where.name.ilike', 'where.name.in', 'where.name.nin', 'where.name.contains', 'where.name.contained', 'where.name.overlaps', 'where.or']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
   const response = await fetch(`${url}/rules/?${searchParams.toString()}`, {
     method: 'PUT',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['updateRules']} */
@@ -293,32 +429,43 @@ export const updateRules = async (request) => {
 async function _getRuleById (url, request) {
   const queryParameters = ['fields']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
   const headers = {
     ...defaultHeaders
   }
 
-  const response = await fetch(`${url}/rules/${request['id']}?${searchParams.toString()}`, {
-    headers
+  const response = await fetch(`${url}/rules/${request.path['id']}?${searchParams.toString()}`, {
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['getRuleById']} */
@@ -328,35 +475,48 @@ export const getRuleById = async (request) => {
 async function _updateRule (url, request) {
   const queryParameters = ['fields']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
-  const response = await fetch(`${url}/rules/${request['id']}?${searchParams.toString()}`, {
+  const response = await fetch(`${url}/rules/${request.path['id']}?${searchParams.toString()}`, {
     method: 'PUT',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['updateRule']} */
@@ -366,35 +526,48 @@ export const updateRule = async (request) => {
 async function _deleteRules (url, request) {
   const queryParameters = ['fields']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
-  const response = await fetch(`${url}/rules/${request['id']}?${searchParams.toString()}`, {
+  const response = await fetch(`${url}/rules/${request.path['id']}?${searchParams.toString()}`, {
     method: 'DELETE',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['deleteRules']} */
@@ -402,34 +575,45 @@ export const deleteRules = async (request) => {
   return await _deleteRules(baseUrl, request)
 }
 async function _getRuleConfigsForRule (url, request) {
-  const queryParameters = ['fields']
+  const queryParameters = ['limit', 'offset', 'fields', 'totalCount']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
   const headers = {
     ...defaultHeaders
   }
 
-  const response = await fetch(`${url}/rules/${request['id']}/ruleConfigs?${searchParams.toString()}`, {
-    headers
+  const response = await fetch(`${url}/rules/${request.path['id']}/ruleConfigs?${searchParams.toString()}`, {
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['getRuleConfigsForRule']} */
@@ -437,34 +621,45 @@ export const getRuleConfigsForRule = async (request) => {
   return await _getRuleConfigsForRule(baseUrl, request)
 }
 async function _getRuleConfigs (url, request) {
-  const queryParameters = ['limit', 'offset', 'totalCount', 'fields', 'where.applicationId.eq', 'where.applicationId.neq', 'where.applicationId.gt', 'where.applicationId.gte', 'where.applicationId.lt', 'where.applicationId.lte', 'where.applicationId.like', 'where.applicationId.in', 'where.applicationId.nin', 'where.applicationId.contains', 'where.applicationId.contained', 'where.applicationId.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.enabled.eq', 'where.enabled.neq', 'where.enabled.gt', 'where.enabled.gte', 'where.enabled.lt', 'where.enabled.lte', 'where.enabled.like', 'where.enabled.in', 'where.enabled.nin', 'where.enabled.contains', 'where.enabled.contained', 'where.enabled.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.options.eq', 'where.options.neq', 'where.options.gt', 'where.options.gte', 'where.options.lt', 'where.options.lte', 'where.options.like', 'where.options.in', 'where.options.nin', 'where.options.contains', 'where.options.contained', 'where.options.overlaps', 'where.ruleId.eq', 'where.ruleId.neq', 'where.ruleId.gt', 'where.ruleId.gte', 'where.ruleId.lt', 'where.ruleId.lte', 'where.ruleId.like', 'where.ruleId.in', 'where.ruleId.nin', 'where.ruleId.contains', 'where.ruleId.contained', 'where.ruleId.overlaps', 'where.type.eq', 'where.type.neq', 'where.type.gt', 'where.type.gte', 'where.type.lt', 'where.type.lte', 'where.type.like', 'where.type.in', 'where.type.nin', 'where.type.contains', 'where.type.contained', 'where.type.overlaps', 'where.or', 'orderby.applicationId', 'orderby.createdAt', 'orderby.enabled', 'orderby.id', 'orderby.options', 'orderby.ruleId', 'orderby.type']
+  const queryParameters = ['limit', 'offset', 'totalCount', 'cursor', 'startAfter', 'endBefore', 'fields', 'where.applicationId.eq', 'where.applicationId.neq', 'where.applicationId.gt', 'where.applicationId.gte', 'where.applicationId.lt', 'where.applicationId.lte', 'where.applicationId.like', 'where.applicationId.ilike', 'where.applicationId.in', 'where.applicationId.nin', 'where.applicationId.contains', 'where.applicationId.contained', 'where.applicationId.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.ilike', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.enabled.eq', 'where.enabled.neq', 'where.enabled.gt', 'where.enabled.gte', 'where.enabled.lt', 'where.enabled.lte', 'where.enabled.like', 'where.enabled.ilike', 'where.enabled.in', 'where.enabled.nin', 'where.enabled.contains', 'where.enabled.contained', 'where.enabled.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.ilike', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.options.eq', 'where.options.neq', 'where.options.gt', 'where.options.gte', 'where.options.lt', 'where.options.lte', 'where.options.like', 'where.options.ilike', 'where.options.in', 'where.options.nin', 'where.options.contains', 'where.options.contained', 'where.options.overlaps', 'where.ruleId.eq', 'where.ruleId.neq', 'where.ruleId.gt', 'where.ruleId.gte', 'where.ruleId.lt', 'where.ruleId.lte', 'where.ruleId.like', 'where.ruleId.ilike', 'where.ruleId.in', 'where.ruleId.nin', 'where.ruleId.contains', 'where.ruleId.contained', 'where.ruleId.overlaps', 'where.type.eq', 'where.type.neq', 'where.type.gt', 'where.type.gte', 'where.type.lt', 'where.type.lte', 'where.type.like', 'where.type.ilike', 'where.type.in', 'where.type.nin', 'where.type.contains', 'where.type.contained', 'where.type.overlaps', 'where.or', 'orderby.applicationId', 'orderby.createdAt', 'orderby.enabled', 'orderby.id', 'orderby.options', 'orderby.ruleId', 'orderby.type']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
   const headers = {
     ...defaultHeaders
   }
 
   const response = await fetch(`${url}/ruleConfigs/?${searchParams.toString()}`, {
-    headers
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['getRuleConfigs']} */
@@ -472,22 +667,50 @@ export const getRuleConfigs = async (request) => {
   return await _getRuleConfigs(baseUrl, request)
 }
 async function _createRuleConfig (url, request) {
+  const queryParameters = ['fields']
+  const searchParams = new URLSearchParams()
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
+      }
+      delete request.query?.[qp]
+    })
+  }
+
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
-  const response = await fetch(`${url}/ruleConfigs/`, {
+  const response = await fetch(`${url}/ruleConfigs/?${searchParams.toString()}`, {
     method: 'POST',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['createRuleConfig']} */
@@ -495,37 +718,50 @@ export const createRuleConfig = async (request) => {
   return await _createRuleConfig(baseUrl, request)
 }
 async function _updateRuleConfigs (url, request) {
-  const queryParameters = ['fields', 'where.applicationId.eq', 'where.applicationId.neq', 'where.applicationId.gt', 'where.applicationId.gte', 'where.applicationId.lt', 'where.applicationId.lte', 'where.applicationId.like', 'where.applicationId.in', 'where.applicationId.nin', 'where.applicationId.contains', 'where.applicationId.contained', 'where.applicationId.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.enabled.eq', 'where.enabled.neq', 'where.enabled.gt', 'where.enabled.gte', 'where.enabled.lt', 'where.enabled.lte', 'where.enabled.like', 'where.enabled.in', 'where.enabled.nin', 'where.enabled.contains', 'where.enabled.contained', 'where.enabled.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.options.eq', 'where.options.neq', 'where.options.gt', 'where.options.gte', 'where.options.lt', 'where.options.lte', 'where.options.like', 'where.options.in', 'where.options.nin', 'where.options.contains', 'where.options.contained', 'where.options.overlaps', 'where.ruleId.eq', 'where.ruleId.neq', 'where.ruleId.gt', 'where.ruleId.gte', 'where.ruleId.lt', 'where.ruleId.lte', 'where.ruleId.like', 'where.ruleId.in', 'where.ruleId.nin', 'where.ruleId.contains', 'where.ruleId.contained', 'where.ruleId.overlaps', 'where.type.eq', 'where.type.neq', 'where.type.gt', 'where.type.gte', 'where.type.lt', 'where.type.lte', 'where.type.like', 'where.type.in', 'where.type.nin', 'where.type.contains', 'where.type.contained', 'where.type.overlaps', 'where.or']
+  const queryParameters = ['fields', 'where.applicationId.eq', 'where.applicationId.neq', 'where.applicationId.gt', 'where.applicationId.gte', 'where.applicationId.lt', 'where.applicationId.lte', 'where.applicationId.like', 'where.applicationId.ilike', 'where.applicationId.in', 'where.applicationId.nin', 'where.applicationId.contains', 'where.applicationId.contained', 'where.applicationId.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.ilike', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.enabled.eq', 'where.enabled.neq', 'where.enabled.gt', 'where.enabled.gte', 'where.enabled.lt', 'where.enabled.lte', 'where.enabled.like', 'where.enabled.ilike', 'where.enabled.in', 'where.enabled.nin', 'where.enabled.contains', 'where.enabled.contained', 'where.enabled.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.ilike', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.options.eq', 'where.options.neq', 'where.options.gt', 'where.options.gte', 'where.options.lt', 'where.options.lte', 'where.options.like', 'where.options.ilike', 'where.options.in', 'where.options.nin', 'where.options.contains', 'where.options.contained', 'where.options.overlaps', 'where.ruleId.eq', 'where.ruleId.neq', 'where.ruleId.gt', 'where.ruleId.gte', 'where.ruleId.lt', 'where.ruleId.lte', 'where.ruleId.like', 'where.ruleId.ilike', 'where.ruleId.in', 'where.ruleId.nin', 'where.ruleId.contains', 'where.ruleId.contained', 'where.ruleId.overlaps', 'where.type.eq', 'where.type.neq', 'where.type.gt', 'where.type.gte', 'where.type.lt', 'where.type.lte', 'where.type.like', 'where.type.ilike', 'where.type.in', 'where.type.nin', 'where.type.contains', 'where.type.contained', 'where.type.overlaps', 'where.or']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
   const response = await fetch(`${url}/ruleConfigs/?${searchParams.toString()}`, {
     method: 'PUT',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['updateRuleConfigs']} */
@@ -535,32 +771,43 @@ export const updateRuleConfigs = async (request) => {
 async function _getRuleConfigById (url, request) {
   const queryParameters = ['fields']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
   const headers = {
     ...defaultHeaders
   }
 
-  const response = await fetch(`${url}/ruleConfigs/${request['id']}?${searchParams.toString()}`, {
-    headers
+  const response = await fetch(`${url}/ruleConfigs/${request.path['id']}?${searchParams.toString()}`, {
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['getRuleConfigById']} */
@@ -570,35 +817,48 @@ export const getRuleConfigById = async (request) => {
 async function _updateRuleConfig (url, request) {
   const queryParameters = ['fields']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
-  const response = await fetch(`${url}/ruleConfigs/${request['id']}?${searchParams.toString()}`, {
+  const response = await fetch(`${url}/ruleConfigs/${request.path['id']}?${searchParams.toString()}`, {
     method: 'PUT',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['updateRuleConfig']} */
@@ -608,35 +868,48 @@ export const updateRuleConfig = async (request) => {
 async function _deleteRuleConfigs (url, request) {
   const queryParameters = ['fields']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
-  const response = await fetch(`${url}/ruleConfigs/${request['id']}?${searchParams.toString()}`, {
+  const response = await fetch(`${url}/ruleConfigs/${request.path['id']}?${searchParams.toString()}`, {
     method: 'DELETE',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['deleteRuleConfigs']} */
@@ -646,32 +919,43 @@ export const deleteRuleConfigs = async (request) => {
 async function _getRuleForRuleConfig (url, request) {
   const queryParameters = ['fields']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
   const headers = {
     ...defaultHeaders
   }
 
-  const response = await fetch(`${url}/ruleConfigs/${request['id']}/rule?${searchParams.toString()}`, {
-    headers
+  const response = await fetch(`${url}/ruleConfigs/${request.path['id']}/rule?${searchParams.toString()}`, {
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['getRuleForRuleConfig']} */
@@ -679,34 +963,45 @@ export const getRuleForRuleConfig = async (request) => {
   return await _getRuleForRuleConfig(baseUrl, request)
 }
 async function _getMetadata (url, request) {
-  const queryParameters = ['limit', 'offset', 'totalCount', 'fields', 'where.applicationId.eq', 'where.applicationId.neq', 'where.applicationId.gt', 'where.applicationId.gte', 'where.applicationId.lt', 'where.applicationId.lte', 'where.applicationId.like', 'where.applicationId.in', 'where.applicationId.nin', 'where.applicationId.contains', 'where.applicationId.contained', 'where.applicationId.overlaps', 'where.bundleId.eq', 'where.bundleId.neq', 'where.bundleId.gt', 'where.bundleId.gte', 'where.bundleId.lt', 'where.bundleId.lte', 'where.bundleId.like', 'where.bundleId.in', 'where.bundleId.nin', 'where.bundleId.contains', 'where.bundleId.contained', 'where.bundleId.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.data.eq', 'where.data.neq', 'where.data.gt', 'where.data.gte', 'where.data.lt', 'where.data.lte', 'where.data.like', 'where.data.in', 'where.data.nin', 'where.data.contains', 'where.data.contained', 'where.data.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.or', 'orderby.applicationId', 'orderby.bundleId', 'orderby.createdAt', 'orderby.data', 'orderby.id']
+  const queryParameters = ['limit', 'offset', 'totalCount', 'cursor', 'startAfter', 'endBefore', 'fields', 'where.applicationId.eq', 'where.applicationId.neq', 'where.applicationId.gt', 'where.applicationId.gte', 'where.applicationId.lt', 'where.applicationId.lte', 'where.applicationId.like', 'where.applicationId.ilike', 'where.applicationId.in', 'where.applicationId.nin', 'where.applicationId.contains', 'where.applicationId.contained', 'where.applicationId.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.ilike', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.data.eq', 'where.data.neq', 'where.data.gt', 'where.data.gte', 'where.data.lt', 'where.data.lte', 'where.data.like', 'where.data.ilike', 'where.data.in', 'where.data.nin', 'where.data.contains', 'where.data.contained', 'where.data.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.ilike', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.or', 'orderby.applicationId', 'orderby.createdAt', 'orderby.data', 'orderby.id']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
   const headers = {
     ...defaultHeaders
   }
 
   const response = await fetch(`${url}/metadata/?${searchParams.toString()}`, {
-    headers
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['getMetadata']} */
@@ -714,37 +1009,50 @@ export const getMetadata = async (request) => {
   return await _getMetadata(baseUrl, request)
 }
 async function _updateMetadata (url, request) {
-  const queryParameters = ['fields', 'where.applicationId.eq', 'where.applicationId.neq', 'where.applicationId.gt', 'where.applicationId.gte', 'where.applicationId.lt', 'where.applicationId.lte', 'where.applicationId.like', 'where.applicationId.in', 'where.applicationId.nin', 'where.applicationId.contains', 'where.applicationId.contained', 'where.applicationId.overlaps', 'where.bundleId.eq', 'where.bundleId.neq', 'where.bundleId.gt', 'where.bundleId.gte', 'where.bundleId.lt', 'where.bundleId.lte', 'where.bundleId.like', 'where.bundleId.in', 'where.bundleId.nin', 'where.bundleId.contains', 'where.bundleId.contained', 'where.bundleId.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.data.eq', 'where.data.neq', 'where.data.gt', 'where.data.gte', 'where.data.lt', 'where.data.lte', 'where.data.like', 'where.data.in', 'where.data.nin', 'where.data.contains', 'where.data.contained', 'where.data.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.or']
+  const queryParameters = ['fields', 'where.applicationId.eq', 'where.applicationId.neq', 'where.applicationId.gt', 'where.applicationId.gte', 'where.applicationId.lt', 'where.applicationId.lte', 'where.applicationId.like', 'where.applicationId.ilike', 'where.applicationId.in', 'where.applicationId.nin', 'where.applicationId.contains', 'where.applicationId.contained', 'where.applicationId.overlaps', 'where.createdAt.eq', 'where.createdAt.neq', 'where.createdAt.gt', 'where.createdAt.gte', 'where.createdAt.lt', 'where.createdAt.lte', 'where.createdAt.like', 'where.createdAt.ilike', 'where.createdAt.in', 'where.createdAt.nin', 'where.createdAt.contains', 'where.createdAt.contained', 'where.createdAt.overlaps', 'where.data.eq', 'where.data.neq', 'where.data.gt', 'where.data.gte', 'where.data.lt', 'where.data.lte', 'where.data.like', 'where.data.ilike', 'where.data.in', 'where.data.nin', 'where.data.contains', 'where.data.contained', 'where.data.overlaps', 'where.id.eq', 'where.id.neq', 'where.id.gt', 'where.id.gte', 'where.id.lt', 'where.id.lte', 'where.id.like', 'where.id.ilike', 'where.id.in', 'where.id.nin', 'where.id.contains', 'where.id.contained', 'where.id.overlaps', 'where.or']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
   const response = await fetch(`${url}/metadata/?${searchParams.toString()}`, {
     method: 'PUT',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['updateMetadata']} */
@@ -754,32 +1062,43 @@ export const updateMetadata = async (request) => {
 async function _getMetadatumById (url, request) {
   const queryParameters = ['fields']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
   const headers = {
     ...defaultHeaders
   }
 
-  const response = await fetch(`${url}/metadata/${request['id']}?${searchParams.toString()}`, {
-    headers
+  const response = await fetch(`${url}/metadata/${request.path['id']}?${searchParams.toString()}`, {
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['getMetadatumById']} */
@@ -789,35 +1108,48 @@ export const getMetadatumById = async (request) => {
 async function _updateMetadatum (url, request) {
   const queryParameters = ['fields']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
-  const response = await fetch(`${url}/metadata/${request['id']}?${searchParams.toString()}`, {
+  const response = await fetch(`${url}/metadata/${request.path['id']}?${searchParams.toString()}`, {
     method: 'PUT',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['updateMetadatum']} */
@@ -827,35 +1159,48 @@ export const updateMetadatum = async (request) => {
 async function _deleteMetadata (url, request) {
   const queryParameters = ['fields']
   const searchParams = new URLSearchParams()
-  queryParameters.forEach((qp) => {
-    if (request[qp]) {
-      if (Array.isArray(request[qp])) {
-        request[qp].forEach((p) => {
-          searchParams.append(qp, p)
-        })
-      } else {
-        searchParams.append(qp, request[qp]?.toString() || '')
+  if (request.query) {
+    queryParameters.forEach((qp) => {
+      const queryValue = request.query?.[qp]
+      if (queryValue) {
+        if (Array.isArray(queryValue)) {
+          queryValue.forEach((p) => searchParams.append(qp, p))
+        } else {
+          searchParams.append(qp, queryValue.toString())
+        }
       }
-    }
-    delete request[qp]
-  })
+      delete request.query?.[qp]
+    })
+  }
 
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
-  const response = await fetch(`${url}/metadata/${request['id']}?${searchParams.toString()}`, {
+  const response = await fetch(`${url}/metadata/${request.path['id']}?${searchParams.toString()}`, {
     method: 'DELETE',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
-  if (!response.ok) {
-    throw new Error(await response.text())
+  const jsonResponses = [200]
+  if (jsonResponses.includes(response.status)) {
+    return {
+      statusCode: response.status,
+      headers: headersToJSON(response.headers),
+      body: await response.json()
+    }
   }
-
-  return await response.json()
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  return {
+    statusCode: response.status,
+    headers: headersToJSON(response.headers),
+    body: await response[responseType]()
+  }
 }
 
 /**  @type {import('./compliance-types.d.ts').Compliance['deleteMetadata']} */
@@ -863,15 +1208,18 @@ export const deleteMetadata = async (request) => {
   return await _deleteMetadata(baseUrl, request)
 }
 async function _postCompliance (url, request) {
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
   const response = await fetch(`${url}/compliance`, {
     method: 'POST',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
   const textResponses = [200]
@@ -882,17 +1230,11 @@ async function _postCompliance (url, request) {
       body: await response.text()
     }
   }
-  if (response.headers.get('content-type') === 'application/json') {
-    return {
-      statusCode: response.status,
-      headers: headersToJSON(response.headers),
-      body: await response.json()
-    }
-  }
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
   return {
     statusCode: response.status,
     headers: headersToJSON(response.headers),
-    body: await response.text()
+    body: await response[responseType]()
   }
 }
 
@@ -901,15 +1243,18 @@ export const postCompliance = async (request) => {
   return await _postCompliance(baseUrl, request)
 }
 async function _postMetadata (url, request) {
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
   const response = await fetch(`${url}/metadata`, {
     method: 'POST',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
   const textResponses = [200]
@@ -920,17 +1265,11 @@ async function _postMetadata (url, request) {
       body: await response.text()
     }
   }
-  if (response.headers.get('content-type') === 'application/json') {
-    return {
-      statusCode: response.status,
-      headers: headersToJSON(response.headers),
-      body: await response.json()
-    }
-  }
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
   return {
     statusCode: response.status,
     headers: headersToJSON(response.headers),
-    body: await response.text()
+    body: await response[responseType]()
   }
 }
 
@@ -939,15 +1278,18 @@ export const postMetadata = async (request) => {
   return await _postMetadata(baseUrl, request)
 }
 async function _postRulesName (url, request) {
+  const body = 'body' in request ? (request.body) : undefined
+  const isFormData = body instanceof FormData
   const headers = {
     ...defaultHeaders,
-    'Content-type': 'application/json; charset=utf-8'
+    ...(isFormData || body === undefined) ? {} : defaultJsonType
   }
 
-  const response = await fetch(`${url}/rules/${request['name']}`, {
+  const response = await fetch(`${url}/rules/${request.path['name']}`, {
     method: 'POST',
-    body: JSON.stringify(request),
-    headers
+    body: isFormData ? body : JSON.stringify(body),
+    headers,
+    ...defaultFetchParams
   })
 
   const textResponses = [200]
@@ -958,17 +1300,11 @@ async function _postRulesName (url, request) {
       body: await response.text()
     }
   }
-  if (response.headers.get('content-type') === 'application/json') {
-    return {
-      statusCode: response.status,
-      headers: headersToJSON(response.headers),
-      body: await response.json()
-    }
-  }
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
   return {
     statusCode: response.status,
     headers: headersToJSON(response.headers),
-    body: await response.text()
+    body: await response[responseType]()
   }
 }
 
@@ -982,7 +1318,8 @@ async function _getRules (url, request) {
   }
 
   const response = await fetch(`${url}/rules`, {
-    headers
+    headers,
+    ...defaultFetchParams
   })
 
   const textResponses = [200]
@@ -993,17 +1330,11 @@ async function _getRules (url, request) {
       body: await response.text()
     }
   }
-  if (response.headers.get('content-type') === 'application/json') {
-    return {
-      statusCode: response.status,
-      headers: headersToJSON(response.headers),
-      body: await response.json()
-    }
-  }
+  const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
   return {
     statusCode: response.status,
     headers: headersToJSON(response.headers),
-    body: await response.text()
+    body: await response[responseType]()
   }
 }
 

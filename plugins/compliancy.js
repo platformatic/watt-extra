@@ -16,6 +16,7 @@ async function compliancy (app, _opts) {
 
     const runtime = app.watt.runtime
     const applicationId = app.instanceConfig?.applicationId
+    const instanceId = app.instanceId
     const appDir = app.env.PLT_APP_DIR
 
     const { default: build, setDefaultHeaders } = await import('../clients/compliance/compliance.mjs')
@@ -38,8 +39,11 @@ async function compliancy (app, _opts) {
 
     {
       const res = await compliancyClient.postMetadata({
-        applicationId,
-        data: compliancyMetadata
+        body: {
+          applicationId,
+          podId: instanceId,
+          data: compliancyMetadata
+        }
       })
 
       if (res.statusCode !== 200 && res.statusCode !== 201) {
@@ -51,7 +55,9 @@ async function compliancy (app, _opts) {
     }
 
     {
-      const res = await compliancyClient.postCompliance({ applicationId })
+      const res = await compliancyClient.postCompliance({
+        body: { applicationId, podId: instanceId }
+      })
       if (res.statusCode !== 200) {
         app.log.error(res, 'Failed to get compliance status')
         throw new CompliancyStatusError()
