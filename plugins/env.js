@@ -23,7 +23,9 @@ const schema = {
     PLT_MAX_WORKERS: { type: 'number' },
     PLT_VERTICAL_SCALER_COOLDOWN_SEC: { type: 'number', default: 60 },
     PLT_VERTICAL_SCALER_SCALE_UP_ELU: { type: 'number', default: 0.8 },
-    PLT_VERTICAL_SCALER_SCALE_DOWN_ELU: { type: 'number', default: 0.2 }
+    PLT_VERTICAL_SCALER_SCALE_DOWN_ELU: { type: 'number', default: 0.2 },
+    PLT_VERTICAL_SCALER_TIMEOUT_SEC: { type: 'number', default: 60 },
+    PLT_VERTICAL_SCALER_METRICS_TIME_WINDOW_SEC: { type: 'number', default: 60 }
   }
 }
 

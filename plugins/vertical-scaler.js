@@ -7,11 +7,14 @@ async function scaler (app, _opts) {
     const cooldown = app.env.PLT_VERTICAL_SCALER_COOLDOWN_SEC
     const scaleUpELU = app.env.PLT_VERTICAL_SCALER_SCALE_UP_ELU
     const scaleDownELU = app.env.PLT_VERTICAL_SCALER_SCALE_DOWN_ELU
+    const timeout = app.env.PLT_VERTICAL_SCALER_TIMEOUT_SEC
+    const timeWindowSec = app.env.PLT_VERTICAL_SCALER_METRICS_TIME_WINDOW_SEC
 
     const scalingAlgorithm = new ScalingAlgorithm({
       maxWorkers,
       scaleUpELU,
-      scaleDownELU
+      scaleDownELU,
+      timeWindowSec
     })
 
     const runtime = app.watt.runtime
@@ -28,6 +31,9 @@ async function scaler (app, _opts) {
         await checkForScaling()
       }
     })
+
+    // Timeout for the scaling down check
+    setTimeout(checkForScaling, timeout * 1000).unref()
 
     let isScaling = false
     let lastScaling = 0
