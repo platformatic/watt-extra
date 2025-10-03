@@ -123,4 +123,3 @@ test.only('should not scale an application when the scaler is the cooldown', asy
     assert.strictEqual(service2Workers.length, 2)
   }
 })
-

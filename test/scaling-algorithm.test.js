@@ -285,4 +285,3 @@ function generateHealthInfo (options = {}) {
     }
   }
 }
-
