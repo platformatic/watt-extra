@@ -48,7 +48,8 @@ async function scaler (app, _opts) {
 
         const appsWorkersInfo = {}
         for (const worker of Object.values(workersInfo)) {
-          // TODO: check worker status
+          if (worker.status === 'exited') continue
+
           const applicationId = worker.application
           appsWorkersInfo[applicationId] ??= 0
           appsWorkersInfo[applicationId]++
