@@ -9,15 +9,15 @@ test('ScalingAlgorithm - should scale down if app ELUs are lower the treshold', 
   const applicationId = 'app-1'
   const workersCount = 2
 
-  const { workersInfo, healthInfo } = generateMetadata([
+  const { appsWorkersInfo, healthInfo } = generateMetadata([
     { applicationId, maxELU: scaleDownELU, workersCount }
   ])
 
   for (const health of healthInfo) {
-    scalingAlgorithm.processWorkerHealthInfo(health)
+    scalingAlgorithm.addWorkerHealthInfo(health)
   }
 
-  const recommendations = scalingAlgorithm.getRecommendations(workersInfo)
+  const recommendations = scalingAlgorithm.getRecommendations(appsWorkersInfo)
   assert.strictEqual(recommendations.length, 1)
 
   const recommendation = recommendations[0]
@@ -32,15 +32,15 @@ test('ScalingAlgorithm - should not scale down if there is 1 worker', async () =
 
   const applicationId = 'app-1'
 
-  const { workersInfo, healthInfo } = generateMetadata([
+  const { appsWorkersInfo, healthInfo } = generateMetadata([
     { applicationId, maxELU: scaleDownELU, workersCount: 1 }
   ])
 
   for (const health of healthInfo) {
-    scalingAlgorithm.processWorkerHealthInfo(health)
+    scalingAlgorithm.addWorkerHealthInfo(health)
   }
 
-  const recommendations = scalingAlgorithm.getRecommendations(workersInfo)
+  const recommendations = scalingAlgorithm.getRecommendations(appsWorkersInfo)
   assert.strictEqual(recommendations.length, 0)
 })
 
@@ -51,15 +51,15 @@ test('ScalingAlgorithm - should scale up if the max workers is reached', async (
   const applicationId = 'app-1'
   const workersCount = maxWorkers
 
-  const { workersInfo, healthInfo } = generateMetadata([
+  const { appsWorkersInfo, healthInfo } = generateMetadata([
     { applicationId, maxELU: 1, workersCount }
   ])
 
   for (const health of healthInfo) {
-    scalingAlgorithm.processWorkerHealthInfo(health)
+    scalingAlgorithm.addWorkerHealthInfo(health)
   }
 
-  const recommendations = scalingAlgorithm.getRecommendations(workersInfo)
+  const recommendations = scalingAlgorithm.getRecommendations(appsWorkersInfo)
   assert.strictEqual(recommendations.length, 0)
 })
 
@@ -69,15 +69,15 @@ test('ScalingAlgorithm - should scale up if elu is higher than treshold', async 
 
   const applicationId = 'app-1'
 
-  const { workersInfo, healthInfo } = generateMetadata([
+  const { appsWorkersInfo, healthInfo } = generateMetadata([
     { applicationId, minELU: scaleUpELU, workersCount: 1 }
   ])
 
   for (const health of healthInfo) {
-    scalingAlgorithm.processWorkerHealthInfo(health)
+    scalingAlgorithm.addWorkerHealthInfo(health)
   }
 
-  const recommendations = scalingAlgorithm.getRecommendations(workersInfo)
+  const recommendations = scalingAlgorithm.getRecommendations(appsWorkersInfo)
   assert.strictEqual(recommendations.length, 1)
 
   const recommendation = recommendations[0]
@@ -93,7 +93,7 @@ test('ScalingAlgorithm - should not scale if elu is between tresholds', async ()
 
   const applicationId = 'app-1'
 
-  const { workersInfo, healthInfo } = generateMetadata([
+  const { appsWorkersInfo, healthInfo } = generateMetadata([
     {
       applicationId,
       minELU: scaleDownELU,
@@ -103,10 +103,10 @@ test('ScalingAlgorithm - should not scale if elu is between tresholds', async ()
   ])
 
   for (const health of healthInfo) {
-    scalingAlgorithm.processWorkerHealthInfo(health)
+    scalingAlgorithm.addWorkerHealthInfo(health)
   }
 
-  const recommendations = scalingAlgorithm.getRecommendations(workersInfo)
+  const recommendations = scalingAlgorithm.getRecommendations(appsWorkersInfo)
   assert.strictEqual(recommendations.length, 0)
 })
 
@@ -114,17 +114,17 @@ test('ScalingAlgorithm - should scale up only one app per recommendation', async
   const scaleUpELU = 0.8
   const scalingAlgorithm = new ScalingAlgorithm({ scaleUpELU })
 
-  const { workersInfo, healthInfo } = generateMetadata([
+  const { appsWorkersInfo, healthInfo } = generateMetadata([
     { applicationId: 'app-1', minELU: scaleUpELU, workersCount: 1 },
     { applicationId: 'app-2', minELU: scaleUpELU, workersCount: 1 },
     { applicationId: 'app-3', minELU: scaleUpELU, workersCount: 1 },
   ])
 
   for (const health of healthInfo) {
-    scalingAlgorithm.processWorkerHealthInfo(health)
+    scalingAlgorithm.addWorkerHealthInfo(health)
   }
 
-  const recommendations = scalingAlgorithm.getRecommendations(workersInfo)
+  const recommendations = scalingAlgorithm.getRecommendations(appsWorkersInfo)
   assert.strictEqual(recommendations.length, 1)
 
   const recommendation = recommendations[0]
@@ -143,7 +143,7 @@ test('ScalingAlgorithm - should scale up the worth application and sclale down t
     maxWorkers
   })
 
-  const { workersInfo, healthInfo } = generateMetadata([
+  const { appsWorkersInfo, healthInfo } = generateMetadata([
     { applicationId: 'app-1', elu: 0.99, workersCount: 2 },
     { applicationId: 'app-2', elu: 0.95, workersCount: 2 },
     { applicationId: 'app-3', elu: 0.6, workersCount: 2 },
@@ -151,10 +151,10 @@ test('ScalingAlgorithm - should scale up the worth application and sclale down t
   ])
 
   for (const health of healthInfo) {
-    scalingAlgorithm.processWorkerHealthInfo(health)
+    scalingAlgorithm.addWorkerHealthInfo(health)
   }
 
-  const recommendations = scalingAlgorithm.getRecommendations(workersInfo)
+  const recommendations = scalingAlgorithm.getRecommendations(appsWorkersInfo)
   assert.strictEqual(recommendations.length, 2)
 
   const scaleDownRecommendation = recommendations[0]
@@ -179,16 +179,16 @@ test('ScalingAlgorithm - should scale down app with more pods if elu are equal',
     maxWorkers
   })
 
-  const { workersInfo, healthInfo } = generateMetadata([
+  const { appsWorkersInfo, healthInfo } = generateMetadata([
     { applicationId: 'app-1', elu: 0.99, workersCount: 7 },
     { applicationId: 'app-2', elu: 0.99, workersCount: 1 },
   ])
 
   for (const health of healthInfo) {
-    scalingAlgorithm.processWorkerHealthInfo(health)
+    scalingAlgorithm.addWorkerHealthInfo(health)
   }
 
-  const recommendations = scalingAlgorithm.getRecommendations(workersInfo)
+  const recommendations = scalingAlgorithm.getRecommendations(appsWorkersInfo)
   assert.strictEqual(recommendations.length, 2)
 
   const scaleDownRecommendation = recommendations[0]
@@ -209,17 +209,17 @@ test('ScalingAlgorithm - should scale down many apps per recommendation', async 
   const appsCount = 3
   const workersCount = 4
 
-  const { workersInfo, healthInfo } = generateMetadata([
+  const { appsWorkersInfo, healthInfo } = generateMetadata([
     { applicationId: 'app-1', maxELU: scaleDownELU, workersCount },
     { applicationId: 'app-2', maxELU: scaleDownELU, workersCount },
     { applicationId: 'app-3', maxELU: scaleDownELU, workersCount },
   ])
 
   for (const health of healthInfo) {
-    scalingAlgorithm.processWorkerHealthInfo(health)
+    scalingAlgorithm.addWorkerHealthInfo(health)
   }
 
-  const recommendations = scalingAlgorithm.getRecommendations(workersInfo)
+  const recommendations = scalingAlgorithm.getRecommendations(appsWorkersInfo)
   assert.strictEqual(recommendations.length, appsCount)
 
   for (let i = 1; i <= appsCount; i++) {
@@ -235,7 +235,7 @@ function randomFloat (min, max) {
 
 function generateMetadata (apps = []) {
   const healthInfo = []
-  const workersInfo = []
+  const appsWorkersInfo = {}
 
   for (const app of apps) {
     const elu = app.elu
@@ -247,8 +247,6 @@ function generateMetadata (apps = []) {
     for (let i = 0; i < workersCount; i++) {
       const workerId = `worker-${i}`
 
-      workersInfo.push({ application: applicationId, worker: i })
-
       for (let j = 0; j < 10; j++) {
         const workerELU = elu ?? randomFloat(minELU, maxELU)
         const workerHealthInfo = generateHealthInfo({
@@ -259,15 +257,17 @@ function generateMetadata (apps = []) {
         healthInfo.push(workerHealthInfo)
       }
     }
+
+    appsWorkersInfo[applicationId] = workersCount
   }
 
-  return { healthInfo, workersInfo }
+  return { healthInfo, appsWorkersInfo }
 }
 
 function generateHealthInfo (options = {}) {
   return {
     id: options.id ?? 'worker-1',
-    applicationId: options.applicationId ?? 'app-1',
+    application: options.applicationId ?? 'app-1',
     currentHealth: {
       elu: options.elu ?? 0.1,
       heapUsed: 1024,

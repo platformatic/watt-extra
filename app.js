@@ -8,6 +8,7 @@ import scheduler from './plugins/scheduler.js'
 import auth from './plugins/auth.js'
 import update from './plugins/update.js'
 import alert from './plugins/alerts.js'
+import scaler from './plugins/vertical-scaler.js'
 import flamegraphs from './plugins/flamegraphs.js'
 
 async function buildApp (logger) {
@@ -27,6 +28,7 @@ async function buildApp (logger) {
     .use(scheduler)
     .use(update)
     .use(flamegraphs)
+    .use(scaler)
 
   await app.ready()
 

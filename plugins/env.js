@@ -2,7 +2,6 @@ import envSchema from 'env-schema'
 
 const schema = {
   type: 'object',
-  required: [],
   properties: {
     PLT_APP_NAME: { type: 'string' },
     PLT_ICC_URL: { type: 'string' },
@@ -20,7 +19,8 @@ const schema = {
     PLT_DISABLE_FLAMEGRAPHS: { type: 'boolean', default: false },
     PLT_FLAMEGRAPHS_INTERVAL_SEC: { type: 'number', default: 60 },
     PLT_JWT_EXPIRATION_OFFSET_SEC: { type: 'number', default: 60 },
-    PLT_UPDATES_RECONNECT_INTERVAL_SEC: { type: 'number', default: 1 }
+    PLT_UPDATES_RECONNECT_INTERVAL_SEC: { type: 'number', default: 1 },
+    PLT_MAX_WORKERS: { type: 'number' }
   }
 }
 
