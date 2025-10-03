@@ -4,8 +4,16 @@ import ScalingAlgorithm from '../lib/scaling-algorithm.js'
 async function scaler (app, _opts) {
   function setupScaler () {
     const maxWorkers = app.env.PLT_MAX_WORKERS ?? os.cpus().length
+    const cooldown = app.env.PLT_VERTICAL_SCALER_COOLDOWN_SEC
+    const scaleUpELU = app.env.PLT_VERTICAL_SCALER_SCALE_UP_ELU
+    const scaleDownELU = app.env.PLT_VERTICAL_SCALER_SCALE_DOWN_ELU
 
-    const scalingAlgorithm = new ScalingAlgorithm({ maxWorkers })
+    const scalingAlgorithm = new ScalingAlgorithm({
+      maxWorkers,
+      scaleUpELU,
+      scaleDownELU
+    })
+
     const runtime = app.watt.runtime
 
     runtime.on('application:worker:health', async (healthInfo) => {
@@ -13,13 +21,23 @@ async function scaler (app, _opts) {
         app.log.error('No health info received')
         return
       }
+
       scalingAlgorithm.addWorkerHealthInfo(healthInfo)
 
-      if (healthInfo.unhealthy) {
+      if (healthInfo.currentHealth.elu > scaleUpELU) {
         await checkForScaling()
       }
+    })
 
-      async function checkForScaling () {
+    let isScaling = false
+    let lastScaling = 0
+
+    async function checkForScaling () {
+      const isInCooldown = Date.now() < lastScaling + cooldown * 1000
+      if (isScaling || isInCooldown) return
+      isScaling = true
+
+      try {
         const workersInfo = await runtime.getWorkers()
 
         const appsWorkersInfo = {}
@@ -34,21 +52,29 @@ async function scaler (app, _opts) {
         if (recommendations.length > 0) {
           await applyRecommendations(recommendations)
         }
+      } catch (err) {
+        app.log.error({ err }, 'Failed to scale the app')
+      } finally {
+        isScaling = false
+        lastScaling = Date.now()
       }
-    })
+    }
 
     async function applyRecommendations (recommendations) {
       const resourcesUpdates = []
       for (const recommendation of recommendations) {
+        const { applicationId, workersCount, direction } = recommendation
+        app.log.info(`Scaling ${direction} the "${applicationId}" app to ${workersCount} workers`)
+
         resourcesUpdates.push({
-          application: recommendation.applicationId,
-          workers: recommendation.workersCount
+          application: applicationId,
+          workers: workersCount
         })
       }
-
       await runtime.updateApplicationsResources(resourcesUpdates)
     }
   }
+
   app.setupScaler = setupScaler
 }
 
