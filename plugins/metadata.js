@@ -42,6 +42,18 @@ async function metadata (app, _opts) {
           )
         )
 
+        const verticalScalerConfig = runtimeConfig.verticalScaler
+        if (verticalScalerConfig?.enabled) {
+          for (const applicationId in verticalScalerConfig.applications) {
+            const service = services.find((s) => s.id === applicationId)
+            if (service) {
+              const appScalerConfig = verticalScalerConfig.applications[applicationId]
+              service.maxWorkers = appScalerConfig.maxWorkers
+              service.minWorkers = appScalerConfig.minWorkers
+            }
+          }
+        }
+
         try {
           // There is a better way? We need to set the default headers for the client
           // every time, because the token might be expired
