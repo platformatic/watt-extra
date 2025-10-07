@@ -60,11 +60,18 @@ test('should spawn a service app sending the state', async (t) => {
   assert.strictEqual(applicationStates.length, 1)
   const [state] = applicationStates
   assert.strictEqual(state.instanceId, hostname())
-  assert.deepStrictEqual(state.state.services.length, 1)
   assert.strictEqual(
     state.state.metadata.platformaticVersion,
     platformaticVersion
   )
+
+  assert.strictEqual(state.state.services.length, 1)
+  const [service] = state.state.services
+
+  assert.strictEqual(service.id, 'main')
+  assert.strictEqual(service.workers, 1)
+  assert.strictEqual(service.maxWorkers, 1)
+  assert.strictEqual(service.minWorkers, 1)
 })
 
 test('should not fail on worker error', async (t) => {
