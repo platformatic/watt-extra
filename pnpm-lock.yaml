@@ -19,7 +19,7 @@ importers:
         version: 3.8.0
       '@platformatic/wattpm-pprof-capture':
         specifier: ^3.8.0
-        version: 3.8.0
+        version: 3.10.0
       avvio:
         specifier: ^9.1.0
         version: 9.1.0
@@ -981,8 +981,8 @@ packages:
   '@platformatic/undici-cache-memory@0.8.4':
     resolution: {integrity: sha512-/JVfPhyUW0GQkmr5lGAGOgh0lpJbTcLG8VB2uNqgNgH1fhPPFAM0l4pLSyeDzpTj2r/GJPLqhzvCgangnSHfoQ==}
 
-  '@platformatic/wattpm-pprof-capture@3.8.0':
-    resolution: {integrity: sha512-pDYm2LgFiEBg9zVlxCjSmhSI6MBqNejfLYk7JgJA9Umzqmg3ZLLKhk4RckrrrK8MaDuU9QzUsmcxJvz+ZhK0tA==}
+  '@platformatic/wattpm-pprof-capture@3.10.0':
+    resolution: {integrity: sha512-ZJL+pq8DNegw5lDiQZ9j9eRPOZDzR/+Z1dOhy94X7qYpIjZLjMgOSQ5ybKsca+lZqI6zNEE7tIX8zgIlkbtEcw==}
     engines: {node: '>=22.19.0'}
 
   '@protobufjs/aspromise@1.1.2':
@@ -4694,7 +4694,7 @@ snapshots:
 
   '@platformatic/undici-cache-memory@0.8.4': {}
 
-  '@platformatic/wattpm-pprof-capture@3.8.0':
+  '@platformatic/wattpm-pprof-capture@3.10.0':
     dependencies:
       '@datadog/pprof': 5.11.0
       '@fastify/error': 4.2.0
