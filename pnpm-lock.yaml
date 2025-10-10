@@ -74,7 +74,7 @@ importers:
         version: 3.10.0
       '@platformatic/node':
         specifier: ^3.8.0
-        version: 3.8.0
+        version: 3.10.0
       '@platformatic/service':
         specifier: ^3.8.0
         version: 3.8.0(typescript@5.9.2)
@@ -913,6 +913,10 @@ packages:
     resolution: {integrity: sha512-aFxzQqYD1ehc7CnaXfiteurZPDYv67VzlSJ2H5FDSNylV+S9WCVpCoxQIZtdShLKFq1VVPv6zGQK2w1GpPx86Q==}
     engines: {node: '>=22.19.0'}
 
+  '@platformatic/generators@3.10.0':
+    resolution: {integrity: sha512-aFxzQqYD1ehc7CnaXfiteurZPDYv67VzlSJ2H5FDSNylV+S9WCVpCoxQIZtdShLKFq1VVPv6zGQK2w1GpPx86Q==}
+    engines: {node: '>=22.19.0'}
+
   '@platformatic/generators@3.8.0':
     resolution: {integrity: sha512-p3xN0v3Kr/68WVGId/hEDW07ozYjxJegsMDUUYSuTQ1TzuQMWYx2iQgYSFGq2dWI+95o78CKAQzINlo1HgFU2Q==}
     engines: {node: '>=22.19.0'}
@@ -943,8 +947,8 @@ packages:
     resolution: {integrity: sha512-8VXaCqxe4ntuqX8tXTLwXBmZRJOY/0FacbRJTkrzB/m291+VyqqyTvFciN8oWgFel1fWp9VvxKV4pglshQ2QGQ==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/node@3.8.0':
-    resolution: {integrity: sha512-5XpBlo46GKH/NoAmcDdcS4wFYFDe2XSv4bqMfzIduQYS17wyolcGMNpzY85FXvPjmxQeNvKQ5E/T88Pj8SVAGA==}
+  '@platformatic/node@3.10.0':
+    resolution: {integrity: sha512-dyDc12OZWojavMdfHUE+MD60CLaeQ6Wc3CSbsuPECiQFUy4wqFbwsjH1ezGQCqXQVA4svthzy61QU4ZBIoh65w==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/openapi-schema-validator@3.0.0':
@@ -4507,11 +4511,11 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@platformatic/node@3.8.0':
+  '@platformatic/node@3.10.0':
     dependencies:
-      '@platformatic/basic': 3.8.0
-      '@platformatic/foundation': 3.8.0
-      '@platformatic/generators': 3.8.0
+      '@platformatic/basic': 3.10.0
+      '@platformatic/foundation': 3.10.0
+      '@platformatic/generators': 3.10.0
       json5: 2.2.3
       light-my-request: 6.6.0
     transitivePeerDependencies:
