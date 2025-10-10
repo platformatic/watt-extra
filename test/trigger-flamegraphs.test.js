@@ -224,3 +224,69 @@ test('should handle trigger-flamegraph when flamegraph upload fails', async (t) 
 
   await app.closeUpdates()
 })
+
+test('should handle trigger-heapprofile command and upload heap profiles from services', async (t) => {
+  setUpEnvironment()
+
+  const receivedMessages = []
+  const getHeapProfileReqs = []
+  let uploadResolve
+  const allUploadsComplete = new Promise((resolve) => {
+    uploadResolve = resolve
+  })
+
+  const wss = new WebSocketServer({ port: port + 3 })
+  t.after(async () => wss.close())
+
+  const { waitForClientSubscription, getWs } = setupMockIccServer(
+    wss,
+    receivedMessages,
+    true
+  )
+
+  const app = createMockApp(port + 3)
+
+  app.watt.runtime.sendCommandToApplication = async (
+    serviceId,
+    command
+  ) => {
+    if (command === 'getLastProfile') {
+      getHeapProfileReqs.push({ serviceId })
+      if (getHeapProfileReqs.length === 2) {
+        uploadResolve()
+      }
+      return { success: true }
+    }
+    return { success: false }
+  }
+
+  await updatePlugin(app)
+  await flamegraphsPlugin(app)
+
+  await app.connectToUpdates()
+  await app.setupFlamegraphs()
+
+  await waitForClientSubscription
+
+  const triggerHeapProfileMessage = {
+    command: 'trigger-heapprofile',
+  }
+
+  getWs().send(JSON.stringify(triggerHeapProfileMessage))
+
+  await allUploadsComplete
+
+  equal(getHeapProfileReqs.length, 2)
+
+  const service1Req = getHeapProfileReqs.find(
+    (f) => f.serviceId === 'service-1'
+  )
+  const service2Req = getHeapProfileReqs.find(
+    (f) => f.serviceId === 'service-2'
+  )
+
+  equal(service1Req.serviceId, 'service-1')
+  equal(service2Req.serviceId, 'service-2')
+
+  await app.closeUpdates()
+})
