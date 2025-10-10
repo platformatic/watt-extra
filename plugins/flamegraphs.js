@@ -43,7 +43,7 @@ async function flamegraphs (app, _opts) {
       return
     }
 
-    let { serviceIds, alertId } = options
+    let { serviceIds, alertId, profileType = 'cpu' } = options
 
     const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
     if (!scalerUrl) {
@@ -71,7 +71,12 @@ async function flamegraphs (app, _opts) {
 
         const url = `${scalerUrl}/pods/${podId}/services/${serviceId}/flamegraph`
 
-        app.log.info({ serviceId, podId }, 'Sending flamegraph')
+        app.log.info({ serviceId, podId, profileType }, 'Sending flamegraph')
+
+        const query = { profileType }
+        if (alertId) {
+          query.alertId = alertId
+        }
 
         const { statusCode, body } = await request(url, {
           method: 'POST',
@@ -79,7 +84,7 @@ async function flamegraphs (app, _opts) {
             'Content-Type': 'application/octet-stream',
             ...authHeaders
           },
-          query: alertId ? { alertId } : {},
+          query,
           body: profile
         })
 
