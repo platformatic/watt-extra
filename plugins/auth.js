@@ -48,7 +48,7 @@ async function authPlugin (app) {
   }
 
   const getAuthorizationHeader = async (headers = {}) => {
-    if (isTokenExpired(app.token, offset)) {
+    if (app.token && isTokenExpired(app.token, offset)) {
       app.log.info('JWT token expired, reloading')
       app.token = await loadToken()
 
@@ -74,11 +74,11 @@ async function authPlugin (app) {
 
   app.token = await loadToken()
 
-  await setInterval(async () => {
+  setInterval(async () => {
     // Check if token is expired to propagate it to the runtime
     // via the shared context
     await getAuthorizationHeader()
-  }, offset * 1000 / 2).unref()
+  }, offset ? offset * 1000 / 2 : 30000).unref()
 
   // We cannot change the global dispatcher because it's shared with the runtime main thread.
   const wattDispatcher = new Agent()

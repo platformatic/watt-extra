@@ -126,3 +126,47 @@ test('auth plugin reloads expired token', async (t) => {
   const reloadLogMessage = logMessages.find(msg => msg === 'JWT token expired, reloading')
   equal(!!reloadLogMessage, true, 'Should log message about token reload')
 })
+
+test('auth plugin does not reload when token is undefined', async (t) => {
+  const originalEnv = { ...process.env }
+
+  t.after(() => {
+    process.env = originalEnv
+  })
+
+  delete process.env.PLT_TEST_TOKEN
+
+  const logMessages = []
+  const app = {
+    log: {
+      info: (msg) => {
+        if (typeof msg === 'string') {
+          logMessages.push(msg)
+        }
+      },
+      warn: () => {},
+      error: () => {}
+    }
+  }
+
+  const server = fastify()
+  server.get('/', async (request) => {
+    return { headers: request.headers }
+  })
+  await server.listen({ port: 0 })
+  const url = `http://localhost:${server.server.address().port}`
+
+  t.after(async () => server.close())
+
+  await authPlugin(app)
+
+  equal(app.token, undefined, 'Token should be undefined when not available')
+
+  const response = await request(url, { dispatcher: app.dispatcher })
+  const responseBody = await response.body.json()
+
+  equal(response.statusCode, 200)
+  equal(responseBody.headers.authorization, 'Bearer undefined')
+  const reloadLogMessage = logMessages.find(msg => msg === 'JWT token expired, reloading')
+  equal(reloadLogMessage, undefined, 'Should not attempt to reload undefined token')
+})
