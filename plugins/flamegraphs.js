@@ -94,7 +94,11 @@ async function flamegraphs (app, _opts) {
           throw new Error(`Failed to send flamegraph: ${error}`)
         }
       } catch (err) {
-        app.log.warn({ err, serviceId, podId }, 'Failed to send flamegraph from service')
+        if (err.code === 'PLT_PPROF_NO_PROFILE_AVAILABLE') {
+          app.log.info({ serviceId, podId }, 'No profile available for the service, it might be idle')
+        } else {
+          app.log.warn({ err, serviceId, podId }, 'Failed to send flamegraph from service')
+        }
       }
     })
 
