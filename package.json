@@ -23,7 +23,7 @@
     "@platformatic/next": "^3.8.0",
     "@platformatic/node": "^3.8.0",
     "@platformatic/service": "^3.8.0",
-    "borp": "^0.20.0",
+    "borp": "^0.21.0",
     "eslint": "9",
     "fastify": "^5.4.0",
     "fastify-plugin": "^5.0.1",
