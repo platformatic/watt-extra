@@ -78,7 +78,7 @@ async function authPlugin (app) {
     // Check if token is expired to propagate it to the runtime
     // via the shared context
     await getAuthorizationHeader()
-  }, Math.max(30000, offset * 1000 / 2)).unref()
+  }, offset ? offset * 1000 / 2 : 30000).unref()
 
   // We cannot change the global dispatcher because it's shared with the runtime main thread.
   const wattDispatcher = new Agent()
