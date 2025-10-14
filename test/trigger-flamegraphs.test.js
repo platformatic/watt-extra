@@ -39,9 +39,9 @@ function createMockApp (port, includeScalerUrl = true) {
   const mockWatt = {
     runtime: {
       getApplications: () => ({
-        applications: [{ id: 'service-1' }, { id: 'service-2' }],
-      }),
-    },
+        applications: [{ id: 'service-1' }, { id: 'service-2' }]
+      })
+    }
   }
 
   const app = {
@@ -49,10 +49,10 @@ function createMockApp (port, includeScalerUrl = true) {
       info: () => {},
       error: () => {},
       warn: () => {},
-      debug: () => {},
+      debug: () => {}
     },
     instanceConfig: {
-      applicationId: 'test-application-id',
+      applicationId: 'test-application-id'
     },
     instanceId: 'test-pod-123',
     getAuthorizationHeader: async () => {
@@ -63,16 +63,18 @@ function createMockApp (port, includeScalerUrl = true) {
       PLT_APP_DIR: '/path/to/app',
       PLT_ICC_URL: `http://localhost:${port}`,
       PLT_DISABLE_FLAMEGRAPHS: false,
-      PLT_FLAMEGRAPHS_INTERVAL_SEC: 1
+      PLT_FLAMEGRAPHS_INTERVAL_SEC: 1,
+      PLT_FLAMEGRAPHS_ELU_THRESHOLD: 0,
+      PLT_FLAMEGRAPHS_GRACE_PERIOD: 0
     },
-    watt: mockWatt,
+    watt: mockWatt
   }
 
   if (includeScalerUrl) {
     app.instanceConfig.iccServices = {
       scaler: {
-        url: `http://localhost:${port}/scaler`,
-      },
+        url: `http://localhost:${port}/scaler`
+      }
     }
   }
 
@@ -125,7 +127,7 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
   await waitForClientSubscription
 
   const triggerFlamegraphMessage = {
-    command: 'trigger-flamegraph',
+    command: 'trigger-flamegraph'
   }
 
   getWs().send(JSON.stringify(triggerFlamegraphMessage))
@@ -169,7 +171,7 @@ test('should handle trigger-flamegraph when no runtime is available', async (t) 
   await waitForClientSubscription
 
   const triggerFlamegraphMessage = {
-    command: 'trigger-flamegraph',
+    command: 'trigger-flamegraph'
   }
 
   getWs().send(JSON.stringify(triggerFlamegraphMessage))
@@ -215,7 +217,7 @@ test('should handle trigger-flamegraph when flamegraph upload fails', async (t) 
   await waitForClientSubscription
 
   const triggerFlamegraphMessage = {
-    command: 'trigger-flamegraph',
+    command: 'trigger-flamegraph'
   }
 
   getWs().send(JSON.stringify(triggerFlamegraphMessage))
@@ -269,7 +271,7 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
   await waitForClientSubscription
 
   const triggerHeapProfileMessage = {
-    command: 'trigger-heapprofile',
+    command: 'trigger-heapprofile'
   }
 
   getWs().send(JSON.stringify(triggerHeapProfileMessage))
@@ -345,7 +347,7 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (
   await waitForClientSubscription
 
   const triggerFlamegraphMessage = {
-    command: 'trigger-flamegraph',
+    command: 'trigger-flamegraph'
   }
 
   getWs().send(JSON.stringify(triggerFlamegraphMessage))
@@ -414,7 +416,7 @@ test('should handle PLT_PPROF_NOT_ENOUGH_ELU error with info log', async (t) => 
   await waitForClientSubscription
 
   const triggerFlamegraphMessage = {
-    command: 'trigger-flamegraph',
+    command: 'trigger-flamegraph'
   }
 
   getWs().send(JSON.stringify(triggerFlamegraphMessage))

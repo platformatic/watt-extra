@@ -1,12 +1,17 @@
 'use strict'
 
+import { setTimeout as sleep } from 'node:timers/promises'
 import { request } from 'undici'
 
 async function flamegraphs (app, _opts) {
   const isFlamegraphsDisabled = app.env.PLT_DISABLE_FLAMEGRAPHS
   const flamegraphsIntervalSec = app.env.PLT_FLAMEGRAPHS_INTERVAL_SEC
+  const flamegraphsELUThreshold = app.env.PLT_FLAMEGRAPHS_ELU_THRESHOLD
+  const flamegraphsGracePeriod = app.env.PLT_FLAMEGRAPHS_GRACE_PERIOD
 
   const durationMillis = parseInt(flamegraphsIntervalSec) * 1000
+  const eluThreshold = parseInt(flamegraphsELUThreshold)
+  const gracePeriod = parseInt(flamegraphsGracePeriod)
 
   app.setupFlamegraphs = async () => {
     if (isFlamegraphsDisabled) {
@@ -16,6 +21,8 @@ async function flamegraphs (app, _opts) {
 
     app.log.info('Start profiling services')
 
+    await sleep(gracePeriod)
+
     const runtime = app.watt.runtime
     const { applications } = await runtime.getApplications()
 
@@ -24,7 +31,7 @@ async function flamegraphs (app, _opts) {
       const promise = runtime.sendCommandToApplication(
         application.id,
         'startProfiling',
-        { durationMillis }
+        { durationMillis, eluThreshold }
       )
       promises.push(promise)
     }
