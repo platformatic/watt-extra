@@ -291,11 +291,11 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
   await app.closeUpdates()
 })
 
-test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with warning log', async (t) => {
+test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (t) => {
   setUpEnvironment()
 
   const receivedMessages = []
-  const warnLogs = []
+  const infoLogs = []
   let errorCount = 0
   let uploadResolve
   const allUploadsComplete = new Promise((resolve) => {
@@ -312,11 +312,15 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with warning log', asyn
   )
 
   const app = createMockApp(port + 4)
-  app.log.warn = (...args) => {
-    warnLogs.push(args)
-    errorCount++
-    if (errorCount === 2) {
-      uploadResolve()
+  const originalInfo = app.log.info
+  app.log.info = (...args) => {
+    originalInfo(...args)
+    if (args[1] && args[1].includes('No profile available for the service')) {
+      infoLogs.push(args)
+      errorCount++
+      if (errorCount === 2) {
+        uploadResolve()
+      }
     }
   }
 
@@ -348,15 +352,15 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with warning log', asyn
 
   await allUploadsComplete
 
-  equal(warnLogs.length, 2)
-  equal(warnLogs[0][0].serviceId, 'service-1')
-  equal(warnLogs[0][0].podId, 'test-pod-123')
-  equal(warnLogs[0][1], 'No profile available for the service')
+  equal(infoLogs.length, 2)
+  equal(infoLogs[0][0].serviceId, 'service-1')
+  equal(infoLogs[0][0].podId, 'test-pod-123')
+  equal(infoLogs[0][1], 'No profile available for the service')
 
   await app.closeUpdates()
 })
 
-test('should handle PLT_PPROF_PROFILING_NOT_STARTED error with info log', async (t) => {
+test('should handle PLT_PPROF_NOT_ENOUGH_ELU error with info log', async (t) => {
   setUpEnvironment()
 
   const receivedMessages = []
@@ -380,7 +384,7 @@ test('should handle PLT_PPROF_PROFILING_NOT_STARTED error with info log', async 
   const originalInfo = app.log.info
   app.log.info = (...args) => {
     originalInfo(...args)
-    if (args[1] && args[1].includes('Profiling not started')) {
+    if (args[1] && args[1].includes('ELU low, CPU profiling not active')) {
       infoLogs.push(args)
       errorCount++
       if (errorCount === 2) {
@@ -394,8 +398,8 @@ test('should handle PLT_PPROF_PROFILING_NOT_STARTED error with info log', async 
     command
   ) => {
     if (command === 'getLastProfile') {
-      const error = new Error('Profiling not started - call startProfiling() first')
-      error.code = 'PLT_PPROF_PROFILING_NOT_STARTED'
+      const error = new Error('No profile available - event loop utilization has been below threshold for too long')
+      error.code = 'PLT_PPROF_NOT_ENOUGH_ELU'
       throw error
     }
     return { success: false }
@@ -420,7 +424,7 @@ test('should handle PLT_PPROF_PROFILING_NOT_STARTED error with info log', async 
   equal(infoLogs.length, 2)
   equal(infoLogs[0][0].serviceId, 'service-1')
   equal(infoLogs[0][0].podId, 'test-pod-123')
-  equal(infoLogs[0][1], 'Profiling not started for the service, it might be idle')
+  equal(infoLogs[0][1], 'ELU low, CPU profiling not active')
 
   await app.closeUpdates()
 })
