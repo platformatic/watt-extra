@@ -95,7 +95,9 @@ async function flamegraphs (app, _opts) {
         }
       } catch (err) {
         if (err.code === 'PLT_PPROF_NO_PROFILE_AVAILABLE') {
-          app.log.info({ serviceId, podId }, 'No profile available for the service, it might be idle')
+          app.log.warn({ serviceId, podId }, 'No profile available for the service')
+        } else if (err.code === 'PLT_PPROF_PROFILING_NOT_STARTED') {
+          app.log.info({ serviceId, podId }, 'Profiling not started for the service, it might be idle')
         } else {
           app.log.warn({ err, serviceId, podId }, 'Failed to send flamegraph from service')
         }
