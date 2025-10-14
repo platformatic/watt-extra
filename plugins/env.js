@@ -19,6 +19,8 @@ const schema = {
     PLT_CACHE_CONFIG: { type: 'string' },
     PLT_DISABLE_FLAMEGRAPHS: { type: 'boolean', default: false },
     PLT_FLAMEGRAPHS_INTERVAL_SEC: { type: 'number', default: 60 },
+    PLT_FLAMEGRAPHS_ELU_THRESHOLD: { type: 'number', default: 0.4 },
+    PLT_FLAMEGRAPHS_GRACE_PERIOD: { type: 'number', default: 3000 },
     PLT_JWT_EXPIRATION_OFFSET_SEC: { type: 'number', default: 60 },
     PLT_UPDATES_RECONNECT_INTERVAL_SEC: { type: 'number', default: 1 }
   }

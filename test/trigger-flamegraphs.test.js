@@ -39,9 +39,9 @@ function createMockApp (port, includeScalerUrl = true) {
   const mockWatt = {
     runtime: {
       getApplications: () => ({
-        applications: [{ id: 'service-1' }, { id: 'service-2' }],
-      }),
-    },
+        applications: [{ id: 'service-1' }, { id: 'service-2' }]
+      })
+    }
   }
 
   const app = {
@@ -49,10 +49,10 @@ function createMockApp (port, includeScalerUrl = true) {
       info: () => {},
       error: () => {},
       warn: () => {},
-      debug: () => {},
+      debug: () => {}
     },
     instanceConfig: {
-      applicationId: 'test-application-id',
+      applicationId: 'test-application-id'
     },
     instanceId: 'test-pod-123',
     getAuthorizationHeader: async () => {
@@ -63,16 +63,18 @@ function createMockApp (port, includeScalerUrl = true) {
       PLT_APP_DIR: '/path/to/app',
       PLT_ICC_URL: `http://localhost:${port}`,
       PLT_DISABLE_FLAMEGRAPHS: false,
-      PLT_FLAMEGRAPHS_INTERVAL_SEC: 1
+      PLT_FLAMEGRAPHS_INTERVAL_SEC: 1,
+      PLT_FLAMEGRAPHS_ELU_THRESHOLD: 0,
+      PLT_FLAMEGRAPHS_GRACE_PERIOD: 0
     },
-    watt: mockWatt,
+    watt: mockWatt
   }
 
   if (includeScalerUrl) {
     app.instanceConfig.iccServices = {
       scaler: {
-        url: `http://localhost:${port}/scaler`,
-      },
+        url: `http://localhost:${port}/scaler`
+      }
     }
   }
 
@@ -111,7 +113,7 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
       if (getFlamegraphReqs.length === 2) {
         uploadResolve()
       }
-      return { success: true }
+      return new Uint8Array([1, 2, 3, 4, 5])
     }
     return { success: false }
   }
@@ -125,7 +127,7 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
   await waitForClientSubscription
 
   const triggerFlamegraphMessage = {
-    command: 'trigger-flamegraph',
+    command: 'trigger-flamegraph'
   }
 
   getWs().send(JSON.stringify(triggerFlamegraphMessage))
@@ -169,7 +171,7 @@ test('should handle trigger-flamegraph when no runtime is available', async (t) 
   await waitForClientSubscription
 
   const triggerFlamegraphMessage = {
-    command: 'trigger-flamegraph',
+    command: 'trigger-flamegraph'
   }
 
   getWs().send(JSON.stringify(triggerFlamegraphMessage))
@@ -215,7 +217,7 @@ test('should handle trigger-flamegraph when flamegraph upload fails', async (t) 
   await waitForClientSubscription
 
   const triggerFlamegraphMessage = {
-    command: 'trigger-flamegraph',
+    command: 'trigger-flamegraph'
   }
 
   getWs().send(JSON.stringify(triggerFlamegraphMessage))
@@ -255,7 +257,7 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
       if (getHeapProfileReqs.length === 2) {
         uploadResolve()
       }
-      return { success: true }
+      return new Uint8Array([1, 2, 3, 4, 5])
     }
     return { success: false }
   }
@@ -269,7 +271,7 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
   await waitForClientSubscription
 
   const triggerHeapProfileMessage = {
-    command: 'trigger-heapprofile',
+    command: 'trigger-heapprofile'
   }
 
   getWs().send(JSON.stringify(triggerHeapProfileMessage))
@@ -287,6 +289,144 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
 
   equal(service1Req.serviceId, 'service-1')
   equal(service2Req.serviceId, 'service-2')
+
+  await app.closeUpdates()
+})
+
+test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (t) => {
+  setUpEnvironment()
+
+  const receivedMessages = []
+  const infoLogs = []
+  let errorCount = 0
+  let uploadResolve
+  const allUploadsComplete = new Promise((resolve) => {
+    uploadResolve = resolve
+  })
+
+  const wss = new WebSocketServer({ port: port + 4 })
+  t.after(async () => wss.close())
+
+  const { waitForClientSubscription, getWs } = setupMockIccServer(
+    wss,
+    receivedMessages,
+    true
+  )
+
+  const app = createMockApp(port + 4)
+  const originalInfo = app.log.info
+  app.log.info = (...args) => {
+    originalInfo(...args)
+    if (args[1] && args[1].includes('No profile available for the service')) {
+      infoLogs.push(args)
+      errorCount++
+      if (errorCount === 2) {
+        uploadResolve()
+      }
+    }
+  }
+
+  app.watt.runtime.sendCommandToApplication = async (
+    serviceId,
+    command
+  ) => {
+    if (command === 'getLastProfile') {
+      const error = new Error('No profile available - wait for profiling to complete or trigger manual capture')
+      error.code = 'PLT_PPROF_NO_PROFILE_AVAILABLE'
+      throw error
+    }
+    return { success: false }
+  }
+
+  await updatePlugin(app)
+  await flamegraphsPlugin(app)
+
+  await app.connectToUpdates()
+  await app.setupFlamegraphs()
+
+  await waitForClientSubscription
+
+  const triggerFlamegraphMessage = {
+    command: 'trigger-flamegraph'
+  }
+
+  getWs().send(JSON.stringify(triggerFlamegraphMessage))
+
+  await allUploadsComplete
+
+  equal(infoLogs.length, 2)
+  equal(infoLogs[0][0].serviceId, 'service-1')
+  equal(infoLogs[0][0].podId, 'test-pod-123')
+  equal(infoLogs[0][1], 'No profile available for the service')
+
+  await app.closeUpdates()
+})
+
+test('should handle PLT_PPROF_NOT_ENOUGH_ELU error with info log', async (t) => {
+  setUpEnvironment()
+
+  const receivedMessages = []
+  const infoLogs = []
+  let errorCount = 0
+  let uploadResolve
+  const allUploadsComplete = new Promise((resolve) => {
+    uploadResolve = resolve
+  })
+
+  const wss = new WebSocketServer({ port: port + 5 })
+  t.after(async () => wss.close())
+
+  const { waitForClientSubscription, getWs } = setupMockIccServer(
+    wss,
+    receivedMessages,
+    true
+  )
+
+  const app = createMockApp(port + 5)
+  const originalInfo = app.log.info
+  app.log.info = (...args) => {
+    originalInfo(...args)
+    if (args[1] && args[1].includes('ELU low, CPU profiling not active')) {
+      infoLogs.push(args)
+      errorCount++
+      if (errorCount === 2) {
+        uploadResolve()
+      }
+    }
+  }
+
+  app.watt.runtime.sendCommandToApplication = async (
+    serviceId,
+    command
+  ) => {
+    if (command === 'getLastProfile') {
+      const error = new Error('No profile available - event loop utilization has been below threshold for too long')
+      error.code = 'PLT_PPROF_NOT_ENOUGH_ELU'
+      throw error
+    }
+    return { success: false }
+  }
+
+  await updatePlugin(app)
+  await flamegraphsPlugin(app)
+
+  await app.connectToUpdates()
+  await app.setupFlamegraphs()
+
+  await waitForClientSubscription
+
+  const triggerFlamegraphMessage = {
+    command: 'trigger-flamegraph'
+  }
+
+  getWs().send(JSON.stringify(triggerFlamegraphMessage))
+
+  await allUploadsComplete
+
+  equal(infoLogs.length, 2)
+  equal(infoLogs[0][0].serviceId, 'service-1')
+  equal(infoLogs[0][0].podId, 'test-pod-123')
+  equal(infoLogs[0][1], 'ELU low, CPU profiling not active')
 
   await app.closeUpdates()
 })
