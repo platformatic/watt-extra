@@ -10,7 +10,7 @@ async function flamegraphs (app, _opts) {
   const flamegraphsGracePeriod = app.env.PLT_FLAMEGRAPHS_GRACE_PERIOD
 
   const durationMillis = parseInt(flamegraphsIntervalSec) * 1000
-  const eluThreshold = parseInt(flamegraphsELUThreshold)
+  const eluThreshold = parseFloat(flamegraphsELUThreshold)
   const gracePeriod = parseInt(flamegraphsGracePeriod)
 
   app.setupFlamegraphs = async () => {
