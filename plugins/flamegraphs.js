@@ -15,6 +15,19 @@ async function flamegraphs (app, _opts) {
 
   let workerStartedListener = null
 
+  const startProfilingOnWorker = async (runtime, workerFullId, logContext = {}) => {
+    try {
+      await runtime.sendCommandToApplication(
+        workerFullId,
+        'startProfiling',
+        { durationMillis, eluThreshold }
+      )
+    } catch (err) {
+      app.log.error({ err, ...logContext }, 'Failed to start profiling')
+      throw err
+    }
+  }
+
   app.setupFlamegraphs = async () => {
     if (isFlamegraphsDisabled) {
       app.log.info('PLT_DISABLE_FLAMEGRAPHS is set, skipping profiling')
@@ -23,19 +36,13 @@ async function flamegraphs (app, _opts) {
 
     app.log.info('Start profiling services')
 
-    await sleep(gracePeriod)
-
     const runtime = app.watt.runtime
     const workers = await runtime.getWorkers()
 
     const promises = []
     for (const [workerFullId, workerInfo] of Object.entries(workers)) {
       if (workerInfo.status === 'started') {
-        const promise = runtime.sendCommandToApplication(
-          workerFullId,
-          'startProfiling',
-          { durationMillis, eluThreshold }
-        )
+        const promise = startProfilingOnWorker(runtime, workerFullId, { workerFullId })
         promises.push(promise)
       }
     }
@@ -48,7 +55,8 @@ async function flamegraphs (app, _opts) {
     }
 
     // Listen for new workers starting and start profiling on them
-    workerStartedListener = ({ application, worker }) => {
+    workerStartedListener = async ({ application, worker }) => {
+      await sleep(gracePeriod)
       if (isFlamegraphsDisabled) {
         return
       }
@@ -56,12 +64,8 @@ async function flamegraphs (app, _opts) {
       const workerFullId = [application, worker].join(':')
       app.log.info({ application, worker }, 'Starting profiling on new worker')
 
-      runtime.sendCommandToApplication(
-        workerFullId,
-        'startProfiling',
-        { durationMillis, eluThreshold }
-      ).catch((err) => {
-        app.log.error({ err, application, worker }, 'Failed to start profiling on new worker')
+      startProfilingOnWorker(runtime, workerFullId, { application, worker }).catch(() => {
+        // Error already logged in startProfilingOnWorker
       })
     }
     runtime.on('application:worker:started', workerStartedListener)
