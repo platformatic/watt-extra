@@ -37,6 +37,7 @@ function setupMockIccServer (wss, receivedMessages, validateAuth = false) {
 
 function createMockApp (port, includeScalerUrl = true) {
   const mockWatt = {
+    areFlamegraphsEnabled: true,
     runtime: {
       getApplications: () => ({
         applications: [{ id: 'service-1' }, { id: 'service-2' }]
