@@ -16,6 +16,8 @@ async function flamegraphs (app, _opts) {
   let workerStartedListener = null
 
   const startProfilingOnWorker = async (runtime, workerFullId, logContext = {}) => {
+    await sleep(gracePeriod)
+
     try {
       await runtime.sendCommandToApplication(
         workerFullId,
@@ -55,8 +57,7 @@ async function flamegraphs (app, _opts) {
     }
 
     // Listen for new workers starting and start profiling on them
-    workerStartedListener = async ({ application, worker }) => {
-      await sleep(gracePeriod)
+    workerStartedListener = ({ application, worker }) => {
       if (isFlamegraphsDisabled) {
         return
       }
