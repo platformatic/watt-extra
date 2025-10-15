@@ -13,6 +13,8 @@ async function flamegraphs (app, _opts) {
   const eluThreshold = parseFloat(flamegraphsELUThreshold)
   const gracePeriod = parseInt(flamegraphsGracePeriod)
 
+  let workerStartedListener = null
+
   app.setupFlamegraphs = async () => {
     if (isFlamegraphsDisabled) {
       app.log.info('PLT_DISABLE_FLAMEGRAPHS is set, skipping profiling')
@@ -24,16 +26,18 @@ async function flamegraphs (app, _opts) {
     await sleep(gracePeriod)
 
     const runtime = app.watt.runtime
-    const { applications } = await runtime.getApplications()
+    const workers = await runtime.getWorkers()
 
     const promises = []
-    for (const application of applications) {
-      const promise = runtime.sendCommandToApplication(
-        application.id,
-        'startProfiling',
-        { durationMillis, eluThreshold }
-      )
-      promises.push(promise)
+    for (const [workerFullId, workerInfo] of Object.entries(workers)) {
+      if (workerInfo.status === 'started') {
+        const promise = runtime.sendCommandToApplication(
+          workerFullId,
+          'startProfiling',
+          { durationMillis, eluThreshold }
+        )
+        promises.push(promise)
+      }
     }
 
     const results = await Promise.allSettled(promises)
@@ -41,6 +45,32 @@ async function flamegraphs (app, _opts) {
       if (result.status === 'rejected') {
         app.log.error({ result }, 'Failed to start profiling')
       }
+    }
+
+    // Listen for new workers starting and start profiling on them
+    workerStartedListener = ({ application, worker }) => {
+      if (isFlamegraphsDisabled) {
+        return
+      }
+
+      const workerFullId = [application, worker].join(':')
+      app.log.info({ application, worker }, 'Starting profiling on new worker')
+
+      runtime.sendCommandToApplication(
+        workerFullId,
+        'startProfiling',
+        { durationMillis, eluThreshold }
+      ).catch((err) => {
+        app.log.error({ err, application, worker }, 'Failed to start profiling on new worker')
+      })
+    }
+    runtime.on('application:worker:started', workerStartedListener)
+  }
+
+  app.cleanupFlamegraphs = () => {
+    if (workerStartedListener && app.watt?.runtime) {
+      app.watt.runtime.removeListener('application:worker:started', workerStartedListener)
+      workerStartedListener = null
     }
   }
 
