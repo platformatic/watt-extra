@@ -23,14 +23,14 @@ async function flamegraphs (app, _opts) {
       await runtime.sendCommandToApplication(
         workerFullId,
         'startProfiling',
-        { durationMillis, eluThreshold, profileType: 'cpu' }
+        { durationMillis, eluThreshold, type: 'cpu' }
       )
 
       // Start HEAP profiling
       await runtime.sendCommandToApplication(
         workerFullId,
         'startProfiling',
-        { durationMillis, eluThreshold, profileType: 'heap' }
+        { durationMillis, eluThreshold, type: 'heap' }
       )
     } catch (err) {
       app.log.error({ err, ...logContext }, 'Failed to start profiling')
@@ -93,7 +93,7 @@ async function flamegraphs (app, _opts) {
       return
     }
 
-    let { serviceIds, alertId, profileType = 'cpu' } = options
+    let { serviceIds, alertId, type = 'cpu' } = options
 
     const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
     if (!scalerUrl) {
@@ -121,9 +121,9 @@ async function flamegraphs (app, _opts) {
 
         const url = `${scalerUrl}/pods/${podId}/services/${serviceId}/flamegraph`
 
-        app.log.info({ serviceId, podId, profileType }, 'Sending flamegraph')
+        app.log.info({ serviceId, podId, type }, 'Sending flamegraph')
 
-        const query = { profileType }
+        const query = { profileType: type }
         if (alertId) {
           query.alertId = alertId
         }
