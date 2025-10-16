@@ -28,7 +28,7 @@ test('should generate metrics with a correct labels', async (t) => {
   setUpEnvironment({
     PLT_APP_NAME: applicationName,
     PLT_APP_DIR: applicationPath,
-    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_ICC_URL: 'http://127.0.0.1:3000'
   })
 
   const app = await start()
@@ -40,7 +40,7 @@ test('should generate metrics with a correct labels', async (t) => {
 
   const { statusCode, body } = await request('http://127.0.0.1:9090/metrics', {
     headers: {
-      accept: 'application/json',
+      accept: 'application/json'
     }
   })
   assert.strictEqual(statusCode, 200)
@@ -77,7 +77,7 @@ test('should generate metrics with a custom metrics label', async (t) => {
   setUpEnvironment({
     PLT_APP_NAME: applicationName,
     PLT_APP_DIR: applicationPath,
-    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_ICC_URL: 'http://127.0.0.1:3000'
   })
 
   const app = await start()
@@ -89,7 +89,7 @@ test('should generate metrics with a custom metrics label', async (t) => {
 
   const { statusCode, body } = await request('http://127.0.0.1:9090/metrics', {
     headers: {
-      accept: 'application/json',
+      accept: 'application/json'
     }
   })
   assert.strictEqual(statusCode, 200)
@@ -103,5 +103,38 @@ test('should generate metrics with a custom metrics label', async (t) => {
     const labels = eluMetrics.values[0].labels
     assert.strictEqual(labels.applicationId, applicationId)
     assert.strictEqual(labels[applicationMetricsLabel], 'main')
+  }
+})
+
+test('should not set an applicationId label if it is undefined', async (t) => {
+  const applicationName = 'test-app'
+  const applicationPath = join(__dirname, 'fixtures', 'service-1')
+
+  delete process.env.PLT_ICC_URL
+
+  process.env.PLT_TEST_APP_1_URL = 'http://test-app-1:3042'
+  t.after(() => {
+    delete process.env.PLT_TEST_APP_1_URL
+  })
+
+  setUpEnvironment({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: applicationPath
+  })
+
+  const app = await start()
+
+  t.after(async () => {
+    await app.close()
+  })
+
+  const { statusCode, body } = await request('http://127.0.0.1:9090/metrics')
+  assert.strictEqual(statusCode, 200)
+
+  const metrics = await body.text()
+  const lines = metrics.split('\n')
+
+  for (const line of lines) {
+    assert.ok(!line.includes('applicationId'), 'applicationId label should not be set:' + line)
   }
 })
