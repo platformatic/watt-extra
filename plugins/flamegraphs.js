@@ -80,10 +80,44 @@ async function flamegraphs (app, _opts) {
     runtime.on('application:worker:started', workerStartedListener)
   }
 
-  app.cleanupFlamegraphs = () => {
+  app.cleanupFlamegraphs = async () => {
     if (workerStartedListener && app.watt?.runtime) {
       app.watt.runtime.removeListener('application:worker:started', workerStartedListener)
       workerStartedListener = null
+    }
+
+    // Explicitly stop all active profiling sessions to avoid memory corruption
+    if (!isFlamegraphsDisabled && app.watt?.runtime) {
+      try {
+        const workers = await app.watt.runtime.getWorkers()
+        const stopPromises = []
+        for (const workerFullId of Object.keys(workers)) {
+          // Stop both CPU and heap profiling on each worker
+          stopPromises.push(
+            app.watt.runtime.sendCommandToApplication(workerFullId, 'stopProfiling', { type: 'cpu' })
+              .catch(err => {
+                // Ignore errors if profiling wasn't running
+                if (err.code !== 'PLT_PPROF_PROFILING_NOT_STARTED') {
+                  app.log.warn({ err, workerFullId }, 'Failed to stop CPU profiling')
+                }
+              })
+          )
+          stopPromises.push(
+            app.watt.runtime.sendCommandToApplication(workerFullId, 'stopProfiling', { type: 'heap' })
+              .catch(err => {
+                // Ignore errors if profiling wasn't running
+                if (err.code !== 'PLT_PPROF_PROFILING_NOT_STARTED') {
+                  app.log.warn({ err, workerFullId }, 'Failed to stop heap profiling')
+                }
+              })
+          )
+        }
+        await Promise.all(stopPromises)
+        // Small delay to ensure native cleanup completes
+        await sleep(100)
+      } catch (err) {
+        app.log.warn({ err }, 'Failed to stop profiling during cleanup')
+      }
     }
   }
 

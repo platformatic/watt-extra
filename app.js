@@ -113,15 +113,7 @@ async function buildApp (logger) {
   app.close = async function close () {
     app.log.info('Closing runtime')
     if (app.cleanupFlamegraphs) {
-      app.cleanupFlamegraphs()
-      // Give native profilers time to finish their cleanup to avoid memory corruption
-      // Wait for the profiling interval duration plus buffer to ensure active sessions complete
-      // Only delay if flamegraphs were actually enabled
-      if (!app.env.PLT_DISABLE_FLAMEGRAPHS) {
-        const intervalSec = parseInt(app.env.PLT_FLAMEGRAPHS_INTERVAL_SEC) || 2
-        const delayMs = (intervalSec * 1000) + 500 // profiling duration + 500ms buffer
-        await setTimeout(delayMs)
-      }
+      await app.cleanupFlamegraphs()
     }
     if (app.watt.runtime) {
       await app.watt.close()
