@@ -19,10 +19,18 @@ async function flamegraphs (app, _opts) {
     await sleep(gracePeriod)
 
     try {
+      // Start CPU profiling
       await runtime.sendCommandToApplication(
         workerFullId,
         'startProfiling',
-        { durationMillis, eluThreshold }
+        { durationMillis, eluThreshold, profileType: 'cpu' }
+      )
+
+      // Start HEAP profiling
+      await runtime.sendCommandToApplication(
+        workerFullId,
+        'startProfiling',
+        { durationMillis, eluThreshold, profileType: 'heap' }
       )
     } catch (err) {
       app.log.error({ err, ...logContext }, 'Failed to start profiling')
