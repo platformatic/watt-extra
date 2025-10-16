@@ -521,13 +521,13 @@ test('should start profiling on new workers that start after initial setup', asy
 
   equal(startProfilingCalls.length, 4)
   equal(startProfilingCalls[0].serviceId, 'service-1:0')
-  equal(startProfilingCalls[0].options.profileType, 'cpu')
+  equal(startProfilingCalls[0].options.type, 'cpu')
   equal(startProfilingCalls[1].serviceId, 'service-1:0')
-  equal(startProfilingCalls[1].options.profileType, 'heap')
+  equal(startProfilingCalls[1].options.type, 'heap')
   equal(startProfilingCalls[2].serviceId, 'service-2:0')
-  equal(startProfilingCalls[2].options.profileType, 'cpu')
+  equal(startProfilingCalls[2].options.type, 'cpu')
   equal(startProfilingCalls[3].serviceId, 'service-2:0')
-  equal(startProfilingCalls[3].options.profileType, 'heap')
+  equal(startProfilingCalls[3].options.type, 'heap')
 
   app.watt.runtime.emit('application:worker:started', {
     application: 'service-1',
@@ -541,11 +541,11 @@ test('should start profiling on new workers that start after initial setup', asy
   equal(startProfilingCalls[4].serviceId, 'service-1:1')
   equal(startProfilingCalls[4].options.durationMillis, 1000)
   equal(startProfilingCalls[4].options.eluThreshold, 0)
-  equal(startProfilingCalls[4].options.profileType, 'cpu')
+  equal(startProfilingCalls[4].options.type, 'cpu')
   equal(startProfilingCalls[5].serviceId, 'service-1:1')
   equal(startProfilingCalls[5].options.durationMillis, 1000)
   equal(startProfilingCalls[5].options.eluThreshold, 0)
-  equal(startProfilingCalls[5].options.profileType, 'heap')
+  equal(startProfilingCalls[5].options.type, 'heap')
 
   if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
   await app.closeUpdates()
