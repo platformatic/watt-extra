@@ -113,7 +113,7 @@ async function flamegraphs (app, _opts) {
 
     const uploadPromises = serviceIds.map(async (serviceId) => {
       try {
-        const profile = await runtime.sendCommandToApplication(serviceId, 'getLastProfile')
+        const profile = await runtime.sendCommandToApplication(serviceId, 'getLastProfile', { type: profileType })
         if (!profile || !(profile instanceof Uint8Array)) {
           app.log.error({ serviceId }, 'Failed to get profile from service')
           return

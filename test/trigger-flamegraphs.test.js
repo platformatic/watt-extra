@@ -286,8 +286,12 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
 
   app.watt.runtime.sendCommandToApplication = async (
     serviceId,
-    command
+    command,
+    options
   ) => {
+    if (options && options.type) {
+      equal(options.type, 'heap')
+    }
     if (command === 'startProfiling') {
       return { success: true }
     }
