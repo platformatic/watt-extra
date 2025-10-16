@@ -115,6 +115,8 @@ async function buildApp (logger) {
     if (app.cleanupFlamegraphs) {
       app.cleanupFlamegraphs()
     }
+    // Give native profilers time to finish their cleanup to avoid memory corruption
+    await setTimeout(500)
     if (app.watt.runtime) {
       await app.watt.close()
     }
