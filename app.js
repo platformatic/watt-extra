@@ -115,9 +115,12 @@ async function buildApp (logger) {
     if (app.cleanupFlamegraphs) {
       app.cleanupFlamegraphs()
       // Give native profilers time to finish their cleanup to avoid memory corruption
+      // Wait for the profiling interval duration plus buffer to ensure active sessions complete
       // Only delay if flamegraphs were actually enabled
       if (!app.env.PLT_DISABLE_FLAMEGRAPHS) {
-        await setTimeout(500)
+        const intervalSec = parseInt(app.env.PLT_FLAMEGRAPHS_INTERVAL_SEC) || 2
+        const delayMs = (intervalSec * 1000) + 500 // profiling duration + 500ms buffer
+        await setTimeout(delayMs)
       }
     }
     if (app.watt.runtime) {
