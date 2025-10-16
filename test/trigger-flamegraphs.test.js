@@ -36,11 +36,38 @@ function setupMockIccServer (wss, receivedMessages, validateAuth = false) {
 }
 
 function createMockApp (port, includeScalerUrl = true) {
+  const eventListeners = new Map()
+
   const mockWatt = {
     runtime: {
-      getApplications: () => ({
+      getWorkers: async () => ({
+        'service-1:0': { application: 'service-1', worker: 0, status: 'started' },
+        'service-2:0': { application: 'service-2', worker: 0, status: 'started' }
+      }),
+      getApplications: async () => ({
         applications: [{ id: 'service-1' }, { id: 'service-2' }]
-      })
+      }),
+      on: (event, listener) => {
+        if (!eventListeners.has(event)) {
+          eventListeners.set(event, [])
+        }
+        eventListeners.get(event).push(listener)
+      },
+      removeListener: (event, listener) => {
+        const listeners = eventListeners.get(event)
+        if (listeners) {
+          const index = listeners.indexOf(listener)
+          if (index !== -1) {
+            listeners.splice(index, 1)
+          }
+        }
+      },
+      emit: (event, ...args) => {
+        const listeners = eventListeners.get(event) || []
+        for (const listener of listeners) {
+          listener(...args)
+        }
+      }
     }
   }
 
@@ -108,6 +135,9 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
     serviceId,
     command
   ) => {
+    if (command === 'startProfiling') {
+      return { success: true }
+    }
     if (command === 'getLastProfile') {
       getFlamegraphReqs.push({ serviceId })
       if (getFlamegraphReqs.length === 2) {
@@ -146,6 +176,7 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
   equal(service1Req.serviceId, 'service-1')
   equal(service2Req.serviceId, 'service-2')
 
+  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
   await app.closeUpdates()
 })
 
@@ -178,6 +209,7 @@ test('should handle trigger-flamegraph when no runtime is available', async (t) 
 
   await sleep(100)
 
+  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
   await app.closeUpdates()
 })
 
@@ -202,6 +234,9 @@ test('should handle trigger-flamegraph when flamegraph upload fails', async (t) 
     command,
     options
   ) => {
+    if (command === 'startProfiling') {
+      return { success: true }
+    }
     if (command === 'sendFlamegraph' && options.url && options.headers) {
       throw new Error('Flamegraph upload failed')
     }
@@ -224,6 +259,7 @@ test('should handle trigger-flamegraph when flamegraph upload fails', async (t) 
 
   await sleep(100)
 
+  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
   await app.closeUpdates()
 })
 
@@ -252,6 +288,9 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
     serviceId,
     command
   ) => {
+    if (command === 'startProfiling') {
+      return { success: true }
+    }
     if (command === 'getLastProfile') {
       getHeapProfileReqs.push({ serviceId })
       if (getHeapProfileReqs.length === 2) {
@@ -290,6 +329,7 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
   equal(service1Req.serviceId, 'service-1')
   equal(service2Req.serviceId, 'service-2')
 
+  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
   await app.closeUpdates()
 })
 
@@ -330,6 +370,9 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (
     serviceId,
     command
   ) => {
+    if (command === 'startProfiling') {
+      return { success: true }
+    }
     if (command === 'getLastProfile') {
       const error = new Error('No profile available - wait for profiling to complete or trigger manual capture')
       error.code = 'PLT_PPROF_NO_PROFILE_AVAILABLE'
@@ -359,6 +402,7 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (
   equal(infoLogs[0][0].podId, 'test-pod-123')
   equal(infoLogs[0][1], 'No profile available for the service')
 
+  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
   await app.closeUpdates()
 })
 
@@ -399,6 +443,9 @@ test('should handle PLT_PPROF_NOT_ENOUGH_ELU error with info log', async (t) => 
     serviceId,
     command
   ) => {
+    if (command === 'startProfiling') {
+      return { success: true }
+    }
     if (command === 'getLastProfile') {
       const error = new Error('No profile available - event loop utilization has been below threshold for too long')
       error.code = 'PLT_PPROF_NOT_ENOUGH_ELU'
@@ -428,5 +475,116 @@ test('should handle PLT_PPROF_NOT_ENOUGH_ELU error with info log', async (t) => 
   equal(infoLogs[0][0].podId, 'test-pod-123')
   equal(infoLogs[0][1], 'ELU low, CPU profiling not active')
 
+  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
+  await app.closeUpdates()
+})
+
+test('should start profiling on new workers that start after initial setup', async (t) => {
+  setUpEnvironment()
+
+  const receivedMessages = []
+  const startProfilingCalls = []
+
+  const wss = new WebSocketServer({ port: port + 6 })
+  t.after(async () => wss.close())
+
+  const { waitForClientSubscription } = setupMockIccServer(
+    wss,
+    receivedMessages,
+    false
+  )
+
+  const app = createMockApp(port + 6)
+
+  app.watt.runtime.sendCommandToApplication = async (
+    serviceId,
+    command,
+    options
+  ) => {
+    if (command === 'startProfiling') {
+      startProfilingCalls.push({ serviceId, options })
+    }
+    return { success: true }
+  }
+
+  await updatePlugin(app)
+  await flamegraphsPlugin(app)
+
+  await app.connectToUpdates()
+  await app.setupFlamegraphs()
+
+  await waitForClientSubscription
+
+  equal(startProfilingCalls.length, 2)
+  equal(startProfilingCalls[0].serviceId, 'service-1:0')
+  equal(startProfilingCalls[1].serviceId, 'service-2:0')
+
+  app.watt.runtime.emit('application:worker:started', {
+    application: 'service-1',
+    worker: 1,
+    workersCount: 2
+  })
+
+  await sleep(10)
+
+  equal(startProfilingCalls.length, 3)
+  equal(startProfilingCalls[2].serviceId, 'service-1:1')
+  equal(startProfilingCalls[2].options.durationMillis, 1000)
+  equal(startProfilingCalls[2].options.eluThreshold, 0)
+
+  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
+  await app.closeUpdates()
+})
+
+test('should not start profiling on new workers when flamegraphs are disabled', async (t) => {
+  setUpEnvironment()
+
+  const receivedMessages = []
+  const startProfilingCalls = []
+
+  const wss = new WebSocketServer({ port: port + 7 })
+  t.after(async () => wss.close())
+
+  const { waitForClientSubscription } = setupMockIccServer(
+    wss,
+    receivedMessages,
+    false
+  )
+
+  const app = createMockApp(port + 7)
+  app.env.PLT_DISABLE_FLAMEGRAPHS = true
+
+  app.watt.runtime.sendCommandToApplication = async (
+    serviceId,
+    command,
+    options
+  ) => {
+    if (command === 'startProfiling') {
+      startProfilingCalls.push({ serviceId, options })
+    }
+    return { success: true }
+  }
+
+  await updatePlugin(app)
+  await flamegraphsPlugin(app)
+
+  await app.connectToUpdates()
+  await app.setupFlamegraphs()
+
+  await waitForClientSubscription
+
+  equal(startProfilingCalls.length, 0)
+
+  app.watt.runtime.emit('application:worker:started', {
+    application: 'service-1',
+    worker: 1,
+    workersCount: 2
+  })
+
+  await sleep(10)
+
+  equal(startProfilingCalls.length, 0)
+
+  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
   await app.closeUpdates()
 })
