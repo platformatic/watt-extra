@@ -23,14 +23,14 @@ async function flamegraphs (app, _opts) {
       await runtime.sendCommandToApplication(
         workerFullId,
         'startProfiling',
-        { durationMillis, eluThreshold, profileType: 'cpu' }
+        { durationMillis, eluThreshold, type: 'cpu' }
       )
 
       // Start HEAP profiling
       await runtime.sendCommandToApplication(
         workerFullId,
         'startProfiling',
-        { durationMillis, eluThreshold, profileType: 'heap' }
+        { durationMillis, eluThreshold, type: 'heap' }
       )
     } catch (err) {
       app.log.error({ err, ...logContext }, 'Failed to start profiling')
@@ -80,10 +80,44 @@ async function flamegraphs (app, _opts) {
     runtime.on('application:worker:started', workerStartedListener)
   }
 
-  app.cleanupFlamegraphs = () => {
+  app.cleanupFlamegraphs = async () => {
     if (workerStartedListener && app.watt?.runtime) {
       app.watt.runtime.removeListener('application:worker:started', workerStartedListener)
       workerStartedListener = null
+    }
+
+    // Explicitly stop all active profiling sessions to avoid memory corruption
+    if (!isFlamegraphsDisabled && app.watt?.runtime) {
+      try {
+        const workers = await app.watt.runtime.getWorkers()
+        const stopPromises = []
+        for (const workerFullId of Object.keys(workers)) {
+          // Stop both CPU and heap profiling on each worker
+          stopPromises.push(
+            app.watt.runtime.sendCommandToApplication(workerFullId, 'stopProfiling', { type: 'cpu' })
+              .catch(err => {
+                // Ignore errors if profiling wasn't running
+                if (err.code !== 'PLT_PPROF_PROFILING_NOT_STARTED') {
+                  app.log.warn({ err, workerFullId }, 'Failed to stop CPU profiling')
+                }
+              })
+          )
+          stopPromises.push(
+            app.watt.runtime.sendCommandToApplication(workerFullId, 'stopProfiling', { type: 'heap' })
+              .catch(err => {
+                // Ignore errors if profiling wasn't running
+                if (err.code !== 'PLT_PPROF_PROFILING_NOT_STARTED') {
+                  app.log.warn({ err, workerFullId }, 'Failed to stop heap profiling')
+                }
+              })
+          )
+        }
+        await Promise.all(stopPromises)
+        // Small delay to ensure native cleanup completes
+        await sleep(100)
+      } catch (err) {
+        app.log.warn({ err }, 'Failed to stop profiling during cleanup')
+      }
     }
   }
 
@@ -113,7 +147,7 @@ async function flamegraphs (app, _opts) {
 
     const uploadPromises = serviceIds.map(async (serviceId) => {
       try {
-        const profile = await runtime.sendCommandToApplication(serviceId, 'getLastProfile')
+        const profile = await runtime.sendCommandToApplication(serviceId, 'getLastProfile', { type: profileType })
         if (!profile || !(profile instanceof Uint8Array)) {
           app.log.error({ serviceId }, 'Failed to get profile from service')
           return

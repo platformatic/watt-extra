@@ -52,8 +52,6 @@ test('should send alert when service becomes unhealthy', async (t) => {
   const app = await start()
   app.getAuthorizationHeader = getAuthorizationHeader
 
-  await app.setupAlerts()
-
   t.after(async () => {
     await app.close()
     await icc.close()
@@ -131,8 +129,6 @@ test('should not send alert when service is healthy', async (t) => {
   const app = await start()
   app.getAuthorizationHeader = getAuthorizationHeader
 
-  await app.setupAlerts()
-
   t.after(async () => {
     await app.close()
     await icc.close()
@@ -198,8 +194,6 @@ test('should cache health data and include it in alerts', async (t) => {
 
   const app = await start()
   app.getAuthorizationHeader = getAuthorizationHeader
-
-  await app.setupAlerts()
 
   t.after(async () => {
     await app.close()
@@ -314,8 +308,6 @@ test('should not fail when health info is missing', async (t) => {
   const app = await start()
   app.getAuthorizationHeader = getAuthorizationHeader
 
-  await app.setupAlerts()
-
   t.after(async () => {
     await app.close()
     await icc.close()
@@ -364,8 +356,6 @@ test('should respect alert retention window', async (t) => {
   const app = await start()
 
   app.getAuthorizationHeader = getAuthorizationHeader
-
-  await app.setupAlerts()
 
   t.after(async () => {
     await app.close()
@@ -489,8 +479,6 @@ test('should send alert when flamegraphs are disabled', async (t) => {
   const app = await start()
   app.getAuthorizationHeader = getAuthorizationHeader
 
-  await app.setupAlerts()
-
   t.after(async () => {
     await app.close()
     await icc.close()
@@ -567,8 +555,6 @@ test('should send alert when failed to send a flamegraph', async (t) => {
 
   const app = await start()
   app.getAuthorizationHeader = getAuthorizationHeader
-
-  await app.setupAlerts()
 
   t.after(async () => {
     await app.close()

@@ -112,6 +112,9 @@ async function buildApp (logger) {
 
   app.close = async function close () {
     app.log.info('Closing runtime')
+    if (app.cleanupFlamegraphs) {
+      await app.cleanupFlamegraphs()
+    }
     if (app.watt.runtime) {
       await app.watt.close()
     }
