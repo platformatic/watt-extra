@@ -39,6 +39,7 @@ function createMockApp (port, includeScalerUrl = true) {
   const eventListeners = new Map()
 
   const mockWatt = {
+    areFlamegraphsEnabled: true,
     runtime: {
       getWorkers: async () => ({
         'service-1:0': { application: 'service-1', worker: 0, status: 'started' },

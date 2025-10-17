@@ -4,7 +4,6 @@ import { setTimeout as sleep } from 'node:timers/promises'
 import { request } from 'undici'
 
 async function flamegraphs (app, _opts) {
-  const isFlamegraphsDisabled = app.env.PLT_DISABLE_FLAMEGRAPHS
   const flamegraphsIntervalSec = app.env.PLT_FLAMEGRAPHS_INTERVAL_SEC
   const flamegraphsELUThreshold = app.env.PLT_FLAMEGRAPHS_ELU_THRESHOLD
   const flamegraphsGracePeriod = app.env.PLT_FLAMEGRAPHS_GRACE_PERIOD
@@ -39,8 +38,8 @@ async function flamegraphs (app, _opts) {
   }
 
   app.setupFlamegraphs = async () => {
-    if (isFlamegraphsDisabled) {
-      app.log.info('PLT_DISABLE_FLAMEGRAPHS is set, skipping profiling')
+    if (!app.watt.areFlamegraphsEnabled) {
+      app.log.info('flamegraphs are disabled, skipping profiling')
       return
     }
 
@@ -122,8 +121,8 @@ async function flamegraphs (app, _opts) {
   }
 
   app.sendFlamegraphs = async (options = {}) => {
-    if (isFlamegraphsDisabled) {
-      app.log.info('PLT_DISABLE_FLAMEGRAPHS is set, flamegraphs are disabled')
+    if (!app.watt.areFlamegraphsEnabled) {
+      app.log.info('flamegraphs are disabled')
       return
     }
 

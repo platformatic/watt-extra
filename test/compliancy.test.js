@@ -61,10 +61,12 @@ test('should retrieve and send compliancy metadata', async (t) => {
       runtime: {
         current: {
           '@platformatic/runtime': platformaticVersion,
+          '@platformatic/wattpm-pprof-capture': platformaticVersion,
           '@foo/bar-1': '1.2.3'
         },
         dependencies: {
           '@platformatic/runtime': 'workspace:*',
+          '@platformatic/wattpm-pprof-capture': 'workspace:*',
           '@foo/bar-1': '^1.0.0',
           missing: '^1.33.3'
         }
@@ -73,10 +75,12 @@ test('should retrieve and send compliancy metadata', async (t) => {
         main: {
           current: {
             '@platformatic/runtime': platformaticVersion,
+            '@platformatic/wattpm-pprof-capture': platformaticVersion,
             '@foo/bar-1': '1.2.3'
           },
           dependencies: {
             '@platformatic/runtime': 'workspace:*',
+            '@platformatic/wattpm-pprof-capture': 'workspace:*',
             '@foo/bar-1': '^1.0.0',
             missing: '^1.33.3'
           }
