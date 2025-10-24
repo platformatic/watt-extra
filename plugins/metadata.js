@@ -42,15 +42,17 @@ async function metadata (app, _opts) {
           )
         )
 
-        const verticalScalerConfig = runtimeConfig.verticalScaler
-        if (verticalScalerConfig?.enabled) {
-          for (const applicationId in verticalScalerConfig.applications) {
-            const service = services.find((s) => s.id === applicationId)
-            if (service) {
-              const appScalerConfig = verticalScalerConfig.applications[applicationId]
-              service.maxWorkers = appScalerConfig.maxWorkers
-              service.minWorkers = appScalerConfig.minWorkers
-            }
+        const workersCount = getWorkersCount(runtimeConfig)
+        for (const service of services) {
+          const serviceWorkers = workersCount[service.id]
+          if (serviceWorkers?.workers) {
+            service.workers = serviceWorkers.workers
+          }
+          if (serviceWorkers?.minWorkers) {
+            service.minWorkers = serviceWorkers.minWorkers
+          }
+          if (serviceWorkers?.maxWorkers) {
+            service.maxWorkers = serviceWorkers.maxWorkers
           }
         }
 
@@ -91,6 +93,42 @@ async function metadata (app, _opts) {
     }
   }
   app.sendMetadata = sendMetadata
+
+  function getWorkersCount (runtimeConfig) {
+    const verticalScalerConfig = runtimeConfig.verticalScaler
+    const serviceWorkers = {}
+
+    for (const application of runtimeConfig.applications) {
+      const { workers } = application
+      if (!workers) continue
+
+      if (typeof workers === 'number') {
+        serviceWorkers[application.id] = {
+          workers,
+          minWorkers: workers,
+          maxWorkers: workers
+        }
+      }
+      if (typeof workers === 'object') {
+        serviceWorkers[application.id] = {
+          workers: workers.static,
+          minWorkers: workers.minimum ?? workers.static,
+          maxWorkers: workers.maximum ?? workers.static
+        }
+      }
+    }
+
+    if (verticalScalerConfig?.enabled) {
+      for (const applicationId in verticalScalerConfig.applications) {
+        const scalingConfig = verticalScalerConfig.applications[applicationId]
+        serviceWorkers[applicationId] ??= {}
+        serviceWorkers[applicationId].maxWorkers ??= scalingConfig.maxWorkers
+        serviceWorkers[applicationId].minWorkers ??= scalingConfig.minWorkers
+      }
+    }
+
+    return serviceWorkers
+  }
 }
 
 export default metadata
