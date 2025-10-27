@@ -26,6 +26,13 @@ class HealthSignalsCache {
 }
 
 async function healthSignals (app, _opts) {
+  const signalsCaches = {}
+  const servicesSendingStatuses = {}
+
+  // TODO: needed to the UI compatibility
+  // remove after depricating the Scaler v1 UI
+  const servicesMetrics = {}
+
   async function setupHealthSignals () {
     const scalerAlgorithmVersion = app.env.PLT_SCALER_ALGORITHM_VERSION
     if (scalerAlgorithmVersion !== 'v2') return
@@ -64,7 +71,7 @@ async function healthSignals (app, _opts) {
         healthSignals
       } = healthInfo
 
-      const { elu, heapUsed } = currentHealth
+      const { elu, heapUsed, heapTotal } = currentHealth
 
       if (elu > eluThreshold) {
         healthSignals.push({
@@ -91,15 +98,24 @@ async function healthSignals (app, _opts) {
         })
       }
 
+      // TODO: needed to the UI compatibility
+      // remove after depricating the Scaler v1 UI
+      servicesMetrics[serviceId] ??= { elu: 0, heapUsed: 0, heapTotal: 0 }
+      const metrics = servicesMetrics[serviceId]
+      if (elu > metrics.elu) {
+        metrics.elu = elu
+      }
+      if (heapUsed > metrics.heapUsed) {
+        metrics.heapUsed = heapUsed
+        metrics.heapTotal = heapTotal
+      }
+
       if (healthSignals.length > 0) {
         await sendHealthSignalsWithTimeout(serviceId, healthSignals)
       }
     })
   }
   app.setupHealthSignals = setupHealthSignals
-
-  const signalsCaches = {}
-  const servicesSendingStatuses = {}
 
   async function sendHealthSignalsWithTimeout (serviceId, signals) {
     signalsCaches[serviceId] ??= new HealthSignalsCache()
@@ -112,9 +128,13 @@ async function healthSignals (app, _opts) {
       servicesSendingStatuses[serviceId] = true
       setTimeout(async () => {
         servicesSendingStatuses[serviceId] = false
+
+        const metrics = servicesMetrics[serviceId]
+        servicesMetrics[serviceId] = null
+
         try {
           const signals = signalsCache.getAll()
-          await sendHealthSignals(serviceId, signals)
+          await sendHealthSignals(serviceId, signals, metrics)
         } catch (err) {
           app.log.error({ err }, 'Failed to send health signals to scaler')
         }
@@ -122,7 +142,7 @@ async function healthSignals (app, _opts) {
     }
   }
 
-  async function sendHealthSignals (serviceId, signals) {
+  async function sendHealthSignals (serviceId, signals, metrics) {
     const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
     const applicationId = app.instanceConfig?.applicationId
     const authHeaders = await app.getAuthorizationHeader()
@@ -133,7 +153,14 @@ async function healthSignals (app, _opts) {
         'Content-Type': 'application/json',
         ...authHeaders
       },
-      body: JSON.stringify({ applicationId, serviceId, signals })
+      body: JSON.stringify({
+        applicationId,
+        serviceId,
+        signals,
+        elu: metrics.elu,
+        heapUsed: metrics.heapUsed,
+        heapTotal: metrics.heapTotal
+      })
     })
 
     if (statusCode !== 200) {

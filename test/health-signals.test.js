@@ -93,6 +93,9 @@ test('should send health signals when service becomes unhealthy', async (t) => {
   assert.ok(receivedSignalReq, 'Alert should have been received')
   assert.strictEqual(receivedSignalReq.applicationId, applicationId)
   assert.strictEqual(receivedSignalReq.serviceId, 'main')
+  assert.ok(receivedSignalReq.elu > 0.9)
+  assert.ok(receivedSignalReq.heapUsed > 0)
+  assert.ok(receivedSignalReq.heapTotal > 0)
 
   const receivedSignals = receivedSignalReq.signals
   assert.ok(receivedSignals.length > 5)
