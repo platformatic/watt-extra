@@ -41,7 +41,7 @@
     "avvio": "^9.1.0",
     "chalk": "^4.1.2",
     "commist": "^3.2.0",
-    "env-schema": "^6.0.1",
+    "env-schema": "^7.0.0",
     "execa": "^9.6.0",
     "help-me": "^5.0.0",
     "minimist": "^1.2.8",

@@ -30,8 +30,8 @@ importers:
         specifier: ^3.2.0
         version: 3.2.0
       env-schema:
-        specifier: ^6.0.1
-        version: 6.1.0
+        specifier: ^7.0.0
+        version: 7.0.0
       execa:
         specifier: ^9.6.0
         version: 9.6.0
@@ -1665,6 +1665,9 @@ packages:
 
   env-schema@6.1.0:
     resolution: {integrity: sha512-TWtYV2jKe7bd/19kzvNGa8GRRrSwmIMarhcWBzuZYPbHtdlUdjYhnaFvxrO4+GvcwF10sEeVGzf9b/wqLIyf9A==}
+
+  env-schema@7.0.0:
+    resolution: {integrity: sha512-b8rdAwdFpekDxNAUNuT6KbV/QEX/pTBs0gjehEPmBUUteh9zBDm9zxFSQt55D29odo3rJt4feoWRqn4U/tzicw==}
 
   es-abstract@1.24.0:
     resolution: {integrity: sha512-WSzPgsdLtTcQwm4CROfS5ju2Wa1QQcVeT37jFjYzdFz1r9ahadC8B8/a4qxJxM+09F18iumCdRmlr96ZYkQvEg==}
@@ -5311,6 +5314,10 @@ snapshots:
       ajv: 8.17.1
       dotenv: 17.2.3
       dotenv-expand: 10.0.0
+
+  env-schema@7.0.0:
+    dependencies:
+      ajv: 8.17.1
 
   es-abstract@1.24.0:
     dependencies:
