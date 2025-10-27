@@ -22,6 +22,7 @@ async function start () {
 
   app.log.info('Setup health check')
   await app.setupAlerts()
+  await app.setupHealthSignals()
   await app.setupFlamegraphs()
 
   app.log.info('Sending info to ICC')

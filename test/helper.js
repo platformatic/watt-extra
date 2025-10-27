@@ -191,6 +191,9 @@ async function startICC (t, opts = {}) {
     icc.post('/alerts', async (req) => {
       return opts.processAlerts?.(req)
     })
+    icc.post('/signals', async (req) => {
+      return opts.processSignals?.(req)
+    })
     icc.post('/pods/:podId/services/:serviceId/flamegraph', async (req) => {
       return opts.processFlamegraphs?.(req)
     })

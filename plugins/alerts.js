@@ -10,6 +10,9 @@ async function alerts (app, _opts) {
   const lastServicesAlertTime = {}
 
   async function setupAlerts () {
+    const scalerAlgorithmVersion = app.env.PLT_SCALER_ALGORITHM_VERSION
+    if (scalerAlgorithmVersion !== 'v1') return
+
     // Skip alerts setup if ICC is not configured
     if (!app.env.PLT_ICC_URL) {
       app.log.info('PLT_ICC_URL not set, skipping alerts setup')
@@ -85,13 +88,13 @@ async function alerts (app, _opts) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...authHeaders,
+            ...authHeaders
           },
           body: JSON.stringify({
             applicationId: app.instanceConfig?.applicationId,
             alert: healthInfo,
-            healthHistory: healthCache,
-          }),
+            healthHistory: healthCache
+          })
         })
 
         if (statusCode !== 200) {
