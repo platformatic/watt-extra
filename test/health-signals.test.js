@@ -27,6 +27,7 @@ test('should send health signals when service becomes unhealthy', async (t) => {
   const icc = await startICC(t, {
     applicationId,
     applicationName,
+    scaler: { version: 'v2' },
     processSignals: (req) => {
       assert.equal(req.headers.authorization, 'Bearer test-token')
       receivedSignalReqs.push(req.body)
@@ -46,8 +47,7 @@ test('should send health signals when service becomes unhealthy', async (t) => {
     PLT_ICC_URL: 'http://127.0.0.1:3000',
     PLT_DISABLE_FLAMEGRAPHS: false,
     PLT_FLAMEGRAPHS_INTERVAL_SEC: 2,
-    PLT_FLAMEGRAPHS_ELU_THRESHOLD: 0,
-    PLT_SCALER_ALGORITHM_VERSION: 'v2'
+    PLT_FLAMEGRAPHS_ELU_THRESHOLD: 0
   })
 
   const app = await start()

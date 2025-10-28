@@ -1,4 +1,5 @@
 import { request } from 'undici'
+import semver from 'semver'
 import { parseMemorySize } from '@platformatic/foundation'
 
 class HealthSignalsCache {
@@ -34,8 +35,17 @@ async function healthSignals (app, _opts) {
   const servicesMetrics = {}
 
   async function setupHealthSignals () {
-    const scalerAlgorithmVersion = app.env.PLT_SCALER_ALGORITHM_VERSION
+    const scalerAlgorithmVersion = app.instanceConfig?.scaler?.version ?? 'v1'
     if (scalerAlgorithmVersion !== 'v2') return
+
+    const runtimeVersion = app.watt.getRuntimeVersion()
+    if (semver.lt(runtimeVersion, '1.4.0')) {
+      app.log.warn(
+        `Watt version "${runtimeVersion}" does not support health signals for the Signal Scaler Algorithm.` +
+          'Please update your watt-extra to version 1.4.0 or higher.'
+      )
+      return
+    }
 
     const eluThreshold = app.env.PLT_ELU_HEALTH_SIGNAL_THRESHOLD
 

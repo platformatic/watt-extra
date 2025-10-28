@@ -50,6 +50,9 @@ importers:
       pino-pretty:
         specifier: ^13.0.0
         version: 13.1.2
+      semver:
+        specifier: ^7.7.3
+        version: 7.7.3
       undici:
         specifier: ^7.11.0
         version: 7.16.0

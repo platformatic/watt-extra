@@ -10,7 +10,7 @@ async function alerts (app, _opts) {
   const lastServicesAlertTime = {}
 
   async function setupAlerts () {
-    const scalerAlgorithmVersion = app.env.PLT_SCALER_ALGORITHM_VERSION
+    const scalerAlgorithmVersion = app.instanceConfig?.scaler?.version ?? 'v1'
     if (scalerAlgorithmVersion !== 'v1') return
 
     // Skip alerts setup if ICC is not configured
