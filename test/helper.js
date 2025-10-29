@@ -35,6 +35,7 @@ async function startICC (t, opts = {}) {
     applicationId,
     applicationName,
     applicationMetricsLabel,
+    scaler,
     iccServices,
     iccConfig = {},
     enableOpenTelemetry = false,
@@ -111,6 +112,7 @@ async function startICC (t, opts = {}) {
         applicationName,
         applicationMetricsLabel,
         iccServices,
+        scaler,
         config: iccConfig,
         enableOpenTelemetry,
         enableSlicerInterceptor,
@@ -190,6 +192,9 @@ async function startICC (t, opts = {}) {
     )
     icc.post('/alerts', async (req) => {
       return opts.processAlerts?.(req)
+    })
+    icc.post('/signals', async (req) => {
+      return opts.processSignals?.(req)
     })
     icc.post('/pods/:podId/services/:serviceId/flamegraph', async (req) => {
       return opts.processFlamegraphs?.(req)

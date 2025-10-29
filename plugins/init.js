@@ -40,6 +40,8 @@ async function initPlugin (app) {
     const instanceConfig = await initApplicationInstance(instanceId, applicationName)
     app.log.info({ applicationId: instanceConfig.applicationId }, 'Got application info')
 
+    instanceConfig.scaler ??= { version: 'v1' }
+
     // Use the application name from the ICC response if not provided
     applicationName = applicationName || instanceConfig.applicationName
     app.log.info({ applicationName }, 'Application name resolved')

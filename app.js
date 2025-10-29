@@ -8,11 +8,12 @@ import scheduler from './plugins/scheduler.js'
 import auth from './plugins/auth.js'
 import update from './plugins/update.js'
 import alert from './plugins/alerts.js'
+import healthSignals from './plugins/health-signals.js'
 import flamegraphs from './plugins/flamegraphs.js'
 
 async function buildApp (logger) {
   const app = {
-    log: logger,
+    log: logger
   }
 
   avvio(app)
@@ -22,6 +23,7 @@ async function buildApp (logger) {
     .use(auth)
     .use(init)
     .use(alert)
+    .use(healthSignals)
     .use(metadata)
     .use(compliancy)
     .use(scheduler)
@@ -101,7 +103,7 @@ async function buildApp (logger) {
           {
             err: err.message,
             attemptNumber: retries,
-            nextRetryMs: currentRetryInterval,
+            nextRetryMs: currentRetryInterval
           },
           `Failed to send info to ICC, retrying in ${currentRetryInterval}ms`
         )
