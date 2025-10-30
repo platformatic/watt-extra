@@ -42,6 +42,8 @@ async function initPlugin (app) {
 
     instanceConfig.scaler ??= { version: 'v1' }
 
+    app.log.info({ scalerVersion: instanceConfig.scaler.version }, 'Scaler version configured')
+
     // Use the application name from the ICC response if not provided
     applicationName = applicationName || instanceConfig.applicationName
     app.log.info({ applicationName }, 'Application name resolved')

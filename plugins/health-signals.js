@@ -36,7 +36,11 @@ async function healthSignals (app, _opts) {
 
   async function setupHealthSignals () {
     const scalerAlgorithmVersion = app.instanceConfig?.scaler?.version ?? 'v1'
-    if (scalerAlgorithmVersion !== 'v2') return
+    if (scalerAlgorithmVersion !== 'v2') {
+      app.log.info({ scalerVersion: scalerAlgorithmVersion }, 'Skipping v2 health signals setup, scaler version is not v2')
+      return
+    }
+    app.log.info('Setting up v2 scaler health signals')
 
     const runtimeVersion = app.watt.getRuntimeVersion()
     if (semver.lt(runtimeVersion, '1.4.0')) {
