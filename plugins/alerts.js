@@ -11,7 +11,11 @@ async function alerts (app, _opts) {
 
   async function setupAlerts () {
     const scalerAlgorithmVersion = app.instanceConfig?.scaler?.version ?? 'v1'
-    if (scalerAlgorithmVersion !== 'v1') return
+    if (scalerAlgorithmVersion !== 'v1') {
+      app.log.info({ scalerVersion: scalerAlgorithmVersion }, 'Skipping v1 alerts setup, scaler version is not v1')
+      return
+    }
+    app.log.info('Setting up v1 scaler alerts')
 
     // Skip alerts setup if ICC is not configured
     if (!app.env.PLT_ICC_URL) {
