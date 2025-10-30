@@ -23,7 +23,7 @@ const schema = {
     PLT_FLAMEGRAPHS_GRACE_PERIOD: { type: 'number', default: 3000 },
     PLT_JWT_EXPIRATION_OFFSET_SEC: { type: 'number', default: 60 },
     PLT_UPDATES_RECONNECT_INTERVAL_SEC: { type: 'number', default: 1 },
-    PLT_ELU_HEALTH_SIGNAL_THRESHOLD: { type: 'number', default: 0.9 },
+    PLT_ELU_HEALTH_SIGNAL_THRESHOLD: { type: 'number', default: 0.8 },
     PLT_HEAP_HEALTH_SIGNAL_THRESHOLD: { type: ['number', 'string'], default: '4GB' }
   }
 }
