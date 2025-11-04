@@ -75,7 +75,7 @@ async function alerts (app, _opts) {
       if (healthInfo.unhealthy) {
         const currentTime = Date.now()
 
-        const serviceId = healthInfo.id
+        const serviceId = healthInfo.application
         const lastAlertTime = lastServicesAlertTime[serviceId]
 
         if (lastAlertTime && currentTime - lastAlertTime < alertRetentionWindow) {

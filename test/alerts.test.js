@@ -63,7 +63,7 @@ test('should send alert when service becomes unhealthy', async (t) => {
   // Manually trigger health event with unhealthy state
   const healthInfo = {
     id: 'main:0',
-    service: 'main',
+    application: 'main',
     currentHealth: {
       elu: 0.95,
       heapUsed: 76798040,
@@ -90,7 +90,7 @@ test('should send alert when service becomes unhealthy', async (t) => {
   assert.deepStrictEqual(alertReceived.alert, healthInfo)
   assert.ok(Array.isArray(alertReceived.healthHistory), 'Health history should be an array')
   assert.ok(alertReceived.healthHistory.length > 0, 'Health history should not be empty')
-  assert.strictEqual(alertReceived.healthHistory[0].service, 'main')
+  assert.strictEqual(alertReceived.healthHistory[0].application, 'main')
 
   assert.ok(flamegraphReceived, 'Flamegraph should have been received')
 
@@ -98,7 +98,7 @@ test('should send alert when service becomes unhealthy', async (t) => {
   assert.ok(profile, 'Profile should be decoded')
 })
 
-test('should not send alert when service is healthy', async (t) => {
+test('should not send alert when application is healthy', async (t) => {
   const applicationName = 'test-app'
   const applicationId = randomUUID()
   const applicationPath = join(__dirname, 'fixtures', 'service-1')
@@ -137,7 +137,7 @@ test('should not send alert when service is healthy', async (t) => {
   // Manually trigger health event with healthy state
   const healthInfo = {
     id: 'service-1',
-    service: 'service-1',
+    application: 'service-1',
     currentHealth: {
       elu: 0.5,
       heapUsed: 76798040,
@@ -204,7 +204,7 @@ test('should cache health data and include it in alerts', async (t) => {
   for (let i = 0; i < 3; i++) {
     const healthyInfo = {
       id: 'service-1',
-      service: 'service-1',
+      application: 'service-1',
       currentHealth: {
         elu: 0.5 + (i * 0.1), // Different values to distinguish them
         heapUsed: 76798040,
@@ -229,7 +229,7 @@ test('should cache health data and include it in alerts', async (t) => {
   // Now send an unhealthy event to trigger alert
   const unhealthyInfo = {
     id: 'service-1',
-    service: 'service-1',
+    application: 'service-1',
     currentHealth: {
       elu: 0.95,
       heapUsed: 76798040,
@@ -363,9 +363,9 @@ test('should respect alert retention window', async (t) => {
   })
 
   // Create a health info template
-  const createHealthInfo = (serviceId, unhealthy = true) => ({
-    id: serviceId,
-    service: serviceId,
+  const createHealthInfo = (applicationId, unhealthy = true) => ({
+    id: applicationId,
+    application: applicationId,
     currentHealth: {
       elu: unhealthy ? 0.95 : 0.5,
       heapUsed: 76798040,
