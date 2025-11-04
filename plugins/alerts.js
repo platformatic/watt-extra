@@ -40,7 +40,8 @@ async function alerts (app, _opts) {
       }
 
       const timestamp = Date.now()
-      const healthWithTimestamp = { ...healthInfo, timestamp }
+      const serviceId = healthInfo.application
+      const healthWithTimestamp = { ...healthInfo, timestamp, service: serviceId }
       delete healthWithTimestamp.healthConfig // we don't need to store this
 
       healthCache.push(healthWithTimestamp)
