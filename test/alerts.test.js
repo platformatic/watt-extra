@@ -254,7 +254,7 @@ test('should cache health data and include it in alerts', async (t) => {
   assert.strictEqual(alertReceived.applicationId, applicationId)
 
   assert.strictEqual(alertReceived.alert.id, unhealthyInfo.id)
-  assert.strictEqual(alertReceived.alert.service, unhealthyInfo.service)
+  assert.strictEqual(alertReceived.alert.service, unhealthyInfo.application)
   assert.strictEqual(alertReceived.alert.unhealthy, unhealthyInfo.unhealthy)
 
   assert.ok(Array.isArray(alertReceived.healthHistory), 'Health history should be an array')
@@ -489,7 +489,7 @@ test('should send alert when flamegraphs are disabled', async (t) => {
   // Manually trigger health event with unhealthy state
   const healthInfo = {
     id: 'main:0',
-    service: 'main',
+    application: 'main',
     currentHealth: {
       elu: 0.95,
       heapUsed: 76798040,
@@ -516,7 +516,7 @@ test('should send alert when flamegraphs are disabled', async (t) => {
   assert.deepStrictEqual(alertReceived.alert, healthInfo)
   assert.ok(Array.isArray(alertReceived.healthHistory), 'Health history should be an array')
   assert.ok(alertReceived.healthHistory.length > 0, 'Health history should not be empty')
-  assert.strictEqual(alertReceived.healthHistory[0].service, 'main')
+  assert.strictEqual(alertReceived.healthHistory[0].application, 'main')
   assert.equal(alertReceived.flamegraph, null, 'Flamegraph should be null')
 })
 
@@ -566,7 +566,7 @@ test('should send alert when failed to send a flamegraph', async (t) => {
   // Manually trigger health event with unhealthy state
   const healthInfo = {
     id: 'main:0',
-    service: 'main',
+    application: 'main',
     currentHealth: {
       elu: 0.95,
       heapUsed: 76798040,
@@ -593,6 +593,6 @@ test('should send alert when failed to send a flamegraph', async (t) => {
   assert.deepStrictEqual(alertReceived.alert, healthInfo)
   assert.ok(Array.isArray(alertReceived.healthHistory), 'Health history should be an array')
   assert.ok(alertReceived.healthHistory.length > 0, 'Health history should not be empty')
-  assert.strictEqual(alertReceived.healthHistory[0].service, 'main')
+  assert.strictEqual(alertReceived.healthHistory[0].application, 'main')
   assert.equal(alertReceived.flamegraph, null, 'Flamegraph should be null')
 })

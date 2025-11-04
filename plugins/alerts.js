@@ -76,6 +76,7 @@ async function alerts (app, _opts) {
         const currentTime = Date.now()
 
         const serviceId = healthInfo.application
+        healthInfo.service = serviceId // ICC expects "service" field
         const lastAlertTime = lastServicesAlertTime[serviceId]
 
         if (lastAlertTime && currentTime - lastAlertTime < alertRetentionWindow) {
