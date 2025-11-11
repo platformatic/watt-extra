@@ -1,5 +1,5 @@
 import { test } from 'node:test'
-import { equal } from 'node:assert'
+import { equal, ok, deepEqual } from 'node:assert'
 import { once } from 'node:events'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { WebSocketServer } from 'ws'
@@ -67,8 +67,16 @@ function createMockApp (port, includeScalerUrl = true) {
         for (const listener of listeners) {
           listener(...args)
         }
-      }
-    }
+      },
+      getApplicationDetails: async (id) => {
+        // Default implementation, can be overridden in tests
+        return { id, config: {} }
+      },
+      getRuntimeConfig: async () => {
+        // Default implementation, can be overridden in tests
+        return {}
+      },
+    },
   }
 
   const app = {
@@ -110,6 +118,296 @@ function createMockApp (port, includeScalerUrl = true) {
 
 const port = 14000
 
+test('setupFlamegraphs should pass sourceMaps from application config to startProfiling', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port)
+  const startProfilingCalls = []
+
+  // Mock getApplicationDetails to return config with sourceMaps for worker IDs
+  app.watt.runtime.getApplicationDetails = async (workerFullId) => {
+    if (workerFullId.startsWith('service-1')) {
+      return { id: workerFullId, config: { sourceMaps: true } }
+    } else if (workerFullId.startsWith('service-2')) {
+      return { id: workerFullId, config: { sourceMaps: false } }
+    }
+    return { id: workerFullId, config: {} }
+  }
+
+  app.watt.runtime.getRuntimeConfig = async () => {
+    return {}
+  }
+
+  app.watt.runtime.sendCommandToApplication = async (workerFullId, command, options) => {
+    if (command === 'startProfiling') {
+      startProfilingCalls.push({ workerFullId, command, options })
+      return { success: true }
+    }
+    return { success: false }
+  }
+
+  await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+
+  // Should call startProfiling 4 times: 2 workers × 2 profile types (cpu + heap)
+  equal(startProfilingCalls.length, 4, 'Should call startProfiling for both workers with cpu and heap')
+
+  const service1CpuCall = startProfilingCalls.find(c => c.workerFullId === 'service-1:0' && c.options.type === 'cpu')
+  const service1HeapCall = startProfilingCalls.find(c => c.workerFullId === 'service-1:0' && c.options.type === 'heap')
+  const service2CpuCall = startProfilingCalls.find(c => c.workerFullId === 'service-2:0' && c.options.type === 'cpu')
+  const service2HeapCall = startProfilingCalls.find(c => c.workerFullId === 'service-2:0' && c.options.type === 'heap')
+
+  ok(service1CpuCall, 'Should have called startProfiling for service-1 CPU')
+  ok(service1HeapCall, 'Should have called startProfiling for service-1 heap')
+  ok(service2CpuCall, 'Should have called startProfiling for service-2 CPU')
+  ok(service2HeapCall, 'Should have called startProfiling for service-2 heap')
+
+  equal(service1CpuCall.options.sourceMaps, true, 'Should pass sourceMaps=true for service-1 CPU')
+  equal(service1HeapCall.options.sourceMaps, true, 'Should pass sourceMaps=true for service-1 heap')
+  equal(service2CpuCall.options.sourceMaps, false, 'Should pass sourceMaps=false for service-2 CPU')
+  equal(service2HeapCall.options.sourceMaps, false, 'Should pass sourceMaps=false for service-2 heap')
+})
+
+test('setupFlamegraphs should handle missing sourceMaps in application config', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port)
+  const startProfilingCalls = []
+
+  // Mock getApplicationDetails to return config without sourceMaps
+  app.watt.runtime.getApplicationDetails = async (workerFullId) => {
+    return { id: workerFullId, config: {} }
+  }
+
+  app.watt.runtime.getRuntimeConfig = async () => {
+    return {}
+  }
+
+  app.watt.runtime.sendCommandToApplication = async (workerFullId, command, options) => {
+    if (command === 'startProfiling') {
+      startProfilingCalls.push({ workerFullId, command, options })
+      return { success: true }
+    }
+    return { success: false }
+  }
+
+  await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+
+  equal(startProfilingCalls.length, 4, 'Should call startProfiling for both workers with cpu and heap')
+
+  for (const call of startProfilingCalls) {
+    equal(call.options.sourceMaps, undefined, 'sourceMaps should be undefined when not in config')
+    equal(call.options.durationMillis, 1000, 'Should still pass duration')
+  }
+})
+
+test('setupFlamegraphs should skip profiling when PLT_DISABLE_FLAMEGRAPHS is set', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port)
+  app.env.PLT_DISABLE_FLAMEGRAPHS = true
+
+  const startProfilingCalls = []
+
+  app.watt.runtime.sendCommandToApplication = async (serviceId, command, options) => {
+    if (command === 'startProfiling') {
+      startProfilingCalls.push({ serviceId, command, options })
+      return { success: true }
+    }
+    return { success: false }
+  }
+
+  await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+
+  equal(startProfilingCalls.length, 0, 'Should not call startProfiling when disabled')
+})
+
+test('setupFlamegraphs should handle errors when starting profiling', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port)
+  const errors = []
+
+  app.log.error = (result) => {
+    errors.push(result)
+  }
+
+  app.watt.runtime.getApplicationDetails = async (workerFullId) => {
+    return { id: workerFullId, config: { sourceMaps: true } }
+  }
+
+  app.watt.runtime.getRuntimeConfig = async () => {
+    return {}
+  }
+
+  app.watt.runtime.sendCommandToApplication = async (workerFullId, command, options) => {
+    if (command === 'startProfiling') {
+      throw new Error(`Failed to start profiling for ${workerFullId}`)
+    }
+    return { success: false }
+  }
+
+  await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+
+  // Should log 4 errors (2 workers, each logged twice: once in startProfilingOnWorker, once in setupFlamegraphs)
+  equal(errors.length, 4, 'Should log errors for both failed workers')
+})
+
+test('sendFlamegraphs should upload flamegraphs from all services', async (t) => {
+  setUpEnvironment()
+
+  const uploadedFlamegraphs = []
+  const httpPort = port + 100
+
+  const app = createMockApp(httpPort)
+
+  const mockProfile = new Uint8Array([1, 2, 3, 4, 5])
+
+  app.watt.runtime.sendCommandToApplication = async (serviceId, command) => {
+    if (command === 'getLastProfile') {
+      return mockProfile
+    }
+    return { success: false }
+  }
+
+  // Mock HTTP server to receive flamegraphs
+  const { createServer } = await import('node:http')
+  const server = createServer((req, res) => {
+    const body = []
+    req.on('data', chunk => body.push(chunk))
+    req.on('end', () => {
+      const buffer = Buffer.concat(body)
+      uploadedFlamegraphs.push({
+        url: req.url,
+        headers: req.headers,
+        body: buffer
+      })
+      res.writeHead(200)
+      res.end()
+    })
+  })
+
+  await new Promise(resolve => server.listen(httpPort, resolve))
+  t.after(() => server.close())
+
+  await flamegraphsPlugin(app)
+  await app.sendFlamegraphs()
+
+  equal(uploadedFlamegraphs.length, 2, 'Should upload flamegraphs for both services')
+
+  const service1Upload = uploadedFlamegraphs.find(u => u.url.includes('service-1'))
+  const service2Upload = uploadedFlamegraphs.find(u => u.url.includes('service-2'))
+
+  ok(service1Upload, 'Should upload flamegraph for service-1')
+  ok(service2Upload, 'Should upload flamegraph for service-2')
+
+  equal(service1Upload.headers['content-type'], 'application/octet-stream')
+  equal(service1Upload.headers.authorization, 'Bearer test-token')
+  deepEqual(service1Upload.body, Buffer.from(mockProfile))
+})
+
+test('sendFlamegraphs should handle missing profile data', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port + 11)
+  const errors = []
+
+  app.log.error = (obj) => {
+    errors.push(obj)
+  }
+
+  app.watt.runtime.sendCommandToApplication = async (serviceId, command) => {
+    if (command === 'getLastProfile') {
+      // Return invalid data (not Uint8Array)
+      return null
+    }
+    return { success: false }
+  }
+
+  await flamegraphsPlugin(app)
+  await app.sendFlamegraphs()
+
+  equal(errors.length, 2, 'Should log errors for both services with missing profiles')
+})
+
+test('sendFlamegraphs should filter by serviceIds when provided', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port + 12)
+  const getProfileCalls = []
+
+  app.watt.runtime.sendCommandToApplication = async (serviceId, command) => {
+    if (command === 'getLastProfile') {
+      getProfileCalls.push(serviceId)
+      return new Uint8Array([1, 2, 3])
+    }
+    return { success: false }
+  }
+
+  // Mock HTTP server
+  const { createServer } = await import('node:http')
+  const server = createServer((req, res) => {
+    const body = []
+    req.on('data', chunk => body.push(chunk))
+    req.on('end', () => {
+      res.writeHead(200)
+      res.end()
+    })
+  })
+
+  await new Promise(resolve => server.listen(port + 12, resolve))
+  t.after(() => server.close())
+
+  await flamegraphsPlugin(app)
+  await app.sendFlamegraphs({ serviceIds: ['service-1'] })
+
+  equal(getProfileCalls.length, 1, 'Should only request profile for specified service')
+  equal(getProfileCalls[0], 'service-1', 'Should request profile for service-1')
+})
+
+test('sendFlamegraphs should skip when PLT_DISABLE_FLAMEGRAPHS is set', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port + 13)
+  app.env.PLT_DISABLE_FLAMEGRAPHS = true
+
+  const getProfileCalls = []
+
+  app.watt.runtime.sendCommandToApplication = async (serviceId, command) => {
+    if (command === 'getLastProfile') {
+      getProfileCalls.push(serviceId)
+      return new Uint8Array([1, 2, 3])
+    }
+    return { success: false }
+  }
+
+  await flamegraphsPlugin(app)
+  await app.sendFlamegraphs()
+
+  equal(getProfileCalls.length, 0, 'Should not request profiles when disabled')
+})
+
+test('sendFlamegraphs should throw error when scaler URL is missing', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port + 14, false) // Don't include scaler URL
+
+  await flamegraphsPlugin(app)
+
+  let errorThrown = false
+  try {
+    await app.sendFlamegraphs()
+  } catch (err) {
+    errorThrown = true
+    ok(err.message.includes('No scaler URL'), 'Should throw error about missing scaler URL')
+  }
+
+  ok(errorThrown, 'Should throw error when scaler URL is missing')
+})
+
 test('should handle trigger-flamegraph command and upload flamegraphs from services', async (t) => {
   setUpEnvironment()
 
@@ -120,7 +418,7 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
     uploadResolve = resolve
   })
 
-  const wss = new WebSocketServer({ port })
+  const wss = new WebSocketServer({ port: port + 15 })
   t.after(async () => wss.close())
 
   const { waitForClientSubscription, getWs } = setupMockIccServer(
@@ -129,7 +427,7 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
     true
   )
 
-  const app = createMockApp(port)
+  const app = createMockApp(port + 15)
 
   app.watt.runtime.sendCommandToApplication = async (
     serviceId,
@@ -185,7 +483,7 @@ test('should handle trigger-flamegraph when no runtime is available', async (t) 
 
   const receivedMessages = []
 
-  const wss = new WebSocketServer({ port: port + 1 })
+  const wss = new WebSocketServer({ port: port + 16 })
   t.after(async () => wss.close())
 
   const { waitForClientSubscription, getWs } = setupMockIccServer(
@@ -194,7 +492,7 @@ test('should handle trigger-flamegraph when no runtime is available', async (t) 
     false
   )
 
-  const app = createMockApp(port + 1)
+  const app = createMockApp(port + 16)
   app.watt.runtime = null
 
   await updatePlugin(app)
@@ -218,7 +516,7 @@ test('should handle trigger-flamegraph when flamegraph upload fails', async (t) 
 
   const receivedMessages = []
 
-  const wss = new WebSocketServer({ port: port + 2 })
+  const wss = new WebSocketServer({ port: port + 17 })
   t.after(async () => wss.close())
 
   const { waitForClientSubscription, getWs } = setupMockIccServer(
@@ -227,7 +525,7 @@ test('should handle trigger-flamegraph when flamegraph upload fails', async (t) 
     false
   )
 
-  const app = createMockApp(port + 2)
+  const app = createMockApp(port + 17)
 
   app.watt.runtime.sendCommandToApplication = async (
     serviceId,
@@ -602,4 +900,128 @@ test('should not start profiling on new workers when flamegraphs are disabled', 
 
   if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
   await app.closeUpdates()
+})
+
+test('sendFlamegraphs should include alertId in query params when provided', async (t) => {
+  setUpEnvironment()
+
+  const uploadedRequests = []
+
+  const app = createMockApp(port + 18)
+
+  app.watt.runtime.sendCommandToApplication = async (serviceId, command) => {
+    if (command === 'getLastProfile') {
+      return new Uint8Array([1, 2, 3])
+    }
+    return { success: false }
+  }
+
+  // Mock HTTP server to capture requests
+  const { createServer } = await import('node:http')
+  const server = createServer((req, res) => {
+    const body = []
+    req.on('data', chunk => body.push(chunk))
+    req.on('end', () => {
+      uploadedRequests.push({
+        url: req.url,
+        method: req.method
+      })
+      res.writeHead(200)
+      res.end()
+    })
+  })
+
+  await new Promise(resolve => server.listen(port + 18, resolve))
+  t.after(() => server.close())
+
+  await flamegraphsPlugin(app)
+  await app.sendFlamegraphs({ alertId: 'test-alert-123' })
+
+  equal(uploadedRequests.length, 2, 'Should upload flamegraphs for both services')
+
+  for (const req of uploadedRequests) {
+    ok(req.url.includes('alertId=test-alert-123'), 'URL should include alertId query param')
+  }
+})
+
+test('setupFlamegraphs should use runtime-level sourceMaps as fallback', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port)
+  const startProfilingCalls = []
+
+  // Mock getApplicationDetails to return config WITHOUT service-level sourceMaps
+  app.watt.runtime.getApplicationDetails = async (workerFullId) => {
+    return { id: workerFullId, config: {} }  // No sourceMaps at service level
+  }
+
+  // Mock getRuntimeConfig to return runtime-level sourceMaps
+  app.watt.runtime.getRuntimeConfig = async () => {
+    return { sourceMaps: true }  // Runtime-level default
+  }
+
+  app.watt.runtime.sendCommandToApplication = async (workerFullId, command, options) => {
+    if (command === 'startProfiling') {
+      startProfilingCalls.push({ workerFullId, command, options })
+      return { success: true }
+    }
+    return { success: false }
+  }
+
+  await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+
+  equal(startProfilingCalls.length, 4, 'Should call startProfiling for both workers with cpu and heap')
+
+  for (const call of startProfilingCalls) {
+    equal(call.options.sourceMaps, true, 'Should use runtime-level sourceMaps as fallback')
+    equal(call.options.durationMillis, 1000, 'Should still pass duration')
+  }
+})
+
+test('setupFlamegraphs should prefer service-level over runtime-level sourceMaps', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port)
+  const startProfilingCalls = []
+
+  // Mock getApplicationDetails - service-1 has explicit false, service-2 has no setting
+  app.watt.runtime.getApplicationDetails = async (workerFullId) => {
+    if (workerFullId.startsWith('service-1')) {
+      return { id: workerFullId, config: { sourceMaps: false } }  // Explicitly set to false
+    }
+    return { id: workerFullId, config: {} }  // No setting
+  }
+
+  // Mock getRuntimeConfig to return runtime-level sourceMaps = true
+  app.watt.runtime.getRuntimeConfig = async () => {
+    return { sourceMaps: true }  // Runtime-level default
+  }
+
+  app.watt.runtime.sendCommandToApplication = async (workerFullId, command, options) => {
+    if (command === 'startProfiling') {
+      startProfilingCalls.push({ workerFullId, command, options })
+      return { success: true }
+    }
+    return { success: false }
+  }
+
+  await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+
+  equal(startProfilingCalls.length, 4, 'Should call startProfiling for both workers with cpu and heap')
+
+  const service1Calls = startProfilingCalls.filter(c => c.workerFullId === 'service-1:0')
+  const service2Calls = startProfilingCalls.filter(c => c.workerFullId === 'service-2:0')
+
+  equal(service1Calls.length, 2, 'Should have 2 calls for service-1 (cpu + heap)')
+  equal(service2Calls.length, 2, 'Should have 2 calls for service-2 (cpu + heap)')
+
+  for (const call of service1Calls) {
+    equal(call.options.sourceMaps, false, 'Service-1 should use explicit false, not runtime default')
+  }
+
+  for (const call of service2Calls) {
+    equal(call.options.sourceMaps, true, 'Service-2 should inherit runtime-level true')
+  }
 })

@@ -18,19 +18,25 @@ async function flamegraphs (app, _opts) {
   const startProfilingOnWorker = async (runtime, workerFullId, logContext = {}) => {
     await sleep(gracePeriod)
 
+    const runtimeConfig = await runtime.getRuntimeConfig()
+    // Get application details to read service-level sourceMaps setting
+    const appDetails = await runtime.getApplicationDetails(workerFullId)
+    // Resolve sourceMaps: service-level overrides runtime-level (same logic as runtime.js:1440)
+    const sourceMaps = appDetails.config?.sourceMaps ?? runtimeConfig.sourceMaps
+
     try {
       // Start CPU profiling
       await runtime.sendCommandToApplication(
         workerFullId,
         'startProfiling',
-        { durationMillis, eluThreshold, type: 'cpu' }
+        { durationMillis, eluThreshold, type: 'cpu', sourceMaps }
       )
 
       // Start HEAP profiling
       await runtime.sendCommandToApplication(
         workerFullId,
         'startProfiling',
-        { durationMillis, eluThreshold, type: 'heap' }
+        { durationMillis, eluThreshold, type: 'heap', sourceMaps }
       )
     } catch (err) {
       app.log.error({ err, ...logContext }, 'Failed to start profiling')
