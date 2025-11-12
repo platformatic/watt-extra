@@ -123,7 +123,7 @@ async function alerts (app, _opts) {
     }
 
     if (app.watt.runtimeSupportsNewHealthMetrics()) {
-      // Runtime >= 3.18.0: Listen to health:metrics and construct healthInfo
+      // Runtime >= 3.18.0: Listen to health:metrics
       runtime.on('application:worker:health:metrics', async (health) => {
         if (!health) {
           app.log.error('No health info received')
@@ -156,7 +156,7 @@ async function alerts (app, _opts) {
         await processHealthInfo(healthInfo)
       })
     } else {
-      // Runtime < 3.18.0: Listen to health event directly
+      // Runtime < 3.18.0:
       runtime.on('application:worker:health', processHealthInfo)
     }
   }
