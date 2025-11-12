@@ -33,7 +33,7 @@ async function alerts (app, _opts) {
       return
     }
 
-    runtime.on('application:worker:health', async (healthInfo) => {
+    const processHealthInfo = async (healthInfo) => {
       if (!healthInfo) {
         app.log.error('No health info received')
         return
@@ -120,7 +120,45 @@ async function alerts (app, _opts) {
           app.log.error({ err }, 'Failed to send a flamegraph')
         }
       }
-    })
+    }
+
+    if (app.watt.runtimeSupportsNewHealthMetrics()) {
+      // Runtime >= 3.18.0: Listen to health:metrics and construct healthInfo
+      runtime.on('application:worker:health:metrics', async (health) => {
+        if (!health) {
+          app.log.error('No health info received')
+          return
+        }
+
+        const {
+          id,
+          application: serviceId,
+          currentHealth
+        } = health
+
+        const { elu, heapUsed, heapTotal } = currentHealth
+        const healthConfig = app.watt.getHealthConfig()
+
+        const maxELU = healthConfig?.maxELU ?? 0.99
+        const maxHeapUsed = healthConfig?.maxHeapUsed ?? 0.99
+
+        const memoryUsage = heapUsed / heapTotal
+        const unhealthy = elu > maxELU || memoryUsage > maxHeapUsed
+
+        const healthInfo = {
+          id,
+          application: serviceId,
+          currentHealth,
+          unhealthy,
+          healthConfig: healthConfig || {}
+        }
+
+        await processHealthInfo(healthInfo)
+      })
+    } else {
+      // Runtime < 3.18.0: Listen to health event directly
+      runtime.on('application:worker:health', processHealthInfo)
+    }
   }
   app.setupAlerts = setupAlerts
 }

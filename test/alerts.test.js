@@ -11,6 +11,39 @@ import { start } from '../index.js'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
+function emitHealthEvent (app, healthInfo) {
+  if (app.watt.runtimeSupportsNewHealthMetrics()) {
+    if (!healthInfo) {
+      // Emit null for testing error handling
+      app.watt.runtime.emit('application:worker:health:metrics', null)
+      return
+    }
+    // Runtime >= 3.18.0: emit health:metrics event with real event shape
+    const { id, application, currentHealth } = healthInfo
+
+    // Add currentELU to match real event shape
+    const enrichedCurrentHealth = {
+      ...currentHealth,
+      currentELU: {
+        idle: 1000,
+        active: currentHealth.elu * 1000,
+        utilization: currentHealth.elu
+      }
+    }
+
+    app.watt.runtime.emit('application:worker:health:metrics', {
+      id,
+      application,
+      worker: 0,
+      currentHealth: enrichedCurrentHealth,
+      healthSignals: []
+    })
+  } else {
+    // Runtime < 3.18.0: emit health event with full healthInfo
+    app.watt.runtime.emit('application:worker:health', healthInfo)
+  }
+}
+
 test('should send alert when service becomes unhealthy', async (t) => {
   const applicationName = 'test-app'
   const applicationId = randomUUID()
@@ -65,7 +98,7 @@ test('should send alert when service becomes unhealthy', async (t) => {
     id: 'main:0',
     application: 'main',
     currentHealth: {
-      elu: 0.95,
+      elu: 0.995,
       heapUsed: 76798040,
       heapTotal: 99721216
     },
@@ -81,15 +114,20 @@ test('should send alert when service becomes unhealthy', async (t) => {
     }
   }
 
-  app.watt.runtime.emit('application:worker:health', healthInfo)
+  emitHealthEvent(app, healthInfo)
 
   await sleep(200)
 
   assert.ok(alertReceived, 'Alert should have been received')
   assert.strictEqual(alertReceived.applicationId, applicationId)
-  assert.deepStrictEqual(alertReceived.alert, healthInfo)
+  assert.strictEqual(alertReceived.alert.id, healthInfo.id)
   assert.strictEqual(alertReceived.alert.application, 'main')
   assert.strictEqual(alertReceived.alert.service, 'main')
+  assert.strictEqual(alertReceived.alert.unhealthy, true)
+  assert.strictEqual(alertReceived.alert.currentHealth.elu, healthInfo.currentHealth.elu)
+  assert.strictEqual(alertReceived.alert.currentHealth.heapUsed, healthInfo.currentHealth.heapUsed)
+  assert.strictEqual(alertReceived.alert.currentHealth.heapTotal, healthInfo.currentHealth.heapTotal)
+  assert.strictEqual(alertReceived.alert.healthConfig, undefined, 'healthConfig should be deleted from alert')
   assert.ok(Array.isArray(alertReceived.healthHistory), 'Health history should be an array')
   assert.ok(alertReceived.healthHistory.length > 0, 'Health history should not be empty')
   assert.strictEqual(alertReceived.healthHistory[0].application, 'main')
@@ -158,7 +196,7 @@ test('should not send alert when application is healthy', async (t) => {
     }
   }
 
-  app.watt.runtime.emit('application:worker:health', healthInfo)
+  emitHealthEvent(app, healthInfo)
 
   await sleep(200)
 
@@ -225,7 +263,7 @@ test('should cache health data and include it in alerts', async (t) => {
       }
     }
 
-    app.watt.runtime.emit('application:worker:health', healthyInfo)
+    emitHealthEvent(app, healthyInfo)
     await sleep(100) // Small delay between events
   }
 
@@ -234,7 +272,7 @@ test('should cache health data and include it in alerts', async (t) => {
     id: 'service-1',
     application: 'service-1',
     currentHealth: {
-      elu: 0.95,
+      elu: 0.995,
       heapUsed: 76798040,
       heapTotal: 99721216
     },
@@ -250,7 +288,7 @@ test('should cache health data and include it in alerts', async (t) => {
     }
   }
 
-  app.watt.runtime.emit('application:worker:health', unhealthyInfo)
+  emitHealthEvent(app, unhealthyInfo)
   await sleep(200)
 
   assert.ok(alertReceived, 'Alert should have been received')
@@ -319,7 +357,7 @@ test('should not fail when health info is missing', async (t) => {
     await icc.close()
   })
 
-  app.watt.runtime.emit('application:worker:health', null)
+  emitHealthEvent(app, null)
 
   await sleep(200)
 
@@ -373,7 +411,7 @@ test('should respect alert retention window', async (t) => {
     id: applicationId,
     application: applicationId,
     currentHealth: {
-      elu: unhealthy ? 0.95 : 0.5,
+      elu: unhealthy ? 0.995 : 0.5,
       heapUsed: 76798040,
       heapTotal: 99721216
     },
@@ -390,15 +428,15 @@ test('should respect alert retention window', async (t) => {
   })
 
   // Send first unhealthy event - should trigger alert
-  app.watt.runtime.emit('application:worker:health', createHealthInfo('service-1', true))
+  emitHealthEvent(app, createHealthInfo('service-1', true))
   await sleep(50)
 
   // Send second unhealthy event immediately - should trigger alert
-  app.watt.runtime.emit('application:worker:health', createHealthInfo('service-2', true))
+  emitHealthEvent(app, createHealthInfo('service-2', true))
   await sleep(50)
 
   // Send second unhealthy event immediately - should be ignored due to retention window
-  app.watt.runtime.emit('application:worker:health', createHealthInfo('service-1', true))
+  emitHealthEvent(app, createHealthInfo('service-1', true))
   await sleep(100)
 
   assert.strictEqual(alertsReceived.length, 2, 'Only one alert should be sent within retention window')
@@ -406,7 +444,7 @@ test('should respect alert retention window', async (t) => {
   await sleep(500)
 
   // Send third unhealthy event - should trigger second alert
-  app.watt.runtime.emit('application:worker:health', createHealthInfo('service-1', true))
+  emitHealthEvent(app, createHealthInfo('service-1', true))
   await sleep(100)
 
   assert.strictEqual(alertsReceived.length, 3, 'Second alert should be sent after retention window expires')
@@ -497,7 +535,7 @@ test('should send alert when flamegraphs are disabled', async (t) => {
     id: 'main:0',
     application: 'main',
     currentHealth: {
-      elu: 0.95,
+      elu: 0.995,
       heapUsed: 76798040,
       heapTotal: 99721216
     },
@@ -513,15 +551,20 @@ test('should send alert when flamegraphs are disabled', async (t) => {
     }
   }
 
-  app.watt.runtime.emit('application:worker:health', healthInfo)
+  emitHealthEvent(app, healthInfo)
 
   await sleep(200)
 
   assert.ok(alertReceived, 'Alert should have been received')
   assert.strictEqual(alertReceived.applicationId, applicationId)
-  assert.deepStrictEqual(alertReceived.alert, healthInfo)
+  assert.strictEqual(alertReceived.alert.id, healthInfo.id)
   assert.strictEqual(alertReceived.alert.application, 'main')
   assert.strictEqual(alertReceived.alert.service, 'main')
+  assert.strictEqual(alertReceived.alert.unhealthy, true)
+  assert.strictEqual(alertReceived.alert.currentHealth.elu, healthInfo.currentHealth.elu)
+  assert.strictEqual(alertReceived.alert.currentHealth.heapUsed, healthInfo.currentHealth.heapUsed)
+  assert.strictEqual(alertReceived.alert.currentHealth.heapTotal, healthInfo.currentHealth.heapTotal)
+  assert.strictEqual(alertReceived.alert.healthConfig, undefined, 'healthConfig should be deleted from alert')
   assert.ok(Array.isArray(alertReceived.healthHistory), 'Health history should be an array')
   assert.ok(alertReceived.healthHistory.length > 0, 'Health history should not be empty')
   assert.strictEqual(alertReceived.healthHistory[0].application, 'main')
@@ -577,7 +620,7 @@ test('should send alert when failed to send a flamegraph', async (t) => {
     id: 'main:0',
     application: 'main',
     currentHealth: {
-      elu: 0.95,
+      elu: 0.995,
       heapUsed: 76798040,
       heapTotal: 99721216
     },
@@ -593,18 +636,107 @@ test('should send alert when failed to send a flamegraph', async (t) => {
     }
   }
 
+  emitHealthEvent(app, healthInfo)
+
+  await sleep(200)
+
+  assert.ok(alertReceived, 'Alert should have been received')
+  assert.strictEqual(alertReceived.applicationId, applicationId)
+  assert.strictEqual(alertReceived.alert.id, healthInfo.id)
+  assert.strictEqual(alertReceived.alert.application, 'main')
+  assert.strictEqual(alertReceived.alert.service, 'main')
+  assert.strictEqual(alertReceived.alert.unhealthy, true)
+  assert.strictEqual(alertReceived.alert.currentHealth.elu, healthInfo.currentHealth.elu)
+  assert.strictEqual(alertReceived.alert.currentHealth.heapUsed, healthInfo.currentHealth.heapUsed)
+  assert.strictEqual(alertReceived.alert.currentHealth.heapTotal, healthInfo.currentHealth.heapTotal)
+  assert.strictEqual(alertReceived.alert.healthConfig, undefined, 'healthConfig should be deleted from alert')
+  assert.ok(Array.isArray(alertReceived.healthHistory), 'Health history should be an array')
+  assert.ok(alertReceived.healthHistory.length > 0, 'Health history should not be empty')
+  assert.strictEqual(alertReceived.healthHistory[0].application, 'main')
+  assert.strictEqual(alertReceived.healthHistory[0].service, 'main')
+  assert.equal(alertReceived.flamegraph, null, 'Flamegraph should be null')
+})
+
+test('should handle old runtime (< 3.18.0) health events', async (t) => {
+  const applicationName = 'test-app'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'service-1')
+
+  let alertReceived = null
+
+  const getAuthorizationHeader = async (headers) => {
+    return { ...headers, authorization: 'Bearer test-token' }
+  }
+
+  const icc = await startICC(t, {
+    applicationId,
+    applicationName,
+    processAlerts: (req) => {
+      const alert = req.body
+      assert.equal(req.headers.authorization, 'Bearer test-token')
+      alertReceived = alert
+      return { id: 'test-alert-id', ...alert }
+    }
+  })
+
+  setUpEnvironment({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000'
+  })
+
+  const app = await start()
+  app.getAuthorizationHeader = getAuthorizationHeader
+
+  // Mock the runtime version check to simulate old runtime
+  const originalFn = app.watt.runtimeSupportsNewHealthMetrics
+  app.watt.runtimeSupportsNewHealthMetrics = () => false
+
+  // Remove all existing event listeners
+  app.watt.runtime.removeAllListeners('application:worker:health:metrics')
+  app.watt.runtime.removeAllListeners('application:worker:health')
+
+  // Re-setup alerts with the mocked function (will use old path)
+  await app.setupAlerts()
+
+  t.after(async () => {
+    app.watt.runtimeSupportsNewHealthMetrics = originalFn
+    await app.close()
+    await icc.close()
+  })
+
+  // Manually trigger health event with unhealthy state using old event format
+  const healthInfo = {
+    id: 'main:0',
+    application: 'main',
+    currentHealth: {
+      elu: 0.995,
+      heapUsed: 76798040,
+      heapTotal: 99721216
+    },
+    unhealthy: true,
+    healthConfig: {
+      enabled: true,
+      interval: 1000,
+      gracePeriod: 1000,
+      maxUnhealthyChecks: 10,
+      maxELU: 0.99,
+      maxHeapUsed: 0.99,
+      maxHeapTotal: 4294967296
+    }
+  }
+
+  // Emit using old event format (application:worker:health)
   app.watt.runtime.emit('application:worker:health', healthInfo)
 
   await sleep(200)
 
   assert.ok(alertReceived, 'Alert should have been received')
   assert.strictEqual(alertReceived.applicationId, applicationId)
-  assert.deepStrictEqual(alertReceived.alert, healthInfo)
+  assert.strictEqual(alertReceived.alert.id, healthInfo.id)
   assert.strictEqual(alertReceived.alert.application, 'main')
   assert.strictEqual(alertReceived.alert.service, 'main')
-  assert.ok(Array.isArray(alertReceived.healthHistory), 'Health history should be an array')
-  assert.ok(alertReceived.healthHistory.length > 0, 'Health history should not be empty')
-  assert.strictEqual(alertReceived.healthHistory[0].application, 'main')
-  assert.strictEqual(alertReceived.healthHistory[0].service, 'main')
-  assert.equal(alertReceived.flamegraph, null, 'Flamegraph should be null')
+  assert.strictEqual(alertReceived.alert.unhealthy, true)
+  assert.deepStrictEqual(alertReceived.alert.currentHealth, healthInfo.currentHealth)
+  assert.strictEqual(alertReceived.alert.healthConfig, undefined, 'healthConfig should be deleted from alert')
 })

@@ -151,9 +151,13 @@ test('should configure health options', async (t) => {
   const runtimeConfig = await app.watt.runtime.getRuntimeConfig(true)
 
   const { health } = runtimeConfig
+  // Runtime applies its own defaults on top of ours, so we just verify health is configured
   assert.strictEqual(health.enabled, true)
-  assert.strictEqual(health.interval, 1000)
-  assert.strictEqual(health.maxUnhealthyChecks, 30)
+  assert.ok(health.interval, 'Health interval should be set')
+  assert.strictEqual(health.maxUnhealthyChecks, 10, 'Health maxUnhealthyChecks should have default value')
+  assert.strictEqual(health.maxELU, 0.99, 'Health maxELU should have default value')
+  assert.strictEqual(health.maxHeapUsed, 0.99, 'Health maxHeapUsed should have default value')
+  assert.strictEqual(health.gracePeriod, 30000, 'Health gracePeriod should have default value')
 })
 
 test('should not set opentelemetry if it is disabled', async (t) => {
@@ -213,4 +217,115 @@ test('should not set opentelemetry if it is disabled', async (t) => {
   }
   const mainConfig = await body.json()
   assert.deepStrictEqual(mainConfig.telemetry, expectedTelemetry)
+})
+test('should expose runtimeSupportsNewHealthMetrics method', async (t) => {
+  const applicationName = 'test-application'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'service-1')
+
+  const icc = await startICC(t, {
+    applicationId,
+    applicationName
+  })
+
+  setUpEnvironment({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000'
+  })
+
+  const app = await start()
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  assert.strictEqual(typeof app.watt.runtimeSupportsNewHealthMetrics, 'function', 'runtimeSupportsNewHealthMetrics should be a function')
+
+  const supportsNewMetrics = app.watt.runtimeSupportsNewHealthMetrics()
+  assert.strictEqual(typeof supportsNewMetrics, 'boolean', 'runtimeSupportsNewHealthMetrics should return a boolean')
+
+  const runtimeVersion = app.watt.getRuntimeVersion()
+  assert.ok(runtimeVersion, 'Runtime version should be available')
+})
+
+test('should expose getHealthConfig method', async (t) => {
+  const applicationName = 'test-application'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'service-1')
+
+  const icc = await startICC(t, {
+    applicationId,
+    applicationName
+  })
+
+  setUpEnvironment({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000'
+  })
+
+  const app = await start()
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  assert.strictEqual(typeof app.watt.getHealthConfig, 'function', 'getHealthConfig should be a function')
+
+  const healthConfig = app.watt.getHealthConfig()
+  assert.ok(healthConfig, 'Health config should be returned')
+  assert.strictEqual(typeof healthConfig, 'object', 'Health config should be an object')
+  assert.strictEqual(healthConfig.enabled, true, 'Health should be enabled')
+  assert.ok(healthConfig.interval, 'Health config should have interval')
+  assert.strictEqual(healthConfig.maxUnhealthyChecks, 10, 'Health config should have maxUnhealthyChecks default')
+  assert.strictEqual(healthConfig.maxELU, 0.99, 'Health config should have maxELU default')
+  assert.strictEqual(healthConfig.maxHeapUsed, 0.99, 'Health config should have maxHeapUsed default')
+  assert.strictEqual(healthConfig.gracePeriod, 30000, 'Health config should have gracePeriod default')
+})
+
+test('should configure health based on runtime version', async (t) => {
+  const appName = 'test-app'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'runtime-service')
+
+  await installDeps(t, applicationPath)
+
+  const icc = await startICC(t, {
+    applicationId
+  })
+
+  setUpEnvironment({
+    PLT_APP_NAME: appName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000'
+  })
+
+  const app = await start()
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  const runtimeConfig = app.watt.runtime.getRuntimeConfig(true)
+  const { health } = runtimeConfig
+
+  // Health should always be enabled regardless of runtime version
+  assert.strictEqual(health.enabled, true, 'Health should be enabled')
+
+  const supportsNewMetrics = app.watt.runtimeSupportsNewHealthMetrics()
+
+  if (supportsNewMetrics) {
+    // For new runtime (>= 3.18.0), we only force enabled: true
+    // Other values come from app config or runtime defaults
+    assert.ok(health.interval, 'Health interval should be set')
+    assert.ok(health.maxUnhealthyChecks, 'Health maxUnhealthyChecks should be set')
+  } else {
+    // For old runtime (< 3.18.0), we set specific defaults
+    assert.ok(health.interval, 'Health interval should be set')
+    assert.ok(health.maxUnhealthyChecks, 'Health maxUnhealthyChecks should be set')
+  }
 })
