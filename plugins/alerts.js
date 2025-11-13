@@ -139,11 +139,12 @@ async function alerts (app, _opts) {
         const { elu, heapUsed, heapTotal } = currentHealth
         const healthConfig = app.watt.getHealthConfig()
 
-        const maxELU = healthConfig?.maxELU ?? 0.99
+        // const maxELU = healthConfig?.maxELU ?? 0.99
+        const unhealthyELUThreshold = 0.85
         const maxHeapUsed = healthConfig?.maxHeapUsed ?? 0.99
 
         const memoryUsage = heapUsed / heapTotal
-        const unhealthy = elu > maxELU || memoryUsage > maxHeapUsed
+        const unhealthy = elu > unhealthyELUThreshold || memoryUsage > maxHeapUsed
 
         const healthInfo = {
           id,
