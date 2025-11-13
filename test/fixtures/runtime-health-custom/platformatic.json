@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schemas.platformatic.dev/@platformatic/runtime/2.62.1.json",
+  "entrypoint": "service-1",
+  "watch": true,
+  "autoload": {
+    "path": "services",
+    "exclude": ["docs"]
+  },
+  "logger": {
+    "level": "info"
+  },
+  "server": {
+    "hostname": "127.0.0.1",
+    "port": "3042"
+  },
+  "health": {
+    "enabled": true,
+    "interval": 2500,
+    "maxUnhealthyChecks": 50
+  }
+}
