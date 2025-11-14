@@ -18,11 +18,9 @@ async function flamegraphs (app, _opts) {
   const startProfilingOnWorker = async (runtime, workerFullId, logContext = {}) => {
     await sleep(gracePeriod)
 
-    const runtimeConfig = await runtime.getRuntimeConfig()
     // Get application details to read service-level sourceMaps setting
     const appDetails = await runtime.getApplicationDetails(workerFullId)
-    // Resolve sourceMaps: service-level overrides runtime-level (same logic as runtime.js:1440)
-    const sourceMaps = appDetails.config?.sourceMaps ?? runtimeConfig.sourceMaps
+    const sourceMaps = appDetails.sourceMaps ?? false
 
     try {
       // Start CPU profiling

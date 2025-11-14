@@ -70,13 +70,13 @@ function createMockApp (port, includeScalerUrl = true) {
       },
       getApplicationDetails: async (id) => {
         // Default implementation, can be overridden in tests
-        return { id, config: {} }
+        return { id, sourceMaps: false }
       },
       getRuntimeConfig: async () => {
         // Default implementation, can be overridden in tests
         return {}
-      },
-    },
+      }
+    }
   }
 
   const app = {
@@ -127,11 +127,11 @@ test('setupFlamegraphs should pass sourceMaps from application config to startPr
   // Mock getApplicationDetails to return config with sourceMaps for worker IDs
   app.watt.runtime.getApplicationDetails = async (workerFullId) => {
     if (workerFullId.startsWith('service-1')) {
-      return { id: workerFullId, config: { sourceMaps: true } }
+      return { id: workerFullId, sourceMaps: true }
     } else if (workerFullId.startsWith('service-2')) {
-      return { id: workerFullId, config: { sourceMaps: false } }
+      return { id: workerFullId, sourceMaps: false }
     }
-    return { id: workerFullId, config: {} }
+    return { id: workerFullId, sourceMaps: false }
   }
 
   app.watt.runtime.getRuntimeConfig = async () => {
@@ -176,7 +176,7 @@ test('setupFlamegraphs should handle missing sourceMaps in application config', 
 
   // Mock getApplicationDetails to return config without sourceMaps
   app.watt.runtime.getApplicationDetails = async (workerFullId) => {
-    return { id: workerFullId, config: {} }
+    return { id: workerFullId }
   }
 
   app.watt.runtime.getRuntimeConfig = async () => {
@@ -197,7 +197,7 @@ test('setupFlamegraphs should handle missing sourceMaps in application config', 
   equal(startProfilingCalls.length, 4, 'Should call startProfiling for both workers with cpu and heap')
 
   for (const call of startProfilingCalls) {
-    equal(call.options.sourceMaps, undefined, 'sourceMaps should be undefined when not in config')
+    equal(call.options.sourceMaps, false, 'sourceMaps should be false when not in config')
     equal(call.options.durationMillis, 1000, 'Should still pass duration')
   }
 })
@@ -235,7 +235,7 @@ test('setupFlamegraphs should handle errors when starting profiling', async (t) 
   }
 
   app.watt.runtime.getApplicationDetails = async (workerFullId) => {
-    return { id: workerFullId, config: { sourceMaps: true } }
+    return { id: workerFullId, sourceMaps: true }
   }
 
   app.watt.runtime.getRuntimeConfig = async () => {
@@ -941,87 +941,5 @@ test('sendFlamegraphs should include alertId in query params when provided', asy
 
   for (const req of uploadedRequests) {
     ok(req.url.includes('alertId=test-alert-123'), 'URL should include alertId query param')
-  }
-})
-
-test('setupFlamegraphs should use runtime-level sourceMaps as fallback', async (t) => {
-  setUpEnvironment()
-
-  const app = createMockApp(port)
-  const startProfilingCalls = []
-
-  // Mock getApplicationDetails to return config WITHOUT service-level sourceMaps
-  app.watt.runtime.getApplicationDetails = async (workerFullId) => {
-    return { id: workerFullId, config: {} }  // No sourceMaps at service level
-  }
-
-  // Mock getRuntimeConfig to return runtime-level sourceMaps
-  app.watt.runtime.getRuntimeConfig = async () => {
-    return { sourceMaps: true }  // Runtime-level default
-  }
-
-  app.watt.runtime.sendCommandToApplication = async (workerFullId, command, options) => {
-    if (command === 'startProfiling') {
-      startProfilingCalls.push({ workerFullId, command, options })
-      return { success: true }
-    }
-    return { success: false }
-  }
-
-  await flamegraphsPlugin(app)
-  await app.setupFlamegraphs()
-
-  equal(startProfilingCalls.length, 4, 'Should call startProfiling for both workers with cpu and heap')
-
-  for (const call of startProfilingCalls) {
-    equal(call.options.sourceMaps, true, 'Should use runtime-level sourceMaps as fallback')
-    equal(call.options.durationMillis, 1000, 'Should still pass duration')
-  }
-})
-
-test('setupFlamegraphs should prefer service-level over runtime-level sourceMaps', async (t) => {
-  setUpEnvironment()
-
-  const app = createMockApp(port)
-  const startProfilingCalls = []
-
-  // Mock getApplicationDetails - service-1 has explicit false, service-2 has no setting
-  app.watt.runtime.getApplicationDetails = async (workerFullId) => {
-    if (workerFullId.startsWith('service-1')) {
-      return { id: workerFullId, config: { sourceMaps: false } }  // Explicitly set to false
-    }
-    return { id: workerFullId, config: {} }  // No setting
-  }
-
-  // Mock getRuntimeConfig to return runtime-level sourceMaps = true
-  app.watt.runtime.getRuntimeConfig = async () => {
-    return { sourceMaps: true }  // Runtime-level default
-  }
-
-  app.watt.runtime.sendCommandToApplication = async (workerFullId, command, options) => {
-    if (command === 'startProfiling') {
-      startProfilingCalls.push({ workerFullId, command, options })
-      return { success: true }
-    }
-    return { success: false }
-  }
-
-  await flamegraphsPlugin(app)
-  await app.setupFlamegraphs()
-
-  equal(startProfilingCalls.length, 4, 'Should call startProfiling for both workers with cpu and heap')
-
-  const service1Calls = startProfilingCalls.filter(c => c.workerFullId === 'service-1:0')
-  const service2Calls = startProfilingCalls.filter(c => c.workerFullId === 'service-2:0')
-
-  equal(service1Calls.length, 2, 'Should have 2 calls for service-1 (cpu + heap)')
-  equal(service2Calls.length, 2, 'Should have 2 calls for service-2 (cpu + heap)')
-
-  for (const call of service1Calls) {
-    equal(call.options.sourceMaps, false, 'Service-1 should use explicit false, not runtime default')
-  }
-
-  for (const call of service2Calls) {
-    equal(call.options.sourceMaps, true, 'Service-2 should inherit runtime-level true')
   }
 })
