@@ -111,14 +111,12 @@ async function alerts (app, _opts) {
 
         const alert = await body.json()
 
-        try {
-          await app.sendFlamegraphs({
-            serviceIds: [serviceId],
-            alertId: alert.id
-          })
-        } catch (err) {
+        app.sendFlamegraphs({
+          serviceIds: [serviceId],
+          alertId: alert.id
+        }).catch(err => {
           app.log.error({ err }, 'Failed to send a flamegraph')
-        }
+        })
       }
     }
 
