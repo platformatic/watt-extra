@@ -35,7 +35,7 @@ function setupMockIccServer (wss, receivedMessages, validateAuth = false) {
   return { waitForClientSubscription, getWs: () => ws }
 }
 
-function createMockApp (port, includeScalerUrl = true) {
+function createMockApp (port, includeScalerUrl = true, env = {}) {
   const eventListeners = new Map()
 
   const mockWatt = {
@@ -100,7 +100,9 @@ function createMockApp (port, includeScalerUrl = true) {
       PLT_DISABLE_FLAMEGRAPHS: false,
       PLT_FLAMEGRAPHS_INTERVAL_SEC: 1,
       PLT_FLAMEGRAPHS_ELU_THRESHOLD: 0,
-      PLT_FLAMEGRAPHS_GRACE_PERIOD: 0
+      PLT_FLAMEGRAPHS_GRACE_PERIOD: 0,
+      PLT_FLAMEGRAPHS_ATTEMPT_TIMEOUT: 1000,
+      ...env
     },
     watt: mockWatt
   }
@@ -640,11 +642,6 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (
 
   const receivedMessages = []
   const infoLogs = []
-  let errorCount = 0
-  let uploadResolve
-  const allUploadsComplete = new Promise((resolve) => {
-    uploadResolve = resolve
-  })
 
   const wss = new WebSocketServer({ port: port + 4 })
   t.after(async () => wss.close())
@@ -655,18 +652,20 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (
     true
   )
 
-  const app = createMockApp(port + 4)
+  const app = createMockApp(port + 4, true, {
+    PLT_FLAMEGRAPHS_INTERVAL_SEC: 10,
+    PLT_FLAMEGRAPHS_ATTEMPT_TIMEOUT: 1000
+  })
+
   const originalInfo = app.log.info
   app.log.info = (...args) => {
     originalInfo(...args)
-    if (args[1] && args[1].includes('No profile available for the service')) {
-      infoLogs.push(args)
-      errorCount++
-      if (errorCount === 2) {
-        uploadResolve()
-      }
-    }
+    infoLogs.push(args)
   }
+
+  // Profile will be generated in 10s
+  const profileGenerationDate = Date.now() + 10000
+  const mockProfile = new Uint8Array([1, 2, 3, 4, 5])
 
   app.watt.runtime.sendCommandToApplication = async (
     serviceId,
@@ -676,9 +675,13 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (
       return { success: true }
     }
     if (command === 'getLastProfile') {
-      const error = new Error('No profile available - wait for profiling to complete or trigger manual capture')
-      error.code = 'PLT_PPROF_NO_PROFILE_AVAILABLE'
-      throw error
+      const now = Date.now()
+      if (now < profileGenerationDate) {
+        const error = new Error('No profile available - wait for profiling to complete or trigger manual capture')
+        error.code = 'PLT_PPROF_NO_PROFILE_AVAILABLE'
+        throw error
+      }
+      return mockProfile
     }
     return { success: false }
   }
@@ -697,12 +700,47 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (
 
   getWs().send(JSON.stringify(triggerFlamegraphMessage))
 
-  await allUploadsComplete
+  await sleep(15000)
 
-  equal(infoLogs.length, 2)
-  equal(infoLogs[0][0].serviceId, 'service-1')
-  equal(infoLogs[0][0].podId, 'test-pod-123')
-  equal(infoLogs[0][1], 'No profile available for the service')
+  const service1AttemptLogs = []
+  const service2AttemptLogs = []
+  const service1SuccessLogs = []
+  const service2SuccessLogs = []
+
+  for (const infoLog of infoLogs) {
+    if (infoLog.length !== 2) continue
+    const [options, message] = infoLog
+
+    if (message.includes('No profile available for the service')) {
+      const { serviceId, attempt, maxAttempts, attemptTimeout } = options
+
+      equal(maxAttempts, 11)
+      equal(attemptTimeout, 1000)
+
+      if (serviceId === 'service-1') {
+        service1AttemptLogs.push(infoLog)
+        equal(attempt, service1AttemptLogs.length)
+      }
+      if (serviceId === 'service-2') {
+        service2AttemptLogs.push(infoLog)
+        equal(attempt, service2AttemptLogs.length)
+      }
+      continue
+    }
+
+    if (message.includes('Sending flamegraph')) {
+      if (options.serviceId === 'service-1') {
+        service1SuccessLogs.push(infoLog)
+      } else if (options.serviceId === 'service-2') {
+        service2SuccessLogs.push(infoLog)
+      }
+    }
+  }
+
+  equal(service1AttemptLogs.length, 10)
+  equal(service2AttemptLogs.length, 10)
+  equal(service1SuccessLogs.length, 1)
+  equal(service2SuccessLogs.length, 1)
 
   if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
   await app.closeUpdates()
@@ -774,7 +812,6 @@ test('should handle PLT_PPROF_NOT_ENOUGH_ELU error with info log', async (t) => 
 
   equal(infoLogs.length, 2)
   equal(infoLogs[0][0].serviceId, 'service-1')
-  equal(infoLogs[0][0].podId, 'test-pod-123')
   equal(infoLogs[0][1], 'ELU low, CPU profiling not active')
 
   if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()

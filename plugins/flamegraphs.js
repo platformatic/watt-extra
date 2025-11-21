@@ -8,10 +8,13 @@ async function flamegraphs (app, _opts) {
   const flamegraphsIntervalSec = app.env.PLT_FLAMEGRAPHS_INTERVAL_SEC
   const flamegraphsELUThreshold = app.env.PLT_FLAMEGRAPHS_ELU_THRESHOLD
   const flamegraphsGracePeriod = app.env.PLT_FLAMEGRAPHS_GRACE_PERIOD
+  const flamegraphsAttemptTimeout = app.env.PLT_FLAMEGRAPHS_ATTEMPT_TIMEOUT
 
   const durationMillis = parseInt(flamegraphsIntervalSec) * 1000
   const eluThreshold = parseFloat(flamegraphsELUThreshold)
   const gracePeriod = parseInt(flamegraphsGracePeriod)
+  const attemptTimeout = Math.min(parseInt(flamegraphsAttemptTimeout), durationMillis)
+  const maxAttempts = Math.ceil(durationMillis / attemptTimeout) + 1
 
   let workerStartedListener = null
 
@@ -125,6 +128,30 @@ async function flamegraphs (app, _opts) {
     }
   }
 
+  async function getServiceFlamegraph (serviceId, profileType, attempt = 1) {
+    const runtime = app.watt.runtime
+
+    try {
+      const profile = await runtime.sendCommandToApplication(serviceId, 'getLastProfile', { type: profileType })
+      return profile
+    } catch (err) {
+      if (err.code === 'PLT_PPROF_NO_PROFILE_AVAILABLE') {
+        app.log.info(
+          { serviceId, attempt, maxAttempts, attemptTimeout },
+          'No profile available for the service. Waiting for profiling to complete.'
+        )
+        if (attempt <= maxAttempts) {
+          await sleep(attemptTimeout)
+          return getServiceFlamegraph(serviceId, profileType, attempt + 1)
+        }
+      } else if (err.code === 'PLT_PPROF_NOT_ENOUGH_ELU') {
+        app.log.info({ serviceId }, 'ELU low, CPU profiling not active')
+      } else {
+        app.log.warn({ err, serviceId }, 'Failed to get profile from service')
+      }
+    }
+  }
+
   app.sendFlamegraphs = async (options = {}) => {
     if (isFlamegraphsDisabled) {
       app.log.info('PLT_DISABLE_FLAMEGRAPHS is set, flamegraphs are disabled')
@@ -150,22 +177,21 @@ async function flamegraphs (app, _opts) {
     const authHeaders = await app.getAuthorizationHeader()
 
     const uploadPromises = serviceIds.map(async (serviceId) => {
+      const profile = await getServiceFlamegraph(serviceId, profileType)
+      if (!profile || !(profile instanceof Uint8Array)) {
+        app.log.error({ serviceId }, 'Failed to get profile from service')
+        return
+      }
+
+      const url = `${scalerUrl}/pods/${podId}/services/${serviceId}/flamegraph`
+      app.log.info({ serviceId, podId, profileType }, 'Sending flamegraph')
+
+      const query = { profileType }
+      if (alertId) {
+        query.alertId = alertId
+      }
+
       try {
-        const profile = await runtime.sendCommandToApplication(serviceId, 'getLastProfile', { type: profileType })
-        if (!profile || !(profile instanceof Uint8Array)) {
-          app.log.error({ serviceId }, 'Failed to get profile from service')
-          return
-        }
-
-        const url = `${scalerUrl}/pods/${podId}/services/${serviceId}/flamegraph`
-
-        app.log.info({ serviceId, podId, profileType }, 'Sending flamegraph')
-
-        const query = { profileType }
-        if (alertId) {
-          query.alertId = alertId
-        }
-
         const { statusCode, body } = await request(url, {
           method: 'POST',
           headers: {
@@ -182,13 +208,7 @@ async function flamegraphs (app, _opts) {
           throw new Error(`Failed to send flamegraph: ${error}`)
         }
       } catch (err) {
-        if (err.code === 'PLT_PPROF_NO_PROFILE_AVAILABLE') {
-          app.log.info({ serviceId, podId }, 'No profile available for the service')
-        } else if (err.code === 'PLT_PPROF_NOT_ENOUGH_ELU') {
-          app.log.info({ serviceId, podId }, 'ELU low, CPU profiling not active')
-        } else {
-          app.log.warn({ err, serviceId, podId }, 'Failed to send flamegraph from service')
-        }
+        app.log.warn({ err, serviceId, podId }, 'Failed to send flamegraph from service')
       }
     })
 
