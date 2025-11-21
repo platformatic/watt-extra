@@ -493,6 +493,13 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
   await app.connectToUpdates()
   await app.setupFlamegraphs()
 
+  t.after(async () => {
+    if (app.cleanupFlamegraphs) {
+      app.cleanupFlamegraphs()
+    }
+    await app.closeUpdates()
+  })
+
   await waitForClientSubscription
 
   const triggerFlamegraphMessage = {
@@ -506,17 +513,14 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
   equal(getFlamegraphReqs.length, 2)
 
   const service1Req = getFlamegraphReqs.find(
-    (f) => f.serviceId === 'service-1:0'
+    (f) => f.serviceId === 'service-1'
   )
   const service2Req = getFlamegraphReqs.find(
-    (f) => f.serviceId === 'service-2:0'
+    (f) => f.serviceId === 'service-2'
   )
 
-  equal(service1Req.serviceId, 'service-1:0')
-  equal(service2Req.serviceId, 'service-2:0')
-
-  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
-  await app.closeUpdates()
+  equal(service1Req.serviceId, 'service-1')
+  equal(service2Req.serviceId, 'service-2')
 })
 
 test('should handle trigger-flamegraph when no runtime is available', async (t) => {
@@ -650,6 +654,13 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
   await app.connectToUpdates()
   await app.setupFlamegraphs()
 
+  t.after(async () => {
+    if (app.cleanupFlamegraphs) {
+      app.cleanupFlamegraphs()
+    }
+    await app.closeUpdates()
+  })
+
   await waitForClientSubscription
 
   const triggerHeapProfileMessage = {
@@ -663,17 +674,14 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
   equal(getHeapProfileReqs.length, 2)
 
   const service1Req = getHeapProfileReqs.find(
-    (f) => f.serviceId === 'service-1:0'
+    (f) => f.serviceId === 'service-1'
   )
   const service2Req = getHeapProfileReqs.find(
-    (f) => f.serviceId === 'service-2:0'
+    (f) => f.serviceId === 'service-2'
   )
 
-  equal(service1Req.serviceId, 'service-1:0')
-  equal(service2Req.serviceId, 'service-2:0')
-
-  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
-  await app.closeUpdates()
+  equal(service1Req.serviceId, 'service-1')
+  equal(service2Req.serviceId, 'service-2')
 })
 
 test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (t) => {
@@ -763,11 +771,11 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (
       equal(maxAttempts, 11)
       equal(attemptTimeout, 1000)
 
-      if (workerId === 'service-1:0') {
+      if (workerId === 'service-1') {
         service1AttemptLogs.push(infoLog)
         equal(attempt, service1AttemptLogs.length)
       }
-      if (workerId === 'service-2:0') {
+      if (workerId === 'service-2') {
         service2AttemptLogs.push(infoLog)
         equal(attempt, service2AttemptLogs.length)
       }
@@ -861,7 +869,7 @@ test('should handle PLT_PPROF_NOT_ENOUGH_ELU error with info log', async (t) => 
   await allUploadsComplete
 
   equal(infoLogs.length, 2)
-  equal(infoLogs[0][0].workerId, 'service-1:0')
+  equal(infoLogs[0][0].workerId, 'service-1')
   equal(infoLogs[0][1], 'ELU low, CPU profiling not active')
 })
 

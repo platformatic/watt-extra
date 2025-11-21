@@ -208,7 +208,7 @@ async function flamegraphs (app, _opts) {
 
     if (!workerIds) {
       const { applications } = await runtime.getApplications()
-      workerIds = applications.map(app => `${app.id}:0`)
+      workerIds = applications.map(app => app.id)
     }
 
     const uploadPromises = workerIds.map(async (workerId) => {
