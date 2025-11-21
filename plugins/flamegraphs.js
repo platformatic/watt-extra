@@ -128,27 +128,65 @@ async function flamegraphs (app, _opts) {
     }
   }
 
-  async function getServiceFlamegraph (serviceId, profileType, attempt = 1) {
+  async function getServiceFlamegraph (workerId, profileType, attempt = 1) {
     const runtime = app.watt.runtime
 
     try {
-      const profile = await runtime.sendCommandToApplication(serviceId, 'getLastProfile', { type: profileType })
+      const profile = await runtime.sendCommandToApplication(workerId, 'getLastProfile', { type: profileType })
       return profile
     } catch (err) {
       if (err.code === 'PLT_PPROF_NO_PROFILE_AVAILABLE') {
         app.log.info(
-          { serviceId, attempt, maxAttempts, attemptTimeout },
+          { workerId, attempt, maxAttempts, attemptTimeout },
           'No profile available for the service. Waiting for profiling to complete.'
         )
         if (attempt <= maxAttempts) {
           await sleep(attemptTimeout)
-          return getServiceFlamegraph(serviceId, profileType, attempt + 1)
+          return getServiceFlamegraph(workerId, profileType, attempt + 1)
         }
       } else if (err.code === 'PLT_PPROF_NOT_ENOUGH_ELU') {
-        app.log.info({ serviceId }, 'ELU low, CPU profiling not active')
+        app.log.info({ workerId }, 'ELU low, CPU profiling not active')
       } else {
-        app.log.warn({ err, serviceId }, 'Failed to get profile from service')
+        app.log.warn({ err, workerId }, 'Failed to get profile from a worker')
+
+        const [serviceId, workerIndex] = workerId.split(':')
+        if (workerIndex) {
+          app.log.warn('Worker not available, trying to get profile from another worker')
+          return getServiceFlamegraph(serviceId, profileType)
+        }
       }
+    }
+  }
+
+  async function sendServiceFlamegraph (scalerUrl, serviceId, profile, profileType, alertId) {
+    const podId = app.instanceId
+    const url = `${scalerUrl}/pods/${podId}/services/${serviceId}/flamegraph`
+    app.log.info({ serviceId, podId, profileType }, 'Sending flamegraph')
+
+    const query = { profileType }
+    if (alertId) {
+      query.alertId = alertId
+    }
+
+    try {
+      const authHeaders = await app.getAuthorizationHeader()
+      const { statusCode, body } = await request(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          ...authHeaders
+        },
+        query,
+        body: profile
+      })
+
+      if (statusCode !== 200) {
+        const error = await body.text()
+        app.log.error({ error }, 'Failed to send flamegraph')
+        throw new Error(`Failed to send flamegraph: ${error}`)
+      }
+    } catch (err) {
+      app.log.warn({ err, serviceId, podId }, 'Failed to send flamegraph from service')
     }
   }
 
@@ -158,7 +196,7 @@ async function flamegraphs (app, _opts) {
       return
     }
 
-    let { serviceIds, alertId, profileType = 'cpu' } = options
+    let { workerIds, alertId, profileType = 'cpu' } = options
 
     const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
     if (!scalerUrl) {
@@ -166,50 +204,22 @@ async function flamegraphs (app, _opts) {
       throw new Error('No scaler URL found in ICC services, cannot send flamegraph')
     }
 
-    const podId = app.instanceId
     const runtime = app.watt.runtime
 
-    if (!serviceIds) {
+    if (!workerIds) {
       const { applications } = await runtime.getApplications()
-      serviceIds = applications.map(app => app.id)
+      workerIds = applications.map(app => `${app.id}:0`)
     }
 
-    const authHeaders = await app.getAuthorizationHeader()
-
-    const uploadPromises = serviceIds.map(async (serviceId) => {
-      const profile = await getServiceFlamegraph(serviceId, profileType)
+    const uploadPromises = workerIds.map(async (workerId) => {
+      const profile = await getServiceFlamegraph(workerId, profileType)
       if (!profile || !(profile instanceof Uint8Array)) {
-        app.log.error({ serviceId }, 'Failed to get profile from service')
+        app.log.error({ workerId }, 'Failed to get profile from service')
         return
       }
 
-      const url = `${scalerUrl}/pods/${podId}/services/${serviceId}/flamegraph`
-      app.log.info({ serviceId, podId, profileType }, 'Sending flamegraph')
-
-      const query = { profileType }
-      if (alertId) {
-        query.alertId = alertId
-      }
-
-      try {
-        const { statusCode, body } = await request(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/octet-stream',
-            ...authHeaders
-          },
-          query,
-          body: profile
-        })
-
-        if (statusCode !== 200) {
-          const error = await body.text()
-          app.log.error({ error }, 'Failed to send flamegraph')
-          throw new Error(`Failed to send flamegraph: ${error}`)
-        }
-      } catch (err) {
-        app.log.warn({ err, serviceId, podId }, 'Failed to send flamegraph from service')
-      }
+      const serviceId = workerId.split(':')[0]
+      await sendServiceFlamegraph(scalerUrl, serviceId, profile, profileType, alertId)
     })
 
     await Promise.all(uploadPromises)

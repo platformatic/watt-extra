@@ -335,15 +335,15 @@ test('sendFlamegraphs should handle missing profile data', async (t) => {
   equal(errors.length, 2, 'Should log errors for both services with missing profiles')
 })
 
-test('sendFlamegraphs should filter by serviceIds when provided', async (t) => {
+test('sendFlamegraphs should filter by workerIds when provided', async (t) => {
   setUpEnvironment()
 
   const app = createMockApp(port + 12)
   const getProfileCalls = []
 
-  app.watt.runtime.sendCommandToApplication = async (serviceId, command) => {
+  app.watt.runtime.sendCommandToApplication = async (workerId, command) => {
     if (command === 'getLastProfile') {
-      getProfileCalls.push(serviceId)
+      getProfileCalls.push(workerId)
       return new Uint8Array([1, 2, 3])
     }
     return { success: false }
@@ -364,10 +364,49 @@ test('sendFlamegraphs should filter by serviceIds when provided', async (t) => {
   t.after(() => server.close())
 
   await flamegraphsPlugin(app)
-  await app.sendFlamegraphs({ serviceIds: ['service-1'] })
+  await app.sendFlamegraphs({ workerIds: ['service-1:0'] })
 
   equal(getProfileCalls.length, 1, 'Should only request profile for specified service')
-  equal(getProfileCalls[0], 'service-1', 'Should request profile for service-1')
+  equal(getProfileCalls[0], 'service-1:0', 'Should request profile for service-1')
+})
+
+test('sendFlamegraphs should try to get the profile from a service if worker is not available', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port + 12)
+  const getProfileCalls = []
+
+  app.watt.runtime.sendCommandToApplication = async (workerId, command) => {
+    if (command === 'getLastProfile') {
+      getProfileCalls.push(workerId)
+      if (workerId === 'service-1:2') {
+        throw new Error('Worker not available')
+      }
+      return new Uint8Array([1, 2, 3])
+    }
+    return { success: false }
+  }
+
+  // Mock HTTP server
+  const { createServer } = await import('node:http')
+  const server = createServer((req, res) => {
+    const body = []
+    req.on('data', chunk => body.push(chunk))
+    req.on('end', () => {
+      res.writeHead(200)
+      res.end()
+    })
+  })
+
+  await new Promise(resolve => server.listen(port + 12, resolve))
+  t.after(() => server.close())
+
+  await flamegraphsPlugin(app)
+  await app.sendFlamegraphs({ workerIds: ['service-1:2'] })
+
+  equal(getProfileCalls.length, 2)
+  equal(getProfileCalls[0], 'service-1:2')
+  equal(getProfileCalls[1], 'service-1')
 })
 
 test('sendFlamegraphs should skip when PLT_DISABLE_FLAMEGRAPHS is set', async (t) => {
@@ -378,9 +417,9 @@ test('sendFlamegraphs should skip when PLT_DISABLE_FLAMEGRAPHS is set', async (t
 
   const getProfileCalls = []
 
-  app.watt.runtime.sendCommandToApplication = async (serviceId, command) => {
+  app.watt.runtime.sendCommandToApplication = async (workerId, command) => {
     if (command === 'getLastProfile') {
-      getProfileCalls.push(serviceId)
+      getProfileCalls.push(workerId)
       return new Uint8Array([1, 2, 3])
     }
     return { success: false }
@@ -467,14 +506,14 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
   equal(getFlamegraphReqs.length, 2)
 
   const service1Req = getFlamegraphReqs.find(
-    (f) => f.serviceId === 'service-1'
+    (f) => f.serviceId === 'service-1:0'
   )
   const service2Req = getFlamegraphReqs.find(
-    (f) => f.serviceId === 'service-2'
+    (f) => f.serviceId === 'service-2:0'
   )
 
-  equal(service1Req.serviceId, 'service-1')
-  equal(service2Req.serviceId, 'service-2')
+  equal(service1Req.serviceId, 'service-1:0')
+  equal(service2Req.serviceId, 'service-2:0')
 
   if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
   await app.closeUpdates()
@@ -624,14 +663,14 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
   equal(getHeapProfileReqs.length, 2)
 
   const service1Req = getHeapProfileReqs.find(
-    (f) => f.serviceId === 'service-1'
+    (f) => f.serviceId === 'service-1:0'
   )
   const service2Req = getHeapProfileReqs.find(
-    (f) => f.serviceId === 'service-2'
+    (f) => f.serviceId === 'service-2:0'
   )
 
-  equal(service1Req.serviceId, 'service-1')
-  equal(service2Req.serviceId, 'service-2')
+  equal(service1Req.serviceId, 'service-1:0')
+  equal(service2Req.serviceId, 'service-2:0')
 
   if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
   await app.closeUpdates()
@@ -692,6 +731,13 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (
   await app.connectToUpdates()
   await app.setupFlamegraphs()
 
+  t.after(async () => {
+    if (app.cleanupFlamegraphs) {
+      app.cleanupFlamegraphs()
+    }
+    await app.closeUpdates()
+  })
+
   await waitForClientSubscription
 
   const triggerFlamegraphMessage = {
@@ -712,16 +758,16 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (
     const [options, message] = infoLog
 
     if (message.includes('No profile available for the service')) {
-      const { serviceId, attempt, maxAttempts, attemptTimeout } = options
+      const { workerId, attempt, maxAttempts, attemptTimeout } = options
 
       equal(maxAttempts, 11)
       equal(attemptTimeout, 1000)
 
-      if (serviceId === 'service-1') {
+      if (workerId === 'service-1:0') {
         service1AttemptLogs.push(infoLog)
         equal(attempt, service1AttemptLogs.length)
       }
-      if (serviceId === 'service-2') {
+      if (workerId === 'service-2:0') {
         service2AttemptLogs.push(infoLog)
         equal(attempt, service2AttemptLogs.length)
       }
@@ -741,9 +787,6 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (
   equal(service2AttemptLogs.length, 10)
   equal(service1SuccessLogs.length, 1)
   equal(service2SuccessLogs.length, 1)
-
-  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
-  await app.closeUpdates()
 })
 
 test('should handle PLT_PPROF_NOT_ENOUGH_ELU error with info log', async (t) => {
@@ -800,6 +843,13 @@ test('should handle PLT_PPROF_NOT_ENOUGH_ELU error with info log', async (t) => 
   await app.connectToUpdates()
   await app.setupFlamegraphs()
 
+  t.after(async () => {
+    if (app.cleanupFlamegraphs) {
+      app.cleanupFlamegraphs()
+    }
+    await app.closeUpdates()
+  })
+
   await waitForClientSubscription
 
   const triggerFlamegraphMessage = {
@@ -811,11 +861,8 @@ test('should handle PLT_PPROF_NOT_ENOUGH_ELU error with info log', async (t) => 
   await allUploadsComplete
 
   equal(infoLogs.length, 2)
-  equal(infoLogs[0][0].serviceId, 'service-1')
+  equal(infoLogs[0][0].workerId, 'service-1:0')
   equal(infoLogs[0][1], 'ELU low, CPU profiling not active')
-
-  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
-  await app.closeUpdates()
 })
 
 test('should start profiling on new workers that start after initial setup', async (t) => {
@@ -852,6 +899,13 @@ test('should start profiling on new workers that start after initial setup', asy
   await app.connectToUpdates()
   await app.setupFlamegraphs()
 
+  t.after(async () => {
+    if (app.cleanupFlamegraphs) {
+      app.cleanupFlamegraphs()
+    }
+    await app.closeUpdates()
+  })
+
   await waitForClientSubscription
 
   equal(startProfilingCalls.length, 4)
@@ -881,9 +935,6 @@ test('should start profiling on new workers that start after initial setup', asy
   equal(startProfilingCalls[5].options.durationMillis, 1000)
   equal(startProfilingCalls[5].options.eluThreshold, 0)
   equal(startProfilingCalls[5].options.type, 'heap')
-
-  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
-  await app.closeUpdates()
 })
 
 test('should not start profiling on new workers when flamegraphs are disabled', async (t) => {
@@ -921,6 +972,13 @@ test('should not start profiling on new workers when flamegraphs are disabled', 
   await app.connectToUpdates()
   await app.setupFlamegraphs()
 
+  t.after(async () => {
+    if (app.cleanupFlamegraphs) {
+      app.cleanupFlamegraphs()
+    }
+    await app.closeUpdates()
+  })
+
   await waitForClientSubscription
 
   equal(startProfilingCalls.length, 0)
@@ -934,9 +992,6 @@ test('should not start profiling on new workers when flamegraphs are disabled', 
   await sleep(10)
 
   equal(startProfilingCalls.length, 0)
-
-  if (app.cleanupFlamegraphs) app.cleanupFlamegraphs()
-  await app.closeUpdates()
 })
 
 test('sendFlamegraphs should include alertId in query params when provided', async (t) => {

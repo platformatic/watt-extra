@@ -80,6 +80,7 @@ async function healthSignals (app, _opts) {
       }
 
       const {
+        id: workerId,
         application: serviceId,
         currentHealth,
         healthSignals
@@ -125,13 +126,13 @@ async function healthSignals (app, _opts) {
       }
 
       if (healthSignals.length > 0) {
-        await sendHealthSignalsWithTimeout(serviceId, healthSignals)
+        await sendHealthSignalsWithTimeout(serviceId, workerId, healthSignals)
       }
     })
   }
   app.setupHealthSignals = setupHealthSignals
 
-  async function sendHealthSignalsWithTimeout (serviceId, signals) {
+  async function sendHealthSignalsWithTimeout (serviceId, workerId, signals) {
     signalsCaches[serviceId] ??= new HealthSignalsCache()
     servicesSendingStatuses[serviceId] ??= false
 
@@ -148,7 +149,7 @@ async function healthSignals (app, _opts) {
 
         try {
           const signals = signalsCache.getAll()
-          await sendHealthSignals(serviceId, signals, metrics)
+          await sendHealthSignals(serviceId, workerId, signals, metrics)
         } catch (err) {
           app.log.error({ err }, 'Failed to send health signals to scaler')
         }
@@ -156,7 +157,7 @@ async function healthSignals (app, _opts) {
     }
   }
 
-  async function sendHealthSignals (serviceId, signals, metrics) {
+  async function sendHealthSignals (serviceId, workerId, signals, metrics) {
     const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
     const applicationId = app.instanceConfig?.applicationId
     const authHeaders = await app.getAuthorizationHeader()
@@ -186,6 +187,7 @@ async function healthSignals (app, _opts) {
 
     app.sendFlamegraphs({
       serviceIds: [serviceId],
+      workerIds: [workerId],
       alertId: alert.id
     }).catch(err => {
       app.log.error({ err }, 'Failed to send a flamegraph')
