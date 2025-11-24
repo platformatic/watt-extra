@@ -199,6 +199,9 @@ async function startICC (t, opts = {}) {
     icc.post('/pods/:podId/services/:serviceId/flamegraph', async (req) => {
       return opts.processFlamegraphs?.(req)
     })
+    icc.post('/flamegraphs/:flamegraphId/alerts', async (req) => {
+      return opts.attachFlamegraphToAlerts?.(req)
+    })
   }, { prefix: '/scaler' })
 
   // Cron

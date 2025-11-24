@@ -3,9 +3,9 @@ import { request } from 'undici'
 async function alerts (app, _opts) {
   const healthCache = [] // It's OK to have this in memory, this is per-pod.
   const podHealthWindow =
-    app.instanceConfig?.config?.scaler?.podHealthWindow || 60 * 1000
+    app.instanceConfig?.scaler?.podHealthWindow || 60 * 1000
   const alertRetentionWindow =
-    app.instanceConfig?.config?.scaler?.alertRetentionWindow || 10 * 1000
+    app.instanceConfig?.scaler?.alertRetentionWindow || 10 * 1000
 
   const lastServicesAlertTime = {}
 
