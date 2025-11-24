@@ -9,12 +9,14 @@ async function flamegraphs (app, _opts) {
   const flamegraphsELUThreshold = app.env.PLT_FLAMEGRAPHS_ELU_THRESHOLD
   const flamegraphsGracePeriod = app.env.PLT_FLAMEGRAPHS_GRACE_PERIOD
   const flamegraphsAttemptTimeout = app.env.PLT_FLAMEGRAPHS_ATTEMPT_TIMEOUT
+  const flamegraphsCacheCleanupInterval = app.env.PLT_FLAMEGRAPHS_CACHE_CLEANUP_INTERVAL
 
   const durationMillis = parseInt(flamegraphsIntervalSec) * 1000
   const eluThreshold = parseFloat(flamegraphsELUThreshold)
   const gracePeriod = parseInt(flamegraphsGracePeriod)
   const attemptTimeout = Math.min(parseInt(flamegraphsAttemptTimeout), durationMillis)
   const maxAttempts = Math.ceil(durationMillis / attemptTimeout) + 1
+  const cacheCleanupInterval = parseInt(flamegraphsCacheCleanupInterval)
 
   let workerStartedListener = null
 
@@ -85,6 +87,8 @@ async function flamegraphs (app, _opts) {
       })
     }
     runtime.on('application:worker:started', workerStartedListener)
+
+    setInterval(cleanupFlamegraphsCache, cacheCleanupInterval).unref()
   }
 
   app.cleanupFlamegraphs = async () => {
@@ -154,47 +158,73 @@ async function flamegraphs (app, _opts) {
     cleanupFlamegraphsCache()
 
     const uploadPromises = workerIds.map(async (workerId) => {
-      let profile = profilesByWorkerId[workerId]
-      if (profile?.flamegraphId) {
-        const { flamegraphId } = profile
-        try {
-          await attachFlamegraphToAlerts(scalerUrl, flamegraphId, [alertId])
-          return
-        } catch (err) {
-          if (err.code === 'PLT_ATTACH_FLAMEGRAPH_MULTIPLE_ALERTS_NOT_SUPPORTED') {
-            app.log.warn(
-              'Attaching flamegraph multiple alerts is not supported by the scaler.' +
-                ' Please upgrade to the latest ICC version to use this feature.'
-            )
-          } else {
-            app.log.error({ err, workerId, alertId, flamegraphId }, 'Failed to attach flamegraph to alert')
-          }
-        }
-      }
-
-      if (!profile) {
-        profile = await getServiceFlamegraph(workerId, profileType)
-        if (!profile || !(profile.data instanceof Uint8Array)) {
-          app.log.error({ workerId }, 'Failed to get profile from service')
-          return
-        }
-      }
-
-      profilesByWorkerId[workerId] = profile
-
       const serviceId = workerId.split(':')[0]
+      const profileKey = `${workerId}:${profileType}`
 
-      try {
-        const flamegraph = await sendServiceFlamegraph(
+      let profile = profilesByWorkerId[profileKey]
+      if (profile !== undefined) {
+        if (alertId) {
+          app.log.info(
+            { workerId, alertId }, 'Flamegraph will be attached to the alert'
+          )
+          profile.waitingAlerts.push(alertId)
+        }
+
+        if (profile.flamegraphId === null) {
+          app.log.info({ workerId }, 'Waiting for flamegraph to be generated and sent')
+          return
+        }
+      }
+
+      if (profile === undefined) {
+        profile = {
+          type: profileType,
+          data: null,
+          timestamp: null,
+          flamegraphId: null,
+          waitingAlerts: []
+        }
+        profilesByWorkerId[profileKey] = profile
+
+        const result = await getServiceFlamegraph(workerId, profileType)
+        if (!result || !(result.data instanceof Uint8Array)) {
+          app.log.error({ workerId }, 'Failed to get profile from service')
+          delete profilesByWorkerId[profileKey]
+          return
+        }
+
+        profile.data = result.data
+        profile.timestamp = result.timestamp
+      }
+
+      if (profile.flamegraphId === null || !alertId) {
+        try {
+          const flamegraph = await sendServiceFlamegraph(
+            scalerUrl,
+            serviceId,
+            profile.data,
+            profileType,
+            alertId
+          )
+          profile.flamegraphId = flamegraph.id
+        } catch (err) {
+          app.log.error({ err, workerId, alertId, profileType }, 'Failed to send flamegraph')
+          delete profilesByWorkerId[profileKey]
+          return
+        }
+      }
+
+      const waitingAlerts = profile.waitingAlerts
+      if (waitingAlerts.length > 0) {
+        profile.waitingAlerts = []
+        await _attachFlamegraphToAlerts(
           scalerUrl,
           serviceId,
+          profile.flamegraphId,
           profile.data,
-          profileType,
-          alertId
+          profile.type,
+          waitingAlerts
         )
-        profile.flamegraphId = flamegraph.id
-      } catch (err) {
-        app.log.error({ err, workerId, alertId, profileType }, 'Failed to send flamegraph')
       }
     })
 
@@ -203,6 +233,8 @@ async function flamegraphs (app, _opts) {
 
   async function getServiceFlamegraph (workerId, profileType, attempt = 1) {
     const runtime = app.watt.runtime
+
+    app.log.info({ workerId, attempt, maxAttempts, attemptTimeout }, 'Getting profile from worker')
 
     try {
       const [state, profile] = await Promise.all([
@@ -265,6 +297,50 @@ async function flamegraphs (app, _opts) {
     return response
   }
 
+  // Function that supports ICC that doesn't have attach flamegraph API
+  // Remove it and use the attachFlamegraphToAlerts when ICC is updated
+  async function _attachFlamegraphToAlerts (
+    scalerUrl,
+    serviceId,
+    flamegraphId,
+    profile,
+    profileType,
+    alertIds
+  ) {
+    try {
+      await attachFlamegraphToAlerts(scalerUrl, flamegraphId, alertIds)
+      return
+    } catch (err) {
+      if (err.code === 'PLT_ATTACH_FLAMEGRAPH_MULTIPLE_ALERTS_NOT_SUPPORTED') {
+        app.log.warn(
+          'Attaching flamegraph multiple alerts is not supported by the scaler.' +
+            ' Please upgrade to the latest ICC version to use this feature.'
+        )
+      } else {
+        app.log.error({ err, alertIds, flamegraphId }, 'Failed to attach flamegraph to alert')
+      }
+    }
+
+    const promises = []
+    for (const alertId of alertIds) {
+      const promise = sendServiceFlamegraph(
+        scalerUrl,
+        serviceId,
+        profile,
+        profileType,
+        alertId
+      )
+      promises.push(promise)
+    }
+
+    const results = await Promise.allSettled(promises)
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        app.log.error({ result }, 'Failed to attach flamegraph to alert')
+      }
+    }
+  }
+
   async function attachFlamegraphToAlerts (scalerUrl, flamegraphId, alertIds) {
     const url = `${scalerUrl}/flamegraphs/${flamegraphId}/alerts`
     app.log.info({ flamegraphId, alerts: alertIds }, 'Attaching flamegraph to alerts')
@@ -294,10 +370,10 @@ async function flamegraphs (app, _opts) {
   function cleanupFlamegraphsCache () {
     const now = Date.now()
 
-    for (const workerId of Object.keys(profilesByWorkerId)) {
-      const { timestamp } = profilesByWorkerId[workerId]
-      if (now - timestamp > durationMillis) {
-        delete profilesByWorkerId[workerId]
+    for (const profileKey of Object.keys(profilesByWorkerId)) {
+      const timestamp = profilesByWorkerId[profileKey]?.timestamp
+      if (timestamp && now - timestamp > durationMillis) {
+        delete profilesByWorkerId[profileKey]
       }
     }
   }
