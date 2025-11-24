@@ -128,12 +128,88 @@ async function flamegraphs (app, _opts) {
     }
   }
 
+  const profilesByWorkerId = {}
+
+  app.sendFlamegraphs = async (options = {}) => {
+    if (isFlamegraphsDisabled) {
+      app.log.info('PLT_DISABLE_FLAMEGRAPHS is set, flamegraphs are disabled')
+      return
+    }
+
+    let { workerIds, alertId, profileType = 'cpu' } = options
+
+    const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
+    if (!scalerUrl) {
+      app.log.error('No scaler URL found in ICC services, cannot send flamegraph')
+      throw new Error('No scaler URL found in ICC services, cannot send flamegraph')
+    }
+
+    const runtime = app.watt.runtime
+
+    if (!workerIds) {
+      const { applications } = await runtime.getApplications()
+      workerIds = applications.map(app => app.id)
+    }
+
+    cleanupFlamegraphsCache()
+
+    const uploadPromises = workerIds.map(async (workerId) => {
+      let profile = profilesByWorkerId[workerId]
+      if (profile?.flamegraphId) {
+        const { flamegraphId } = profile
+        try {
+          await attachFlamegraphToAlerts(scalerUrl, flamegraphId, [alertId])
+          return
+        } catch (err) {
+          if (err.code === 'PLT_ATTACH_FLAMEGRAPH_MULTIPLE_ALERTS_NOT_SUPPORTED') {
+            app.log.warn(
+              'Attaching flamegraph multiple alerts is not supported by the scaler.' +
+                ' Please upgrade to the latest ICC version to use this feature.'
+            )
+          } else {
+            app.log.error({ err, workerId, alertId, flamegraphId }, 'Failed to attach flamegraph to alert')
+          }
+        }
+      }
+
+      if (!profile) {
+        profile = await getServiceFlamegraph(workerId, profileType)
+        if (!profile || !(profile.data instanceof Uint8Array)) {
+          app.log.error({ workerId }, 'Failed to get profile from service')
+          return
+        }
+      }
+
+      profilesByWorkerId[workerId] = profile
+
+      const serviceId = workerId.split(':')[0]
+
+      try {
+        const flamegraph = await sendServiceFlamegraph(
+          scalerUrl,
+          serviceId,
+          profile.data,
+          profileType,
+          alertId
+        )
+        profile.flamegraphId = flamegraph.id
+      } catch (err) {
+        app.log.error({ err, workerId, alertId, profileType }, 'Failed to send flamegraph')
+      }
+    })
+
+    await Promise.all(uploadPromises)
+  }
+
   async function getServiceFlamegraph (workerId, profileType, attempt = 1) {
     const runtime = app.watt.runtime
 
     try {
-      const profile = await runtime.sendCommandToApplication(workerId, 'getLastProfile', { type: profileType })
-      return profile
+      const [state, profile] = await Promise.all([
+        runtime.sendCommandToApplication(workerId, 'getProfilingState', { type: profileType }),
+        runtime.sendCommandToApplication(workerId, 'getLastProfile', { type: profileType })
+      ])
+      return { data: profile, timestamp: state.latestProfileTimestamp }
     } catch (err) {
       if (err.code === 'PLT_PPROF_NO_PROFILE_AVAILABLE') {
         app.log.info(
@@ -168,61 +244,62 @@ async function flamegraphs (app, _opts) {
       query.alertId = alertId
     }
 
-    try {
-      const authHeaders = await app.getAuthorizationHeader()
-      const { statusCode, body } = await request(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-          ...authHeaders
-        },
-        query,
-        body: profile
-      })
+    const authHeaders = await app.getAuthorizationHeader()
+    const { statusCode, body } = await request(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        ...authHeaders
+      },
+      query,
+      body: profile
+    })
 
-      if (statusCode !== 200) {
-        const error = await body.text()
-        app.log.error({ error }, 'Failed to send flamegraph')
-        throw new Error(`Failed to send flamegraph: ${error}`)
+    if (statusCode !== 200) {
+      const error = await body.text()
+      app.log.error({ error }, 'Failed to send flamegraph')
+      throw new Error(`Failed to send flamegraph: ${error}`)
+    }
+
+    const response = await body.json()
+    return response
+  }
+
+  async function attachFlamegraphToAlerts (scalerUrl, flamegraphId, alertIds) {
+    const url = `${scalerUrl}/flamegraphs/${flamegraphId}/alerts`
+    app.log.info({ flamegraphId, alerts: alertIds }, 'Attaching flamegraph to alerts')
+
+    const authHeaders = await app.getAuthorizationHeader()
+    const { statusCode, body } = await request(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders
+      },
+      body: JSON.stringify({ alertIds })
+    })
+
+    if (statusCode !== 200) {
+      const error = await body.text()
+      if (statusCode === 404 && error.includes('Route POST')) {
+        const err = new Error('Attaching flamegraph multiple alerts is not supported by the scaler')
+        err.code = 'PLT_ATTACH_FLAMEGRAPH_MULTIPLE_ALERTS_NOT_SUPPORTED'
+        throw err
       }
-    } catch (err) {
-      app.log.warn({ err, serviceId, podId }, 'Failed to send flamegraph from service')
+
+      throw new Error(`Failed to attach flamegraph to alerts: ${error}`)
     }
   }
 
-  app.sendFlamegraphs = async (options = {}) => {
-    if (isFlamegraphsDisabled) {
-      app.log.info('PLT_DISABLE_FLAMEGRAPHS is set, flamegraphs are disabled')
-      return
-    }
+  function cleanupFlamegraphsCache () {
+    const now = Date.now()
 
-    let { workerIds, alertId, profileType = 'cpu' } = options
-
-    const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
-    if (!scalerUrl) {
-      app.log.error('No scaler URL found in ICC services, cannot send flamegraph')
-      throw new Error('No scaler URL found in ICC services, cannot send flamegraph')
-    }
-
-    const runtime = app.watt.runtime
-
-    if (!workerIds) {
-      const { applications } = await runtime.getApplications()
-      workerIds = applications.map(app => app.id)
-    }
-
-    const uploadPromises = workerIds.map(async (workerId) => {
-      const profile = await getServiceFlamegraph(workerId, profileType)
-      if (!profile || !(profile instanceof Uint8Array)) {
-        app.log.error({ workerId }, 'Failed to get profile from service')
-        return
+    for (const workerId of Object.keys(profilesByWorkerId)) {
+      const { timestamp } = profilesByWorkerId[workerId]
+      if (now - timestamp > durationMillis) {
+        delete profilesByWorkerId[workerId]
       }
-
-      const serviceId = workerId.split(':')[0]
-      await sendServiceFlamegraph(scalerUrl, serviceId, profile, profileType, alertId)
-    })
-
-    await Promise.all(uploadPromises)
+    }
   }
 }
 
