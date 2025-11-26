@@ -155,8 +155,8 @@ test('setupFlamegraphs should pass sourceMaps from application config to startPr
   })
 
   // Trigger profiling for both CPU and heap profiles
-  await app.sendFlamegraphs({ profileType: 'cpu' })
-  await app.sendFlamegraphs({ profileType: 'heap' })
+  await app.requestFlamegraphs({ profileType: 'cpu' })
+  await app.requestFlamegraphs({ profileType: 'heap' })
 
   // Wait for profiling to start
   await sleep(100)
@@ -207,8 +207,8 @@ test('setupFlamegraphs should handle missing sourceMaps in application config', 
   })
 
   // Trigger profiling for both CPU and heap profiles
-  await app.sendFlamegraphs({ profileType: 'cpu' })
-  await app.sendFlamegraphs({ profileType: 'heap' })
+  await app.requestFlamegraphs({ profileType: 'cpu' })
+  await app.requestFlamegraphs({ profileType: 'heap' })
 
   // Wait for profiling to start
   await sleep(100)
@@ -241,7 +241,7 @@ test('setupFlamegraphs should skip profiling when PLT_DISABLE_FLAMEGRAPHS is set
   await app.setupFlamegraphs()
 
   // Also try to send flamegraphs
-  await app.sendFlamegraphs()
+  await app.requestFlamegraphs()
 
   // Wait to ensure no profiling starts
   await sleep(100)
@@ -249,7 +249,7 @@ test('setupFlamegraphs should skip profiling when PLT_DISABLE_FLAMEGRAPHS is set
   equal(startProfilingCalls.length, 0, 'Should not call startProfiling when disabled')
 })
 
-test('sendFlamegraphs should handle errors when starting profiling', async (t) => {
+test('requestFlamegraphs should handle errors when starting profiling', async (t) => {
   setUpEnvironment()
 
   const app = createMockApp(port)
@@ -278,7 +278,7 @@ test('sendFlamegraphs should handle errors when starting profiling', async (t) =
   })
 
   // Trigger profiling which will fail
-  await app.sendFlamegraphs()
+  await app.requestFlamegraphs()
 
   // Wait for errors to be logged
   await sleep(100)
@@ -287,7 +287,7 @@ test('sendFlamegraphs should handle errors when starting profiling', async (t) =
   equal(errors.length, 2, 'Should log errors for both failed services')
 })
 
-test('sendFlamegraphs should upload flamegraphs from all services', async (t) => {
+test('requestFlamegraphs should upload flamegraphs from all services', async (t) => {
   setUpEnvironment()
 
   const uploadedFlamegraphs = []
@@ -338,7 +338,7 @@ test('sendFlamegraphs should upload flamegraphs from all services', async (t) =>
   })
 
   // Trigger profiling
-  await app.sendFlamegraphs()
+  await app.requestFlamegraphs()
 
   // Wait for profile to be generated (duration is 1 second)
   await sleep(1500)
@@ -356,7 +356,7 @@ test('sendFlamegraphs should upload flamegraphs from all services', async (t) =>
   deepEqual(service1Upload.body, Buffer.from(mockProfile))
 })
 
-test('sendFlamegraphs should handle missing profile data', async (t) => {
+test('requestFlamegraphs should handle missing profile data', async (t) => {
   setUpEnvironment()
 
   const app = createMockApp(port + 11)
@@ -388,7 +388,7 @@ test('sendFlamegraphs should handle missing profile data', async (t) => {
   })
 
   // Trigger profiling
-  await app.sendFlamegraphs()
+  await app.requestFlamegraphs()
 
   // Wait for profile to be generated (duration is 1 second)
   await sleep(1500)
@@ -396,7 +396,7 @@ test('sendFlamegraphs should handle missing profile data', async (t) => {
   equal(errors.length, 2, 'Should log errors for both services with missing profiles')
 })
 
-test('sendFlamegraphs should filter by workerIds when provided', async (t) => {
+test('requestFlamegraphs should filter by workerIds when provided', async (t) => {
   setUpEnvironment()
 
   const app = createMockApp(port + 12)
@@ -438,7 +438,7 @@ test('sendFlamegraphs should filter by workerIds when provided', async (t) => {
   })
 
   // Trigger profiling for specific worker
-  await app.sendFlamegraphs({ workerIds: ['service-1:0'] })
+  await app.requestFlamegraphs({ workerIds: ['service-1:0'] })
 
   // Wait for profile to be generated (duration is 1 second)
   await sleep(1500)
@@ -447,7 +447,7 @@ test('sendFlamegraphs should filter by workerIds when provided', async (t) => {
   equal(getProfileCalls[0], 'service-1:0', 'Should request profile for service-1')
 })
 
-test('sendFlamegraphs should skip when PLT_DISABLE_FLAMEGRAPHS is set', async (t) => {
+test('requestFlamegraphs should skip when PLT_DISABLE_FLAMEGRAPHS is set', async (t) => {
   setUpEnvironment()
 
   const app = createMockApp(port + 13)
@@ -467,7 +467,7 @@ test('sendFlamegraphs should skip when PLT_DISABLE_FLAMEGRAPHS is set', async (t
   }
 
   await flamegraphsPlugin(app)
-  await app.sendFlamegraphs()
+  await app.requestFlamegraphs()
 
   // Wait to ensure no profiling starts
   await sleep(100)
@@ -475,7 +475,7 @@ test('sendFlamegraphs should skip when PLT_DISABLE_FLAMEGRAPHS is set', async (t
   equal(getProfileCalls.length, 0, 'Should not request profiles when disabled')
 })
 
-test('sendFlamegraphs should throw error when scaler URL is missing', async (t) => {
+test('requestFlamegraphs should throw error when scaler URL is missing', async (t) => {
   setUpEnvironment()
 
   const app = createMockApp(port + 14, false) // Don't include scaler URL
@@ -484,7 +484,7 @@ test('sendFlamegraphs should throw error when scaler URL is missing', async (t) 
 
   let errorThrown = false
   try {
-    await app.sendFlamegraphs()
+    await app.requestFlamegraphs()
   } catch (err) {
     errorThrown = true
     ok(err.message.includes('No scaler URL'), 'Should throw error about missing scaler URL')
@@ -734,7 +734,7 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
   equal(service2Req.serviceId, 'service-2:0')
 })
 
-test('sendFlamegraphs should include alertId in query params when provided', async (t) => {
+test('requestFlamegraphs should include alertId in query params when provided', async (t) => {
   setUpEnvironment()
 
   const uploadedRequests = []
@@ -780,7 +780,7 @@ test('sendFlamegraphs should include alertId in query params when provided', asy
   })
 
   // Trigger profiling with alertId
-  await app.sendFlamegraphs({ alertId: 'test-alert-123' })
+  await app.requestFlamegraphs({ alertId: 'test-alert-123' })
 
   // Wait for profile to be generated (duration is 1 second)
   await sleep(1500)

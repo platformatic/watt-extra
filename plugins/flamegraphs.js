@@ -190,7 +190,7 @@ async function flamegraphs (app, _opts) {
     }
   }
 
-  app.sendFlamegraphs = async (options = {}) => {
+  app.requestFlamegraphs = async (options = {}) => {
     if (isFlamegraphsDisabled) {
       app.log.info('PLT_DISABLE_FLAMEGRAPHS is set, flamegraphs are disabled')
       return

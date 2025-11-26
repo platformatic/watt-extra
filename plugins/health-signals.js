@@ -185,7 +185,7 @@ async function healthSignals (app, _opts) {
 
     const alert = await body.json()
 
-    app.sendFlamegraphs({
+    app.requestFlamegraphs({
       serviceIds: [serviceId],
       workerIds: [workerId],
       alertId: alert.id

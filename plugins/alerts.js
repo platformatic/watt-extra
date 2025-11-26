@@ -112,7 +112,7 @@ async function alerts (app, _opts) {
 
         const alert = await body.json()
 
-        app.sendFlamegraphs({
+        app.requestFlamegraphs({
           workerIds: [workerId],
           alertId: alert.id
         }).catch(err => {
