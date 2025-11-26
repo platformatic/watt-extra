@@ -27,9 +27,9 @@ export class Profiler {
     if (typeof workerId !== 'string') {
       throw new Error('Invalid Worker ID. Must be a string')
     }
-    // if (!workerId.includes(':')) {
-    //   throw new Error('Worker ID must include the service ID and worker index')
-    // }
+    if (!workerId.includes(':')) {
+      throw new Error('Worker ID must include the service ID and worker index')
+    }
     if (typeof onProfile !== 'function') {
       throw new Error('Invalid onProfile handler. Must be a function')
     }
@@ -205,19 +205,35 @@ async function flamegraphs (app, _opts) {
     const runtime = app.watt.runtime
 
     let { workerIds, alertId, profileType = 'cpu' } = options
-    if (!workerIds) {
-      const { applications } = await runtime.getApplications()
-      workerIds = applications.map(app => app.id)
+
+    const servicesWorkers = {}
+    const workers = await runtime.getWorkers()
+    for (const workerId in workers) {
+      const workerInfo = workers[workerId]
+      const serviceId = workerInfo.application
+
+      servicesWorkers[serviceId] ??= []
+      servicesWorkers[serviceId].push(workerId)
     }
 
-    for (const workerId of workerIds) {
+    workerIds ??= Object.keys(servicesWorkers)
+
+    for (let workerId of workerIds) {
+      const [serviceId, workerIndex] = workerId.split(':')
+      if (workerIndex === undefined) {
+        workerId = servicesWorkers[serviceId][0]
+      }
+
+      if (workerId === undefined) {
+        app.log.error({ serviceId }, 'No worker found for an application')
+        continue
+      }
+
       const profileKey = `${workerId}:${profileType}`
 
       let profiler = profilers[profileKey]
       if (!profiler) {
-        const serviceId = workerId.split(':')[0]
         const config = profilersConfigs[serviceId]
-
         profiler = new Profiler({
           app,
           workerId,

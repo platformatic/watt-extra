@@ -164,10 +164,10 @@ test('setupFlamegraphs should pass sourceMaps from application config to startPr
   // Should call startProfiling 4 times: 2 services × 2 profile types (cpu + heap)
   equal(startProfilingCalls.length, 4, 'Should call startProfiling for both services with cpu and heap')
 
-  const service1CpuCall = startProfilingCalls.find(c => c.workerId === 'service-1' && c.options.type === 'cpu')
-  const service1HeapCall = startProfilingCalls.find(c => c.workerId === 'service-1' && c.options.type === 'heap')
-  const service2CpuCall = startProfilingCalls.find(c => c.workerId === 'service-2' && c.options.type === 'cpu')
-  const service2HeapCall = startProfilingCalls.find(c => c.workerId === 'service-2' && c.options.type === 'heap')
+  const service1CpuCall = startProfilingCalls.find(c => c.workerId === 'service-1:0' && c.options.type === 'cpu')
+  const service1HeapCall = startProfilingCalls.find(c => c.workerId === 'service-1:0' && c.options.type === 'heap')
+  const service2CpuCall = startProfilingCalls.find(c => c.workerId === 'service-2:0' && c.options.type === 'cpu')
+  const service2HeapCall = startProfilingCalls.find(c => c.workerId === 'service-2:0' && c.options.type === 'heap')
 
   ok(service1CpuCall, 'Should have called startProfiling for service-1 CPU')
   ok(service1HeapCall, 'Should have called startProfiling for service-1 heap')
@@ -447,45 +447,6 @@ test('sendFlamegraphs should filter by workerIds when provided', async (t) => {
   equal(getProfileCalls[0], 'service-1:0', 'Should request profile for service-1')
 })
 
-test.skip('sendFlamegraphs should try to get the profile from a service if worker is not available', async (t) => {
-  setUpEnvironment()
-
-  const app = createMockApp(port + 12)
-  const getProfileCalls = []
-
-  app.watt.runtime.sendCommandToApplication = async (workerId, command) => {
-    if (command === 'getLastProfile') {
-      getProfileCalls.push(workerId)
-      if (workerId === 'service-1:2') {
-        throw new Error('Worker not available')
-      }
-      return new Uint8Array([1, 2, 3])
-    }
-    return { success: false }
-  }
-
-  // Mock HTTP server
-  const { createServer } = await import('node:http')
-  const server = createServer((req, res) => {
-    const body = []
-    req.on('data', chunk => body.push(chunk))
-    req.on('end', () => {
-      res.writeHead(200)
-      res.end()
-    })
-  })
-
-  await new Promise(resolve => server.listen(port + 12, resolve))
-  t.after(() => server.close())
-
-  await flamegraphsPlugin(app)
-  await app.sendFlamegraphs({ workerIds: ['service-1:2'] })
-
-  equal(getProfileCalls.length, 2)
-  equal(getProfileCalls[0], 'service-1:2')
-  equal(getProfileCalls[1], 'service-1')
-})
-
 test('sendFlamegraphs should skip when PLT_DISABLE_FLAMEGRAPHS is set', async (t) => {
   setUpEnvironment()
 
@@ -599,14 +560,14 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
   equal(getFlamegraphReqs.length, 2)
 
   const service1Req = getFlamegraphReqs.find(
-    (f) => f.serviceId === 'service-1'
+    (f) => f.serviceId === 'service-1:0'
   )
   const service2Req = getFlamegraphReqs.find(
-    (f) => f.serviceId === 'service-2'
+    (f) => f.serviceId === 'service-2:0'
   )
 
-  equal(service1Req.serviceId, 'service-1')
-  equal(service2Req.serviceId, 'service-2')
+  equal(service1Req.serviceId, 'service-1:0')
+  equal(service2Req.serviceId, 'service-2:0')
 })
 
 test('should handle trigger-flamegraph when no runtime is available', async (t) => {
@@ -763,14 +724,14 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
   equal(getHeapProfileReqs.length, 2)
 
   const service1Req = getHeapProfileReqs.find(
-    (f) => f.serviceId === 'service-1'
+    (f) => f.serviceId === 'service-1:0'
   )
   const service2Req = getHeapProfileReqs.find(
-    (f) => f.serviceId === 'service-2'
+    (f) => f.serviceId === 'service-2:0'
   )
 
-  equal(service1Req.serviceId, 'service-1')
-  equal(service2Req.serviceId, 'service-2')
+  equal(service1Req.serviceId, 'service-1:0')
+  equal(service2Req.serviceId, 'service-2:0')
 })
 
 test('sendFlamegraphs should include alertId in query params when provided', async (t) => {
