@@ -139,9 +139,14 @@ export class Profiler {
     this.#isProfiling = false
     this.#log.info('Stopping profiling')
 
-    await this.#runtime.sendCommandToApplication(
-      this.#workerId, 'stopProfiling', this.#profileOptions
-    )
+    try {
+      await this.#runtime.sendCommandToApplication(
+        this.#workerId, 'stopProfiling', this.#profileOptions
+      )
+    } catch (err) {
+      // Ignore errors if the app is already closing
+      this.#log.debug({ err }, 'Failed to stop profiling')
+    }
   }
 
   async #getProfile () {
