@@ -1,51 +1,178 @@
 'use strict'
 
-import { setTimeout as sleep } from 'node:timers/promises'
 import { request } from 'undici'
+
+export class Profiler {
+  #workerId
+  #type
+  #duration
+  #profileOptions
+  #runtime
+  #log
+  #requests
+  #isProfiling
+  #onProfile
+  #getProfileInterval
+  #stopProfileTimeout
+
+  constructor (options = {}) {
+    const { type, duration, workerId, sourceMaps, app, onProfile } = options
+
+    if (type !== 'cpu' && type !== 'heap') {
+      throw new Error('Invalid Profiler type. Must be either "cpu" or "heap"')
+    }
+    if (typeof duration !== 'number') {
+      throw new Error('Invalid Profiler duration. Must be a number')
+    }
+    if (typeof workerId !== 'string') {
+      throw new Error('Invalid Worker ID. Must be a string')
+    }
+    // if (!workerId.includes(':')) {
+    //   throw new Error('Worker ID must include the service ID and worker index')
+    // }
+    if (typeof onProfile !== 'function') {
+      throw new Error('Invalid onProfile handler. Must be a function')
+    }
+
+    this.#type = type
+    this.#duration = duration
+    this.#workerId = workerId
+    this.#onProfile = onProfile
+
+    this.#profileOptions = {
+      type,
+      durationMillis: duration,
+      sourceMaps: sourceMaps ?? false
+    }
+
+    this.#requests = []
+    this.#isProfiling = false
+
+    this.#runtime = app.watt.runtime
+    this.#log = app.log.child({
+      workerId: this.#workerId,
+      profilerType: this.#type
+    })
+  }
+
+  async requestProfile (request = {}) {
+    request.timestamp ??= Date.now()
+    this.#requests.push(request)
+    this.#unscheduleStopProfiling()
+
+    if (!this.#isProfiling) {
+      this.#startProfilingLoop()
+    }
+  }
+
+  async stop () {
+    if (this.#getProfileInterval) {
+      clearInterval(this.#getProfileInterval)
+      this.#getProfileInterval = null
+    }
+    if (this.#stopProfileTimeout) {
+      clearTimeout(this.#stopProfileTimeout)
+      this.#stopProfileTimeout = null
+    }
+    if (this.#isProfiling) {
+      await this.#stopProfiling()
+    }
+  }
+
+  async #startProfilingLoop () {
+    try {
+      await this.#startProfiling()
+    } catch (err) {
+      this.#log.error({ err }, 'Failed to start profiling')
+      const requests = this.#getProfileRequests(Date.now())
+      this.#onProfile(err, null, requests)
+      return
+    }
+
+    this.#getProfileInterval = setInterval(
+      () => this.#processProfile(),
+      this.#duration
+    ).unref()
+  }
+
+  async #processProfile () {
+    try {
+      const profile = await this.#getProfile()
+      const requests = this.#getProfileRequests(profile.timestamp)
+      this.#onProfile(null, profile, requests)
+    } catch (err) {
+      this.#log.error({ err }, 'Failed to generate a profile')
+      const requests = this.#getProfileRequests(Date.now())
+      this.#onProfile(err, null, requests)
+    }
+
+    if (this.#requests.length === 0) {
+      this.#scheduleStopProfiling()
+    }
+  }
+
+  #scheduleStopProfiling () {
+    // Stop profiling after the duration/2 if there are no more requests
+    this.#stopProfileTimeout = setTimeout(
+      () => this.stop(),
+      this.#duration / 2
+    ).unref()
+  }
+
+  #unscheduleStopProfiling () {
+    if (this.#stopProfileTimeout) {
+      clearTimeout(this.#stopProfileTimeout)
+      this.#stopProfileTimeout = null
+    }
+  }
+
+  async #startProfiling () {
+    this.#isProfiling = true
+    this.#log.info('Starting profiling')
+
+    await this.#runtime.sendCommandToApplication(
+      this.#workerId, 'startProfiling', this.#profileOptions
+    )
+  }
+
+  async #stopProfiling () {
+    this.#isProfiling = false
+    this.#log.info('Stopping profiling')
+
+    await this.#runtime.sendCommandToApplication(
+      this.#workerId, 'stopProfiling', this.#profileOptions
+    )
+  }
+
+  async #getProfile () {
+    this.#log.info('Getting profile from worker')
+
+    const [state, profile] = await Promise.all([
+      this.#runtime.sendCommandToApplication(this.#workerId, 'getProfilingState', { type: this.#type }),
+      this.#runtime.sendCommandToApplication(this.#workerId, 'getLastProfile', { type: this.#type })
+    ])
+    return { data: profile, timestamp: state.latestProfileTimestamp }
+  }
+
+  #getProfileRequests (profileTimestamp) {
+    let processedIndex = 0
+    for (let i = 0; i < this.#requests.length; i++) {
+      if (this.#requests[i].timestamp <= profileTimestamp) {
+        processedIndex = i + 1
+      }
+    }
+    return this.#requests.splice(0, processedIndex)
+  }
+}
 
 async function flamegraphs (app, _opts) {
   const isFlamegraphsDisabled = app.env.PLT_DISABLE_FLAMEGRAPHS
   const flamegraphsIntervalSec = app.env.PLT_FLAMEGRAPHS_INTERVAL_SEC
-  const flamegraphsELUThreshold = app.env.PLT_FLAMEGRAPHS_ELU_THRESHOLD
-  const flamegraphsGracePeriod = app.env.PLT_FLAMEGRAPHS_GRACE_PERIOD
-  const flamegraphsAttemptTimeout = app.env.PLT_FLAMEGRAPHS_ATTEMPT_TIMEOUT
-  const flamegraphsCacheCleanupInterval = app.env.PLT_FLAMEGRAPHS_CACHE_CLEANUP_INTERVAL
 
   const durationMillis = parseInt(flamegraphsIntervalSec) * 1000
-  const eluThreshold = parseFloat(flamegraphsELUThreshold)
-  const gracePeriod = parseInt(flamegraphsGracePeriod)
-  const attemptTimeout = Math.min(parseInt(flamegraphsAttemptTimeout), durationMillis)
-  const maxAttempts = Math.ceil(durationMillis / attemptTimeout) + 1
-  const cacheCleanupInterval = parseInt(flamegraphsCacheCleanupInterval)
 
-  let workerStartedListener = null
-
-  const startProfilingOnWorker = async (runtime, workerFullId, logContext = {}) => {
-    await sleep(gracePeriod)
-
-    // Get application details to read service-level sourceMaps setting
-    const appDetails = await runtime.getApplicationDetails(workerFullId)
-    const sourceMaps = appDetails.sourceMaps ?? false
-
-    try {
-      // Start CPU profiling
-      await runtime.sendCommandToApplication(
-        workerFullId,
-        'startProfiling',
-        { durationMillis, eluThreshold, type: 'cpu', sourceMaps }
-      )
-
-      // Start HEAP profiling
-      await runtime.sendCommandToApplication(
-        workerFullId,
-        'startProfiling',
-        { durationMillis, eluThreshold, type: 'heap', sourceMaps }
-      )
-    } catch (err) {
-      app.log.error({ err, ...logContext }, 'Failed to start profiling')
-      throw err
-    }
-  }
+  const profilers = {}
+  const profilersConfigs = {}
 
   app.setupFlamegraphs = async () => {
     if (isFlamegraphsDisabled) {
@@ -53,94 +180,21 @@ async function flamegraphs (app, _opts) {
       return
     }
 
-    app.log.info('Start profiling services')
-
     const runtime = app.watt.runtime
-    const workers = await runtime.getWorkers()
+    const { applications } = await runtime.getApplications()
 
-    const promises = []
-    for (const [workerFullId, workerInfo] of Object.entries(workers)) {
-      if (workerInfo.status === 'started') {
-        const promise = startProfilingOnWorker(runtime, workerFullId, { workerFullId })
-        promises.push(promise)
-      }
-    }
-
-    const results = await Promise.allSettled(promises)
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        app.log.error({ result }, 'Failed to start profiling')
-      }
-    }
-
-    // Listen for new workers starting and start profiling on them
-    workerStartedListener = ({ application, worker }) => {
-      if (isFlamegraphsDisabled) {
-        return
-      }
-
-      const workerFullId = [application, worker].join(':')
-      app.log.info({ application, worker }, 'Starting profiling on new worker')
-
-      startProfilingOnWorker(runtime, workerFullId, { application, worker }).catch(() => {
-        // Error already logged in startProfilingOnWorker
-      })
-    }
-    runtime.on('application:worker:started', workerStartedListener)
-
-    setInterval(cleanupFlamegraphsCache, cacheCleanupInterval).unref()
-  }
-
-  app.cleanupFlamegraphs = async () => {
-    if (workerStartedListener && app.watt?.runtime) {
-      app.watt.runtime.removeListener('application:worker:started', workerStartedListener)
-      workerStartedListener = null
-    }
-
-    // Explicitly stop all active profiling sessions to avoid memory corruption
-    if (!isFlamegraphsDisabled && app.watt?.runtime) {
-      try {
-        const workers = await app.watt.runtime.getWorkers()
-        const stopPromises = []
-        for (const workerFullId of Object.keys(workers)) {
-          // Stop both CPU and heap profiling on each worker
-          stopPromises.push(
-            app.watt.runtime.sendCommandToApplication(workerFullId, 'stopProfiling', { type: 'cpu' })
-              .catch(err => {
-                // Ignore errors if profiling wasn't running
-                if (err.code !== 'PLT_PPROF_PROFILING_NOT_STARTED') {
-                  app.log.warn({ err, workerFullId }, 'Failed to stop CPU profiling')
-                }
-              })
-          )
-          stopPromises.push(
-            app.watt.runtime.sendCommandToApplication(workerFullId, 'stopProfiling', { type: 'heap' })
-              .catch(err => {
-                // Ignore errors if profiling wasn't running
-                if (err.code !== 'PLT_PPROF_PROFILING_NOT_STARTED') {
-                  app.log.warn({ err, workerFullId }, 'Failed to stop heap profiling')
-                }
-              })
-          )
-        }
-        await Promise.all(stopPromises)
-        // Small delay to ensure native cleanup completes
-        await sleep(100)
-      } catch (err) {
-        app.log.warn({ err }, 'Failed to stop profiling during cleanup')
-      }
+    for (const application of applications) {
+      const appDetails = await runtime.getApplicationDetails(application.id)
+      const sourceMaps = appDetails.sourceMaps ?? false
+      profilersConfigs[application.id] = { durationMillis, sourceMaps }
     }
   }
-
-  const profilesByWorkerId = {}
 
   app.sendFlamegraphs = async (options = {}) => {
     if (isFlamegraphsDisabled) {
       app.log.info('PLT_DISABLE_FLAMEGRAPHS is set, flamegraphs are disabled')
       return
     }
-
-    let { workerIds, alertId, profileType = 'cpu' } = options
 
     const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
     if (!scalerUrl) {
@@ -150,118 +204,73 @@ async function flamegraphs (app, _opts) {
 
     const runtime = app.watt.runtime
 
+    let { workerIds, alertId, profileType = 'cpu' } = options
     if (!workerIds) {
       const { applications } = await runtime.getApplications()
       workerIds = applications.map(app => app.id)
     }
 
-    cleanupFlamegraphsCache()
-
-    const uploadPromises = workerIds.map(async (workerId) => {
-      const serviceId = workerId.split(':')[0]
+    for (const workerId of workerIds) {
       const profileKey = `${workerId}:${profileType}`
 
-      let profile = profilesByWorkerId[profileKey]
-      if (profile !== undefined) {
-        if (alertId) {
-          app.log.info(
-            { workerId, alertId }, 'Flamegraph will be attached to the alert'
-          )
-          profile.waitingAlerts.push(alertId)
-        }
+      let profiler = profilers[profileKey]
+      if (!profiler) {
+        const serviceId = workerId.split(':')[0]
+        const config = profilersConfigs[serviceId]
 
-        if (profile.flamegraphId === null) {
-          app.log.info({ workerId }, 'Waiting for flamegraph to be generated and sent')
-          return
-        }
-      }
-
-      if (profile === undefined) {
-        profile = {
+        profiler = new Profiler({
+          app,
+          workerId,
           type: profileType,
-          data: null,
-          timestamp: null,
-          flamegraphId: null,
-          waitingAlerts: []
-        }
-        profilesByWorkerId[profileKey] = profile
-
-        const result = await getServiceFlamegraph(workerId, profileType)
-        if (!result || !(result.data instanceof Uint8Array)) {
-          app.log.error({ workerId }, 'Failed to get profile from service')
-          delete profilesByWorkerId[profileKey]
-          return
-        }
-
-        profile.data = result.data
-        profile.timestamp = result.timestamp
+          duration: config.durationMillis,
+          sourceMaps: config.sourceMaps,
+          onProfile: createProfileHandler(scalerUrl, workerId, profileType)
+        })
+        profilers[profileKey] = profiler
       }
 
-      if (profile.flamegraphId === null || !alertId) {
-        try {
-          const flamegraph = await sendServiceFlamegraph(
-            scalerUrl,
-            serviceId,
-            profile.data,
-            profileType,
-            alertId
-          )
-          profile.flamegraphId = flamegraph.id
-        } catch (err) {
-          app.log.error({ err, workerId, alertId, profileType }, 'Failed to send flamegraph')
-          delete profilesByWorkerId[profileKey]
-          return
-        }
-      }
-
-      const waitingAlerts = profile.waitingAlerts
-      if (waitingAlerts.length > 0) {
-        profile.waitingAlerts = []
-        await _attachFlamegraphToAlerts(
-          scalerUrl,
-          serviceId,
-          profile.flamegraphId,
-          profile.data,
-          profile.type,
-          waitingAlerts
-        )
-      }
-    })
-
-    await Promise.all(uploadPromises)
+      profiler.requestProfile({ alertId })
+    }
   }
 
-  async function getServiceFlamegraph (workerId, profileType, attempt = 1) {
-    const runtime = app.watt.runtime
+  function createProfileHandler (scalerUrl, workerId, profileType) {
+    const serviceId = workerId.split(':')[0]
 
-    app.log.info({ workerId, attempt, maxAttempts, attemptTimeout }, 'Getting profile from worker')
+    return async (err, profile, requests) => {
+      if (err) {
+        app.log.error({ err }, 'Failed to generate a profile')
+        return
+      }
 
-    try {
-      const [state, profile] = await Promise.all([
-        runtime.sendCommandToApplication(workerId, 'getProfilingState', { type: profileType }),
-        runtime.sendCommandToApplication(workerId, 'getLastProfile', { type: profileType })
-      ])
-      return { data: profile, timestamp: state.latestProfileTimestamp }
-    } catch (err) {
-      if (err.code === 'PLT_PPROF_NO_PROFILE_AVAILABLE') {
-        app.log.info(
-          { workerId, attempt, maxAttempts, attemptTimeout },
-          'No profile available for the service. Waiting for profiling to complete.'
+      const alertIds = []
+      for (const request of requests) {
+        if (request.alertId) {
+          alertIds.push(request.alertId)
+        }
+      }
+
+      try {
+        const alertId = alertIds.shift()
+        const flamegraph = await sendServiceFlamegraph(
+          scalerUrl,
+          serviceId,
+          profile.data,
+          profileType,
+          alertId
         )
-        if (attempt <= maxAttempts) {
-          await sleep(attemptTimeout)
-          return getServiceFlamegraph(workerId, profileType, attempt + 1)
-        }
-      } else if (err.code === 'PLT_PPROF_NOT_ENOUGH_ELU') {
-        app.log.info({ workerId }, 'ELU low, CPU profiling not active')
-      } else {
-        app.log.warn({ err, workerId }, 'Failed to get profile from a worker')
 
-        const [serviceId, workerIndex] = workerId.split(':')
-        if (workerIndex) {
-          app.log.warn('Worker not available, trying to get profile from another worker')
-          return getServiceFlamegraph(serviceId, profileType)
+        if (alertIds.length > 0) {
+          await _attachFlamegraphToAlerts(
+            scalerUrl,
+            serviceId,
+            flamegraph.id,
+            profile.data,
+            profileType,
+            alertIds
+          )
         }
+      } catch (err) {
+        app.log.error({ err, workerId }, 'Failed to send flamegraph')
       }
     }
   }
@@ -367,15 +376,10 @@ async function flamegraphs (app, _opts) {
     }
   }
 
-  function cleanupFlamegraphsCache () {
-    const now = Date.now()
-
-    for (const profileKey of Object.keys(profilesByWorkerId)) {
-      const timestamp = profilesByWorkerId[profileKey]?.timestamp
-      if (timestamp && now - timestamp > durationMillis) {
-        delete profilesByWorkerId[profileKey]
-      }
-    }
+  app.cleanupFlamegraphs = async () => {
+    // Stop all tracked profilers in parallel
+    const stopPromises = Object.values(profilers).map(profiler => profiler.stop())
+    await Promise.all(stopPromises)
   }
 }
 
