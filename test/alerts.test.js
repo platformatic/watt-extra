@@ -1025,3 +1025,91 @@ test('should skip alerts during grace period but still cache health data', async
   assert.strictEqual(alertReceived.applicationId, applicationId)
   assert.strictEqual(alertReceived.alert.application, 'main')
 })
+
+test('should reset grace period when worker restarts', async (t) => {
+  const applicationName = 'test-app'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'service-1')
+
+  const alertsReceived = []
+
+  const getAuthorizationHeader = async (headers) => {
+    return { ...headers, authorization: 'Bearer test-token' }
+  }
+
+  const icc = await startICC(t, {
+    applicationId,
+    applicationName,
+    scaler: {
+      alertRetentionWindow: 1 // Very short retention window
+    },
+    processAlerts: (req) => {
+      const alert = req.body
+      alertsReceived.push(alert)
+      return { id: `alert-${alertsReceived.length}`, ...alert }
+    }
+  })
+
+  // Set grace period to 1 second for faster testing
+  setUpEnvironment({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_ALERTS_GRACE_PERIOD_SEC: '1'
+  })
+
+  const app = await start()
+  app.getAuthorizationHeader = getAuthorizationHeader
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  const healthInfo = {
+    id: 'main:0',
+    application: 'main',
+    currentHealth: {
+      elu: 0.995,
+      heapUsed: 76798040,
+      heapTotal: 99721216
+    },
+    unhealthy: true,
+    healthConfig: {
+      enabled: true,
+      interval: 1000,
+      gracePeriod: 1000,
+      maxUnhealthyChecks: 10,
+      maxELU: 0.99,
+      maxHeapUsed: 0.99,
+      maxHeapTotal: 4294967296
+    }
+  }
+
+  // Simulate initial worker start (the real event fired before setupAlerts was called)
+  app.watt.runtime.emit('application:worker:started', { id: 'main:0' })
+
+  // Wait for initial grace period to expire
+  await sleep(1500)
+
+  // Emit unhealthy event - should trigger alert
+  emitHealthEvent(app, healthInfo)
+  await sleep(200)
+  assert.strictEqual(alertsReceived.length, 1, 'First alert should be sent after grace period')
+
+  // Simulate worker restart by emitting worker started event again
+  app.watt.runtime.emit('application:worker:started', { id: 'main:0' })
+
+  // Emit unhealthy event immediately after restart - should be skipped (new grace period)
+  emitHealthEvent(app, healthInfo)
+  await sleep(200)
+  assert.strictEqual(alertsReceived.length, 1, 'Alert should be skipped during new grace period after restart')
+
+  // Wait for the new grace period to expire
+  await sleep(1500)
+
+  // Emit unhealthy event again - should trigger alert
+  emitHealthEvent(app, healthInfo)
+  await sleep(200)
+  assert.strictEqual(alertsReceived.length, 2, 'Second alert should be sent after restart grace period expires')
+})

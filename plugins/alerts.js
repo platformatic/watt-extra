@@ -8,6 +8,7 @@ async function alerts (app, _opts) {
     app.instanceConfig?.scaler?.alertRetentionWindow || 10 * 1000
 
   const lastServicesAlertTime = {}
+  const workerStartTimes = new Map() // Track per-worker start times for grace period
 
   async function setupAlerts () {
     const scalerAlgorithmVersion = app.instanceConfig?.scaler?.version ?? 'v1'
@@ -17,8 +18,7 @@ async function alerts (app, _opts) {
     }
     app.log.info('Setting up v1 scaler alerts')
 
-    // Grace period during which alerts are suppressed.
-    const startupTime = Date.now()
+    // Grace period during which alerts are suppressed per-worker.
     const gracePeriodMs = app.env.PLT_ALERTS_GRACE_PERIOD_SEC !== undefined
       ? app.env.PLT_ALERTS_GRACE_PERIOD_SEC * 1000
       : 30000 // Default 30 seconds
@@ -38,6 +38,15 @@ async function alerts (app, _opts) {
       )
       return
     }
+
+    // Listen for worker start events to track start times
+    runtime.on('application:worker:started', (workerInfo) => {
+      const workerId = workerInfo?.id
+      if (workerId) {
+        workerStartTimes.set(workerId, Date.now())
+        app.log.debug({ workerId }, 'Worker started, tracking for grace period')
+      }
+    })
 
     const processHealthInfo = async (healthInfo) => {
       if (!healthInfo) {
@@ -61,9 +70,16 @@ async function alerts (app, _opts) {
         healthCache.splice(0, validIndex)
       }
 
-      // Skip sending alerts during startup grace period
-      if (Date.now() - startupTime < gracePeriodMs) {
-        app.log.debug('Skipping alert during startup grace period')
+      // Track worker start time if not already tracked. This handles cases
+      // where the worker started before the plugin was initialized.
+      if (!workerStartTimes.has(workerId)) {
+        workerStartTimes.set(workerId, timestamp)
+      }
+
+      // Skip sending alerts during worker's grace period
+      const workerStartTime = workerStartTimes.get(workerId)
+      if (timestamp - workerStartTime < gracePeriodMs) {
+        app.log.debug({ workerId }, 'Skipping alert during worker grace period')
         return
       }
 
