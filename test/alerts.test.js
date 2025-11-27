@@ -948,3 +948,165 @@ test('should send flamegraphs if attaching fails', async (t) => {
   assert.strictEqual(flamegraph2.id, 'flamegraph-2')
   assert.strictEqual(flamegraph2.alertId, 'alert-2')
 })
+
+test('should skip alerts during grace period but still cache health data', async (t) => {
+  const applicationName = 'test-app'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'service-1')
+
+  let alertReceived = null
+
+  const getAuthorizationHeader = async (headers) => {
+    return { ...headers, authorization: 'Bearer test-token' }
+  }
+
+  const icc = await startICC(t, {
+    applicationId,
+    applicationName,
+    processAlerts: (req) => {
+      const alert = req.body
+      alertReceived = alert
+      return { id: 'test-alert-id', ...alert }
+    }
+  })
+
+  // Set grace period to 2 seconds for this test
+  setUpEnvironment({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_ALERTS_GRACE_PERIOD_SEC: '2'
+  })
+
+  const app = await start()
+  app.getAuthorizationHeader = getAuthorizationHeader
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  // Manually trigger unhealthy event during grace period
+  const healthInfo = {
+    id: 'main:0',
+    application: 'main',
+    currentHealth: {
+      elu: 0.995,
+      heapUsed: 76798040,
+      heapTotal: 99721216
+    },
+    unhealthy: true,
+    healthConfig: {
+      enabled: true,
+      interval: 1000,
+      gracePeriod: 1000,
+      maxUnhealthyChecks: 10,
+      maxELU: 0.99,
+      maxHeapUsed: 0.99,
+      maxHeapTotal: 4294967296
+    }
+  }
+
+  emitHealthEvent(app, healthInfo)
+  await sleep(200)
+
+  // Alert should NOT have been received during grace period
+  assert.strictEqual(alertReceived, null, 'No alert should be sent during grace period')
+
+  // Wait for grace period to expire
+  await sleep(2500)
+
+  // Now trigger another unhealthy event after grace period
+  emitHealthEvent(app, healthInfo)
+  await sleep(200)
+
+  // Alert should now be received
+  assert.ok(alertReceived, 'Alert should be sent after grace period expires')
+  assert.strictEqual(alertReceived.applicationId, applicationId)
+  assert.strictEqual(alertReceived.alert.application, 'main')
+})
+
+test('should reset grace period when worker restarts', async (t) => {
+  const applicationName = 'test-app'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'service-1')
+
+  const alertsReceived = []
+
+  const getAuthorizationHeader = async (headers) => {
+    return { ...headers, authorization: 'Bearer test-token' }
+  }
+
+  const icc = await startICC(t, {
+    applicationId,
+    applicationName,
+    scaler: {
+      alertRetentionWindow: 1 // Very short retention window
+    },
+    processAlerts: (req) => {
+      const alert = req.body
+      alertsReceived.push(alert)
+      return { id: `alert-${alertsReceived.length}`, ...alert }
+    }
+  })
+
+  // Set grace period to 1 second for faster testing
+  setUpEnvironment({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_ALERTS_GRACE_PERIOD_SEC: '1'
+  })
+
+  const app = await start()
+  app.getAuthorizationHeader = getAuthorizationHeader
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  const healthInfo = {
+    id: 'main:0',
+    application: 'main',
+    currentHealth: {
+      elu: 0.995,
+      heapUsed: 76798040,
+      heapTotal: 99721216
+    },
+    unhealthy: true,
+    healthConfig: {
+      enabled: true,
+      interval: 1000,
+      gracePeriod: 1000,
+      maxUnhealthyChecks: 10,
+      maxELU: 0.99,
+      maxHeapUsed: 0.99,
+      maxHeapTotal: 4294967296
+    }
+  }
+
+  // Wait for initial grace period to expire (uses plugin start time as default)
+  await sleep(1500)
+
+  // Emit unhealthy event - should trigger alert
+  emitHealthEvent(app, healthInfo)
+  await sleep(200)
+  assert.strictEqual(alertsReceived.length, 1, 'First alert should be sent after grace period')
+
+  // Simulate worker restart by emitting worker started event
+  app.watt.runtime.emit('application:worker:started', { id: 'main:0' })
+
+  // Emit unhealthy event immediately after restart - should be skipped (new grace period)
+  emitHealthEvent(app, healthInfo)
+  await sleep(200)
+  assert.strictEqual(alertsReceived.length, 1, 'Alert should be skipped during new grace period after restart')
+
+  // Wait for the new grace period to expire
+  await sleep(1500)
+
+  // Emit unhealthy event again - should trigger alert
+  emitHealthEvent(app, healthInfo)
+  await sleep(200)
+  assert.strictEqual(alertsReceived.length, 2, 'Second alert should be sent after restart grace period expires')
+})
