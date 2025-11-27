@@ -19,9 +19,7 @@ async function alerts (app, _opts) {
     app.log.info('Setting up v1 scaler alerts')
 
     // Grace period during which alerts are suppressed per-worker.
-    const gracePeriodMs = app.env.PLT_ALERTS_GRACE_PERIOD_SEC !== undefined
-      ? app.env.PLT_ALERTS_GRACE_PERIOD_SEC * 1000
-      : 30000 // Default 30 seconds
+    const gracePeriodMs = app.env.PLT_ALERTS_GRACE_PERIOD_SEC * 1000
 
     // Skip alerts setup if ICC is not configured
     if (!app.env.PLT_ICC_URL) {
@@ -38,6 +36,9 @@ async function alerts (app, _opts) {
       )
       return
     }
+
+    // Default start time for workers that started before the listener was registered
+    const pluginStartTime = Date.now()
 
     // Listen for worker start events to track start times
     runtime.on('application:worker:started', (workerInfo) => {
@@ -70,14 +71,9 @@ async function alerts (app, _opts) {
         healthCache.splice(0, validIndex)
       }
 
-      // Track worker start time if not already tracked. This handles cases
-      // where the worker started before the plugin was initialized.
-      if (!workerStartTimes.has(workerId)) {
-        workerStartTimes.set(workerId, timestamp)
-      }
-
-      // Skip sending alerts during worker's grace period
-      const workerStartTime = workerStartTimes.get(workerId)
+      // Skip sending alerts during worker's grace period.
+      // Use plugin start time as default for workers that started before the listener.
+      const workerStartTime = workerStartTimes.get(workerId) ?? pluginStartTime
       if (timestamp - workerStartTime < gracePeriodMs) {
         app.log.debug({ workerId }, 'Skipping alert during worker grace period')
         return

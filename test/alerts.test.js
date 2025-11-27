@@ -1086,10 +1086,7 @@ test('should reset grace period when worker restarts', async (t) => {
     }
   }
 
-  // Simulate initial worker start (the real event fired before setupAlerts was called)
-  app.watt.runtime.emit('application:worker:started', { id: 'main:0' })
-
-  // Wait for initial grace period to expire
+  // Wait for initial grace period to expire (uses plugin start time as default)
   await sleep(1500)
 
   // Emit unhealthy event - should trigger alert
@@ -1097,7 +1094,7 @@ test('should reset grace period when worker restarts', async (t) => {
   await sleep(200)
   assert.strictEqual(alertsReceived.length, 1, 'First alert should be sent after grace period')
 
-  // Simulate worker restart by emitting worker started event again
+  // Simulate worker restart by emitting worker started event
   app.watt.runtime.emit('application:worker:started', { id: 'main:0' })
 
   // Emit unhealthy event immediately after restart - should be skipped (new grace period)
