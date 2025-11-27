@@ -17,6 +17,12 @@ async function alerts (app, _opts) {
     }
     app.log.info('Setting up v1 scaler alerts')
 
+    // Grace period during which alerts are suppressed.
+    const startupTime = Date.now()
+    const gracePeriodMs = app.env.PLT_ALERTS_GRACE_PERIOD_SEC !== undefined
+      ? app.env.PLT_ALERTS_GRACE_PERIOD_SEC * 1000
+      : 30000 // Default 30 seconds
+
     // Skip alerts setup if ICC is not configured
     if (!app.env.PLT_ICC_URL) {
       app.log.info('PLT_ICC_URL not set, skipping alerts setup')
@@ -53,6 +59,12 @@ async function alerts (app, _opts) {
       )
       if (validIndex > 0) {
         healthCache.splice(0, validIndex)
+      }
+
+      // Skip sending alerts during startup grace period
+      if (Date.now() - startupTime < gracePeriodMs) {
+        app.log.debug('Skipping alert during startup grace period')
+        return
       }
 
       // healthInfo is an object with the following structure:
