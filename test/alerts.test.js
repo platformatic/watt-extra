@@ -90,9 +90,6 @@ test('should send alert when service becomes unhealthy', async (t) => {
     await icc.close()
   })
 
-  // Wait for the first flamegraph to be generated
-  await sleep(5000)
-
   // Manually trigger health event with unhealthy state
   const healthInfo = {
     id: 'main:0',
@@ -132,6 +129,9 @@ test('should send alert when service becomes unhealthy', async (t) => {
   assert.ok(alertReceived.healthHistory.length > 0, 'Health history should not be empty')
   assert.strictEqual(alertReceived.healthHistory[0].application, 'main')
   assert.strictEqual(alertReceived.healthHistory[0].service, 'main')
+
+  // Wait for flamegraph to be generated (duration is 2 seconds)
+  await sleep(2500)
 
   assert.ok(flamegraphReceived, 'Flamegraph should have been received')
 
@@ -526,8 +526,6 @@ test('should send alert when flamegraphs are disabled', async (t) => {
     await icc.close()
   })
 
-  await sleep(5000)
-
   // Manually trigger health event with unhealthy state
   const healthInfo = {
     id: 'main:0',
@@ -610,8 +608,6 @@ test('should send alert when failed to send a flamegraph', async (t) => {
     await app.close()
     await icc.close()
   })
-
-  await sleep(5000)
 
   // Manually trigger health event with unhealthy state
   const healthInfo = {
@@ -799,9 +795,6 @@ test('should attach one flamegraph to multiple alerts', async (t) => {
     await icc.close()
   })
 
-  // Wait for the first flamegraph to be generated
-  await sleep(5000)
-
   // Manually trigger health event with unhealthy state
   const healthInfo = {
     id: 'main:0',
@@ -827,8 +820,8 @@ test('should attach one flamegraph to multiple alerts', async (t) => {
   await sleep(1000)
   emitHealthEvent(app, healthInfo)
 
-  // Wait for flamegraphs to be sent
-  await sleep(1000)
+  // Wait for flamegraph to be generated (duration is 5 seconds) and sent
+  await sleep(5500)
 
   assert.strictEqual(receivedAlerts.length, 2)
   const alert1 = receivedAlerts[0]
@@ -902,9 +895,6 @@ test('should send flamegraphs if attaching fails', async (t) => {
     await icc.close()
   })
 
-  // Wait for the first flamegraph to be generated
-  await sleep(5000)
-
   // Manually trigger health event with unhealthy state
   const healthInfo = {
     id: 'main:0',
@@ -930,8 +920,8 @@ test('should send flamegraphs if attaching fails', async (t) => {
   await sleep(1000)
   emitHealthEvent(app, healthInfo)
 
-  // Wait for flamegraphs to be sent
-  await sleep(1000)
+  // Wait for flamegraph to be generated (duration is 5 seconds) and sent
+  await sleep(5500)
 
   assert.strictEqual(receivedAlerts.length, 2)
   const alert1 = receivedAlerts[0]

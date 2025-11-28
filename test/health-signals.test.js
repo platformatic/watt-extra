@@ -58,9 +58,6 @@ test('should send health signals when service becomes unhealthy', async (t) => {
     await icc.close()
   })
 
-  // Wait for the first flamegraph to be generated
-  await sleep(5000)
-
   {
     const { statusCode } = await request('http://127.0.0.1:3042/custom-health-signal', {
       method: 'POST',
@@ -119,8 +116,8 @@ test('should send health signals when service becomes unhealthy', async (t) => {
     assert.ok(receivedSignal.timestamp > 0)
   }
 
-  // Wait for the second flamegraph to be generated
-  await sleep(2000)
+  // Wait for flamegraph to be generated (duration is 2 seconds)
+  await sleep(2500)
 
   // assert.strictEqual(receivedFlamegraphReqs.length, 1)
 
