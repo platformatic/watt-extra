@@ -26,7 +26,8 @@ const schema = {
     PLT_JWT_EXPIRATION_OFFSET_SEC: { type: 'number', default: 60 },
     PLT_UPDATES_RECONNECT_INTERVAL_SEC: { type: 'number', default: 1 },
     PLT_ELU_HEALTH_SIGNAL_THRESHOLD: { type: 'number', default: 0.8 },
-    PLT_HEAP_HEALTH_SIGNAL_THRESHOLD: { type: ['number', 'string'], default: '4GB' }
+    PLT_HEAP_HEALTH_SIGNAL_THRESHOLD: { type: ['number', 'string'], default: '4GB' },
+    PLT_ALERTS_GRACE_PERIOD_SEC: { type: 'number', default: 30 }
   }
 }
 

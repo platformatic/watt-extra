@@ -25,6 +25,7 @@ function setUpEnvironment (env = {}) {
     PLT_DISABLE_COMPLIANCE_CHECK: 'true',
     PLT_DISABLE_FLAMEGRAPHS: 'true',
     PLT_THROW_ON_COMPLIANCE_FAILURE: 'false',
+    PLT_ALERTS_GRACE_PERIOD_SEC: '0', // Disable grace period for tests
     PLT_TEST_TOKEN: createJwtToken(3600)
   }
   Object.assign(process.env, defaultEnv, env)
