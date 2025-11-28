@@ -791,3 +791,98 @@ test('requestFlamegraphs should include alertId in query params when provided', 
     ok(req.url.includes('alertId=test-alert-123'), 'URL should include alertId query param')
   }
 })
+
+test('requestFlamegraphs should failover to worker 1 when worker 0 crashes', async (t) => {
+  setUpEnvironment()
+
+  const uploadedFlamegraphs = []
+  const startProfilingCalls = []
+  const httpPort = port + 20
+
+  const app = createMockApp(httpPort)
+
+  // Track which workers are available
+  let availableWorkers = {
+    'service-1:0': { application: 'service-1', worker: 0, status: 'started' },
+    'service-1:1': { application: 'service-1', worker: 1, status: 'started' }
+  }
+
+  // Update getWorkers to return dynamic worker list
+  app.watt.runtime.getWorkers = async () => availableWorkers
+
+  // Update getApplications to return only service-1
+  app.watt.runtime.getApplications = async () => ({
+    applications: [{ id: 'service-1' }]
+  })
+
+  const mockProfile = new Uint8Array([1, 2, 3, 4, 5])
+
+  app.watt.runtime.sendCommandToApplication = async (workerId, command, options) => {
+    if (command === 'startProfiling') {
+      startProfilingCalls.push({ workerId, options })
+      return { success: true }
+    }
+    if (command === 'getProfilingState') {
+      return { latestProfileTimestamp: Date.now() }
+    }
+    if (command === 'getLastProfile') {
+      return mockProfile
+    }
+    if (command === 'stopProfiling') {
+      return { success: true }
+    }
+    return { success: false }
+  }
+
+  // Mock HTTP server to receive flamegraphs
+  const { createServer } = await import('node:http')
+  const server = createServer((req, res) => {
+    const body = []
+    req.on('data', chunk => body.push(chunk))
+    req.on('end', () => {
+      const buffer = Buffer.concat(body)
+      uploadedFlamegraphs.push({
+        url: req.url,
+        workerId: req.url.includes('service-1') ? 'service-1' : 'unknown',
+        body: buffer
+      })
+      res.writeHead(200)
+      res.end(JSON.stringify({ id: 'flamegraph-id' }))
+    })
+  })
+
+  await new Promise(resolve => server.listen(httpPort, resolve))
+  t.after(() => server.close())
+
+  await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+
+  t.after(async () => {
+    await app.cleanupFlamegraphs()
+  })
+
+  // First request: should start profiling on worker 0 (index 0 of workers array)
+  await app.requestFlamegraphs({ serviceIds: ['service-1'] })
+
+  // Wait for profile to be generated (duration is 1 second)
+  await sleep(1500)
+
+  equal(startProfilingCalls.length, 1, 'Should have started profiling once')
+  equal(startProfilingCalls[0].workerId, 'service-1:0', 'Should have started profiling on worker 0')
+  equal(uploadedFlamegraphs.length, 1, 'Should have uploaded first flamegraph')
+
+  // Simulate worker 0 crashing - remove it from available workers
+  availableWorkers = {
+    'service-1:1': { application: 'service-1', worker: 1, status: 'started' }
+  }
+
+  // Second request: should detect worker 0 is gone and start profiling on worker 1 (now at index 0)
+  await app.requestFlamegraphs({ serviceIds: ['service-1'] })
+
+  // Wait for profile to be generated
+  await sleep(1500)
+
+  equal(startProfilingCalls.length, 2, 'Should have started profiling twice')
+  equal(startProfilingCalls[1].workerId, 'service-1:1', 'Should have started profiling on worker 1')
+  equal(uploadedFlamegraphs.length, 2, 'Should have uploaded second flamegraph')
+})

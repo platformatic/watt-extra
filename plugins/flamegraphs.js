@@ -83,7 +83,18 @@ export class Profiler {
       this.#stopProfileTimeout = null
     }
     if (this.#isProfiling) {
-      await this.#stopProfiling()
+      const requests = this.#getProfileRequests()
+      try {
+        const profile = await this.#stopProfiling()
+        if (requests.length > 0) {
+          this.#onProfile(null, profile, requests)
+        }
+      } catch (err) {
+        this.#log.error({ err }, 'Failed to stop profiling')
+        if (requests.length > 0) {
+          this.#onProfile(err, null, requests)
+        }
+      }
     }
   }
 
@@ -92,7 +103,7 @@ export class Profiler {
       await this.#startProfiling()
     } catch (err) {
       this.#log.error({ err }, 'Failed to start profiling')
-      const requests = this.#getProfileRequests(Date.now())
+      const requests = this.#getProfileRequests()
       this.#onProfile(err, null, requests)
       return
     }
@@ -110,7 +121,7 @@ export class Profiler {
       this.#onProfile(null, profile, requests)
     } catch (err) {
       this.#log.error({ err }, 'Failed to generate a profile')
-      const requests = this.#getProfileRequests(Date.now())
+      const requests = this.#getProfileRequests()
       this.#onProfile(err, null, requests)
     }
 
@@ -148,9 +159,10 @@ export class Profiler {
     this.#log.info('Stopping profiling')
 
     try {
-      await this.#runtime.sendCommandToApplication(
+      const profile = await this.#runtime.sendCommandToApplication(
         this.#workerId, 'stopProfiling', this.#profileOptions
       )
+      return profile
     } catch (err) {
       // Ignore errors if the app is already closing
       this.#log.debug({ err }, 'Failed to stop profiling')
@@ -168,6 +180,12 @@ export class Profiler {
   }
 
   #getProfileRequests (profileTimestamp) {
+    if (profileTimestamp === undefined) {
+      const requests = this.#requests
+      this.#requests = []
+      return requests
+    }
+
     let processedIndex = 0
     for (let i = 0; i < this.#requests.length; i++) {
       if (this.#requests[i].timestamp <= profileTimestamp) {
