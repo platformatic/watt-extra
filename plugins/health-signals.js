@@ -185,13 +185,8 @@ async function healthSignals (app, _opts) {
 
     const response = await body.json()
 
-    app.requestFlamegraphs({
-      serviceIds: [serviceId],
-      workerIds: [workerId],
-      alertId: response.alertId
-    }).catch(err => {
-      app.log.error({ err }, 'Failed to send a flamegraph')
-    })
+    app.requestFlamegraphs({ serviceIds: [serviceId], alertId: response.alertId })
+      .catch(err => app.log.error({ err }, 'Failed to send a flamegraph'))
   }
 }
 

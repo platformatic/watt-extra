@@ -40,7 +40,6 @@ async function alerts (app, _opts) {
       }
 
       const timestamp = Date.now()
-      const workerId = healthInfo.id
       const serviceId = healthInfo.application
       const healthWithTimestamp = { ...healthInfo, timestamp, service: serviceId }
       delete healthWithTimestamp.healthConfig // we don't need to store this
@@ -112,12 +111,8 @@ async function alerts (app, _opts) {
 
         const alert = await body.json()
 
-        app.requestFlamegraphs({
-          workerIds: [workerId],
-          alertId: alert.id
-        }).catch(err => {
-          app.log.error({ err }, 'Failed to send a flamegraph')
-        })
+        app.requestFlamegraphs({ serviceIds: [serviceId], alertId: alert.id })
+          .catch(err => app.log.error({ err }, 'Failed to send a flamegraph'))
       }
     }
 

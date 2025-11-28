@@ -396,7 +396,7 @@ test('requestFlamegraphs should handle missing profile data', async (t) => {
   equal(errors.length, 2, 'Should log errors for both services with missing profiles')
 })
 
-test('requestFlamegraphs should filter by workerIds when provided', async (t) => {
+test('requestFlamegraphs should filter by serviceIds when provided', async (t) => {
   setUpEnvironment()
 
   const app = createMockApp(port + 12)
@@ -438,7 +438,7 @@ test('requestFlamegraphs should filter by workerIds when provided', async (t) =>
   })
 
   // Trigger profiling for specific worker
-  await app.requestFlamegraphs({ workerIds: ['service-1:0'] })
+  await app.requestFlamegraphs({ serviceIds: ['service-1'] })
 
   // Wait for profile to be generated (duration is 1 second)
   await sleep(1500)

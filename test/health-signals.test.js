@@ -31,7 +31,7 @@ test('should send health signals when service becomes unhealthy', async (t) => {
     processSignals: (req) => {
       assert.equal(req.headers.authorization, 'Bearer test-token')
       receivedSignalReqs.push(req.body)
-      return { id: 'test-alert-id' }
+      return { alertId: 'test-alert-id' }
     },
     processFlamegraphs: (req) => {
       const alertId = req.query.alertId

@@ -55,6 +55,14 @@ export class Profiler {
     })
   }
 
+  get workerId () {
+    return this.#workerId
+  }
+
+  get isProfiling () {
+    return this.#isProfiling
+  }
+
   async requestProfile (request = {}) {
     request.timestamp ??= Date.now()
     this.#requests.push(request)
@@ -209,10 +217,11 @@ async function flamegraphs (app, _opts) {
 
     const runtime = app.watt.runtime
 
-    let { workerIds, alertId, profileType = 'cpu' } = options
+    let { serviceIds, alertId, profileType = 'cpu' } = options
 
     const servicesWorkers = {}
     const workers = await runtime.getWorkers()
+
     for (const workerId in workers) {
       const workerInfo = workers[workerId]
       const serviceId = workerInfo.application
@@ -221,23 +230,27 @@ async function flamegraphs (app, _opts) {
       servicesWorkers[serviceId].push(workerId)
     }
 
-    workerIds ??= Object.keys(servicesWorkers)
-
-    for (let workerId of workerIds) {
-      const [serviceId, workerIndex] = workerId.split(':')
-      if (workerIndex === undefined) {
-        workerId = servicesWorkers[serviceId][0]
+    for (const serviceId in profilers) {
+      const workerProfilers = profilers[serviceId]
+      for (const profileType in workerProfilers) {
+        const profiler = workerProfilers[profileType]
+        const workerId = profiler.workerId
+        if (workers[workerId]) continue
+        if (profiler.isProfiling) {
+          profiler.stop()
+        }
+        delete profilers[serviceId][profileType]
       }
+    }
 
-      if (workerId === undefined) {
-        app.log.error({ serviceId }, 'No worker found for an application')
-        continue
-      }
+    serviceIds ??= Object.keys(servicesWorkers)
 
-      const profileKey = `${workerId}:${profileType}`
+    for (const serviceId of serviceIds) {
+      profilers[serviceId] ??= {}
 
-      let profiler = profilers[profileKey]
+      let profiler = profilers[serviceId][profileType]
       if (!profiler) {
+        const workerId = servicesWorkers[serviceId][0]
         const config = profilersConfigs[serviceId]
         profiler = new Profiler({
           app,
@@ -247,7 +260,7 @@ async function flamegraphs (app, _opts) {
           sourceMaps: config.sourceMaps,
           onProfile: createProfileHandler(scalerUrl, workerId, profileType)
         })
-        profilers[profileKey] = profiler
+        profilers[serviceId][profileType] = profiler
       }
 
       profiler.requestProfile({ alertId })
@@ -405,7 +418,14 @@ async function flamegraphs (app, _opts) {
 
   app.cleanupFlamegraphs = async () => {
     // Stop all tracked profilers in parallel
-    const stopPromises = Object.values(profilers).map(profiler => profiler.stop())
+    const stopPromises = []
+    for (const serviceId in profilers) {
+      const serviceProfilers = profilers[serviceId]
+      for (const profileType in serviceProfilers) {
+        const profiler = serviceProfilers[profileType]
+        stopPromises.push(profiler.stop())
+      }
+    }
     await Promise.all(stopPromises)
   }
 }
