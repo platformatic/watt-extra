@@ -183,12 +183,12 @@ async function healthSignals (app, _opts) {
       app.log.error({ error }, 'Failed to send health signals to scaler')
     }
 
-    const alert = await body.json()
+    const response = await body.json()
 
     app.requestFlamegraphs({
       serviceIds: [serviceId],
       workerIds: [workerId],
-      alertId: alert.id
+      alertId: response.alertId
     }).catch(err => {
       app.log.error({ err }, 'Failed to send a flamegraph')
     })

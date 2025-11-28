@@ -299,7 +299,7 @@ async function flamegraphs (app, _opts) {
   async function sendServiceFlamegraph (scalerUrl, serviceId, profile, profileType, alertId) {
     const podId = app.instanceId
     const url = `${scalerUrl}/pods/${podId}/services/${serviceId}/flamegraph`
-    app.log.info({ serviceId, podId, profileType }, 'Sending flamegraph')
+    app.log.info({ serviceId, podId, profileType, alertId }, 'Sending flamegraph')
 
     const query = { profileType }
     if (alertId) {
@@ -323,8 +323,14 @@ async function flamegraphs (app, _opts) {
       throw new Error(`Failed to send flamegraph: ${error}`)
     }
 
-    const response = await body.json()
-    return response
+    const flamegraph = await body.json()
+
+    app.log.info(
+      { serviceId, podId, profileType, flamegraph },
+      'Flamegraph successfully stored'
+    )
+
+    return flamegraph
   }
 
   // Function that supports ICC that doesn't have attach flamegraph API
