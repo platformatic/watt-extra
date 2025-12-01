@@ -38,6 +38,7 @@ test('should send health signals when service becomes unhealthy', async (t) => {
       assert.strictEqual(alertId, 'test-alert-id')
       assert.strictEqual(req.headers.authorization, 'Bearer test-token')
       receivedFlamegraphReqs.push(req.body)
+      return { id: 'test-flamegraph-id' }
     }
   })
 
@@ -47,7 +48,7 @@ test('should send health signals when service becomes unhealthy', async (t) => {
     PLT_ICC_URL: 'http://127.0.0.1:3000',
     PLT_DISABLE_FLAMEGRAPHS: false,
     PLT_FLAMEGRAPHS_INTERVAL_SEC: 2,
-    PLT_FLAMEGRAPHS_ELU_THRESHOLD: 0
+    PLT_FLAMEGRAPHS_PAUSE_ELU_TRESHOLD: 1
   })
 
   const app = await start()
@@ -95,7 +96,7 @@ test('should send health signals when service becomes unhealthy', async (t) => {
   assert.ok(receivedSignalReq.heapTotal > 0)
 
   const receivedSignals = receivedSignalReq.signals
-  assert.ok(receivedSignals.length > 5)
+  assert.ok(receivedSignals.length > 3)
 
   const eluSignals = receivedSignals.filter(
     (signal) => signal.type === 'elu'
@@ -107,7 +108,7 @@ test('should send health signals when service becomes unhealthy', async (t) => {
 
   for (const receivedSignal of eluSignals) {
     assert.strictEqual(receivedSignal.type, 'elu')
-    assert.ok(receivedSignal.value > 0.9)
+    assert.ok(receivedSignal.value > 0.8)
     assert.ok(receivedSignal.timestamp > 0)
   }
   for (const receivedSignal of customSignals) {
@@ -119,9 +120,167 @@ test('should send health signals when service becomes unhealthy', async (t) => {
   // Wait for flamegraph to be generated (duration is 2 seconds)
   await sleep(2500)
 
-  // assert.strictEqual(receivedFlamegraphReqs.length, 1)
+  assert.strictEqual(receivedFlamegraphReqs.length, 1)
 
   const receivedFlamegraph = receivedFlamegraphReqs[0]
   const profile = Profile.decode(receivedFlamegraph)
   assert.ok(profile, 'Profile should be decoded')
+})
+
+test('should not attach flamegraph if ELU is too high', async (t) => {
+  const applicationName = 'test-app'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'service-1')
+
+  const receivedSignalReqs = []
+  const receivedFlamegraphReqs = []
+
+  const getAuthorizationHeader = async (headers) => {
+    return { ...headers, authorization: 'Bearer test-token' }
+  }
+
+  const icc = await startICC(t, {
+    applicationId,
+    applicationName,
+    scaler: { version: 'v2' },
+    processSignals: (req) => {
+      assert.equal(req.headers.authorization, 'Bearer test-token')
+      receivedSignalReqs.push(req.body)
+      return { alertId: 'test-alert-id' }
+    },
+    processFlamegraphs: (req) => {
+      const alertId = req.query.alertId
+      assert.strictEqual(alertId, 'test-alert-id')
+      assert.strictEqual(req.headers.authorization, 'Bearer test-token')
+      receivedFlamegraphReqs.push(req.body)
+      return { id: 'test-flamegraph-id' }
+    }
+  })
+
+  setUpEnvironment({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_DISABLE_FLAMEGRAPHS: false,
+    PLT_FLAMEGRAPHS_INTERVAL_SEC: 2,
+    PLT_FLAMEGRAPHS_PAUSE_ELU_TRESHOLD: 0.5
+  })
+
+  const app = await start()
+  app.getAuthorizationHeader = getAuthorizationHeader
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  {
+    const { statusCode } = await request('http://127.0.0.1:3042/cpu-intensive', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ timeout: 3000 })
+    })
+    assert.strictEqual(statusCode, 200)
+  }
+
+  assert.strictEqual(receivedSignalReqs.length, 1)
+
+  const receivedSignalReq = receivedSignalReqs[0]
+  assert.ok(receivedSignalReq, 'Alert should have been received')
+  assert.strictEqual(receivedSignalReq.applicationId, applicationId)
+  assert.strictEqual(receivedSignalReq.serviceId, 'main')
+
+  const receivedSignals = receivedSignalReq.signals
+  assert.ok(receivedSignals.length > 3)
+
+  const eluSignals = receivedSignals.filter(
+    (signal) => signal.type === 'elu'
+  )
+
+  for (const receivedSignal of eluSignals) {
+    assert.strictEqual(receivedSignal.type, 'elu')
+    assert.ok(receivedSignal.value > 0.8)
+    assert.ok(receivedSignal.timestamp > 0)
+  }
+
+  // Wait for flamegraph to be generated (duration is 2 seconds)
+  await sleep(2500)
+
+  assert.strictEqual(receivedFlamegraphReqs.length, 0)
+})
+
+test('should stop profining and attach flamegraph as is when ELU is too high', async (t) => {
+  const applicationName = 'test-app'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'service-1')
+
+  const receivedSignalReqs = []
+  const receivedFlamegraphReqs = []
+
+  const getAuthorizationHeader = async (headers) => {
+    return { ...headers, authorization: 'Bearer test-token' }
+  }
+
+  const icc = await startICC(t, {
+    applicationId,
+    applicationName,
+    scaler: { version: 'v2' },
+    processSignals: (req) => {
+      assert.equal(req.headers.authorization, 'Bearer test-token')
+      receivedSignalReqs.push(req.body)
+      return { alertId: 'test-alert-id' }
+    },
+    processFlamegraphs: (req) => {
+      const alertId = req.query.alertId
+      assert.strictEqual(alertId, 'test-alert-id')
+      assert.strictEqual(req.headers.authorization, 'Bearer test-token')
+      receivedFlamegraphReqs.push(req.body)
+      return { id: 'test-flamegraph-id' }
+    }
+  })
+
+  setUpEnvironment({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_DISABLE_FLAMEGRAPHS: false,
+    PLT_FLAMEGRAPHS_INTERVAL_SEC: 60,
+    PLT_FLAMEGRAPHS_PAUSE_ELU_TRESHOLD: 0.95
+  })
+
+  const app = await start()
+  app.getAuthorizationHeader = getAuthorizationHeader
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  {
+    // Should trigger profiling
+    const { statusCode } = await request('http://127.0.0.1:3042/cpu-intensive', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ timeout: 2000, elu: 0.9 })
+    })
+    assert.strictEqual(statusCode, 200)
+  }
+
+  {
+    // Should stop profiling due to high ELU
+    const { statusCode } = await request('http://127.0.0.1:3042/cpu-intensive', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ timeout: 2000, elu: 1 })
+    })
+    assert.strictEqual(statusCode, 200)
+  }
+
+  assert.strictEqual(receivedFlamegraphReqs.length, 1)
 })

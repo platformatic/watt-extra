@@ -204,6 +204,7 @@ async function flamegraphs (app, _opts) {
 
   const profilers = {}
   const profilersConfigs = {}
+  const profilersPauseReqs = {}
 
   app.setupFlamegraphs = async () => {
     if (isFlamegraphsDisabled) {
@@ -264,6 +265,15 @@ async function flamegraphs (app, _opts) {
     serviceIds ??= Object.keys(servicesWorkers)
 
     for (const serviceId of serviceIds) {
+      const { isPaused, remainingTimeSec } = isProfilingPaused(serviceId)
+      if (isPaused) {
+        app.log.info(
+          { serviceId },
+          `Skipping service profiling, it is paused for ${remainingTimeSec}s`
+        )
+        continue
+      }
+
       profilers[serviceId] ??= {}
 
       let profiler = profilers[serviceId][profileType]
@@ -283,6 +293,45 @@ async function flamegraphs (app, _opts) {
 
       profiler.requestProfile({ alertId })
     }
+  }
+
+  // Method to be called when the worker ELU is very high
+  // to stop profiling and wait for app to go back to normal
+  app.pauseProfiling = async (options = {}) => {
+    if (isFlamegraphsDisabled) {
+      app.log.info('PLT_DISABLE_FLAMEGRAPHS is set, flamegraphs are disabled')
+      return
+    }
+
+    const { serviceId, timeout } = options
+
+    profilersPauseReqs[serviceId] = { timestamp: timeout + Date.now() }
+
+    const serviceProfilers = profilers[serviceId]
+    if (!serviceProfilers) {
+      app.log.debug({ serviceId }, 'Skipping service profiling pause, no profilers found')
+      return
+    }
+
+    for (const profilerType in profilers[serviceId]) {
+      const profiler = profilers[serviceId][profilerType]
+      app.log.info({ serviceId, profilerType }, 'Pausing service profiling due to high ELU')
+      await profiler.stop()
+    }
+  }
+
+  function isProfilingPaused (serviceId) {
+    let isPaused = false
+    let remainingTimeSec = 0
+
+    const pauseReq = profilersPauseReqs[serviceId]
+    if (pauseReq) {
+      const now = Date.now()
+      isPaused = pauseReq.timestamp > now
+      remainingTimeSec = Math.round((pauseReq.timestamp - now) / 1000)
+    }
+
+    return { isPaused, remainingTimeSec }
   }
 
   function createProfileHandler (scalerUrl, workerId, profileType) {

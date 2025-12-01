@@ -102,9 +102,7 @@ function createMockApp (port, includeScalerUrl = true, env = {}) {
       PLT_ICC_URL: `http://localhost:${port}`,
       PLT_DISABLE_FLAMEGRAPHS: false,
       PLT_FLAMEGRAPHS_INTERVAL_SEC: 1,
-      PLT_FLAMEGRAPHS_ELU_THRESHOLD: 0,
       PLT_FLAMEGRAPHS_GRACE_PERIOD: 0,
-      PLT_FLAMEGRAPHS_ATTEMPT_TIMEOUT: 1000,
       ...env
     },
     watt: mockWatt

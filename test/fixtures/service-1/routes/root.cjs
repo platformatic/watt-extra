@@ -2,6 +2,7 @@
 
 const { join } = require('node:path')
 const { readFile } = require('node:fs/promises')
+const { setTimeout: sleep } = require('node:timers/promises')
 const { request } = require('undici')
 const atomicSleep = require('atomic-sleep')
 
@@ -50,8 +51,19 @@ module.exports = async function (fastify) {
   fastify.post('/cpu-intensive', async (req) => {
     // Simulate a CPU intensive operation
     const timeout = req.query.timeout || 10000
-    atomicSleep(timeout)
+    const elu = req.query.elu || 0.9
 
+    const blockTime = 1000 * elu
+    const idleTime = 1000 - blockTime
+
+    const interval = setInterval(async () => {
+      atomicSleep(blockTime)
+      await sleep(idleTime)
+    }, 1000).unref()
+
+    await sleep(timeout)
+
+    clearInterval(interval)
     return { status: 'ok' }
   })
 

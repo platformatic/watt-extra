@@ -51,6 +51,8 @@ async function healthSignals (app, _opts) {
       return
     }
 
+    const pauseEluThreshold = app.env.PLT_FLAMEGRAPHS_PAUSE_ELU_TRESHOLD
+    const pauseTimeout = app.env.PLT_FLAMEGRAPHS_PAUSE_TIMEOUT
     const eluThreshold = app.env.PLT_ELU_HEALTH_SIGNAL_THRESHOLD
 
     let heapThreshold = app.env.PLT_HEAP_HEALTH_SIGNAL_THRESHOLD
@@ -87,6 +89,10 @@ async function healthSignals (app, _opts) {
       } = healthInfo
 
       const { elu, heapUsed, heapTotal } = currentHealth
+
+      if (elu >= pauseEluThreshold) {
+        app.pauseProfiling({ serviceId, timeout: pauseTimeout })
+      }
 
       if (elu > eluThreshold) {
         healthSignals.push({

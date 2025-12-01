@@ -78,8 +78,7 @@ test('should send alert when service becomes unhealthy', async (t) => {
     PLT_APP_DIR: applicationPath,
     PLT_ICC_URL: 'http://127.0.0.1:3000',
     PLT_DISABLE_FLAMEGRAPHS: false,
-    PLT_FLAMEGRAPHS_INTERVAL_SEC: 2,
-    PLT_FLAMEGRAPHS_ELU_THRESHOLD: 0
+    PLT_FLAMEGRAPHS_INTERVAL_SEC: 2
   })
 
   const app = await start()
@@ -95,7 +94,7 @@ test('should send alert when service becomes unhealthy', async (t) => {
     id: 'main:0',
     application: 'main',
     currentHealth: {
-      elu: 0.995,
+      elu: 0.9,
       heapUsed: 76798040,
       heapTotal: 99721216
     },
@@ -783,8 +782,7 @@ test('should attach one flamegraph to multiple alerts', async (t) => {
     PLT_APP_DIR: applicationPath,
     PLT_ICC_URL: 'http://127.0.0.1:3000',
     PLT_DISABLE_FLAMEGRAPHS: false,
-    PLT_FLAMEGRAPHS_INTERVAL_SEC: 5,
-    PLT_FLAMEGRAPHS_ELU_THRESHOLD: 0
+    PLT_FLAMEGRAPHS_INTERVAL_SEC: 5
   })
 
   const app = await start()
@@ -800,7 +798,7 @@ test('should attach one flamegraph to multiple alerts', async (t) => {
     id: 'main:0',
     application: 'main',
     currentHealth: {
-      elu: 0.995,
+      elu: 0.9,
       heapUsed: 76798040,
       heapTotal: 99721216
     },
@@ -838,6 +836,99 @@ test('should attach one flamegraph to multiple alerts', async (t) => {
   const attachedFlamegraph = receivedAttachedFlamegraphs[0]
   assert.strictEqual(attachedFlamegraph.flamegraphId, 'flamegraph-1')
   assert.deepStrictEqual(attachedFlamegraph.alertIds, ['alert-2'])
+})
+
+test('should not attach flamegraph if ELU is too high', async (t) => {
+  const applicationName = 'test-app'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'service-1')
+
+  const receivedAlerts = []
+  const receivedFlamegraphs = []
+  const receivedAttachedFlamegraphs = []
+
+  const getAuthorizationHeader = async (headers) => {
+    return { ...headers, authorization: 'Bearer test-token' }
+  }
+
+  const icc = await startICC(t, {
+    applicationId,
+    applicationName,
+    scaler: {
+      podHealthWindow: 1,
+      alertRetentionWindow: 1
+    },
+    processAlerts: (req) => {
+      assert.equal(req.headers.authorization, 'Bearer test-token')
+      const alert = req.body
+      alert.id = `alert-${receivedAlerts.length + 1}`
+      receivedAlerts.push(alert)
+      return alert
+    },
+    processFlamegraphs: (req) => {
+      assert.strictEqual(req.headers.authorization, 'Bearer test-token')
+      const flamegraphId = `flamegraph-${receivedFlamegraphs.length + 1}`
+      const alertId = req.query.alertId
+      receivedFlamegraphs.push({ id: flamegraphId, alertId })
+      return { id: flamegraphId }
+    },
+    attachFlamegraphToAlerts: (req) => {
+      assert.strictEqual(req.headers.authorization, 'Bearer test-token')
+      const flamegraphId = req.params.flamegraphId
+      const { alertIds } = req.body
+      receivedAttachedFlamegraphs.push({ flamegraphId, alertIds })
+      return {}
+    }
+  })
+
+  setUpEnvironment({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_DISABLE_FLAMEGRAPHS: false,
+    PLT_FLAMEGRAPHS_INTERVAL_SEC: 5
+  })
+
+  const app = await start()
+  app.getAuthorizationHeader = getAuthorizationHeader
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  // Manually trigger health event with unhealthy state
+  const healthInfo = {
+    id: 'main:0',
+    application: 'main',
+    currentHealth: {
+      elu: 0.995,
+      heapUsed: 76798040,
+      heapTotal: 99721216
+    },
+    unhealthy: true,
+    healthConfig: {
+      enabled: true,
+      interval: 1000,
+      gracePeriod: 1000,
+      maxUnhealthyChecks: 10,
+      maxELU: 0.99,
+      maxHeapUsed: 0.99,
+      maxHeapTotal: 4294967296
+    }
+  }
+
+  emitHealthEvent(app, healthInfo)
+
+  // Wait for flamegraph to be generated (duration is 5 seconds) and sent
+  await sleep(5500)
+
+  assert.strictEqual(receivedAlerts.length, 1)
+  const alert1 = receivedAlerts[0]
+  assert.strictEqual(alert1.id, 'alert-1')
+
+  assert.strictEqual(receivedFlamegraphs.length, 0)
+  assert.strictEqual(receivedAttachedFlamegraphs.length, 0)
 })
 
 test('should send flamegraphs if attaching fails', async (t) => {
@@ -883,8 +974,7 @@ test('should send flamegraphs if attaching fails', async (t) => {
     PLT_APP_DIR: applicationPath,
     PLT_ICC_URL: 'http://127.0.0.1:3000',
     PLT_DISABLE_FLAMEGRAPHS: false,
-    PLT_FLAMEGRAPHS_INTERVAL_SEC: 5,
-    PLT_FLAMEGRAPHS_ELU_THRESHOLD: 0
+    PLT_FLAMEGRAPHS_INTERVAL_SEC: 5
   })
 
   const app = await start()
@@ -900,7 +990,7 @@ test('should send flamegraphs if attaching fails', async (t) => {
     id: 'main:0',
     application: 'main',
     currentHealth: {
-      elu: 0.995,
+      elu: 0.9,
       heapUsed: 76798040,
       heapTotal: 99721216
     },
