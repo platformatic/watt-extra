@@ -139,6 +139,8 @@ async function healthSignals (app, _opts) {
   app.setupHealthSignals = setupHealthSignals
 
   async function sendHealthSignalsWithTimeout (serviceId, workerId, signals) {
+    const batchTimeout = app.env.PLT_HEALTH_SIGNALS_BATCH_TIMEOUT
+
     signalsCaches[serviceId] ??= new HealthSignalsCache()
     servicesSendingStatuses[serviceId] ??= false
 
@@ -159,7 +161,7 @@ async function healthSignals (app, _opts) {
         } catch (err) {
           app.log.error({ err }, 'Failed to send health signals to scaler')
         }
-      }, 5000).unref()
+      }, batchTimeout).unref()
     }
   }
 

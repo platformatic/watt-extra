@@ -214,7 +214,7 @@ export class Profiler {
 async function flamegraphs (app, _opts) {
   const isFlamegraphsDisabled = app.env.PLT_DISABLE_FLAMEGRAPHS
   const flamegraphsIntervalSec = app.env.PLT_FLAMEGRAPHS_INTERVAL_SEC
-  const statesRefreshInterval = app.env.PLT_FLAMEGRAPHS_STATES_REFRESH_INTERVAL
+  const statesRefreshInterval = app.env.PLT_FLAMEGRAPHS_STATES_REFRESH_INTERVAL ?? 10 * 1000
 
   const durationMillis = parseInt(flamegraphsIntervalSec) * 1000
 

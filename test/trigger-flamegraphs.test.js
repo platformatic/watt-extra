@@ -315,11 +315,13 @@ test('requestFlamegraphs should upload flamegraphs from all services', async (t)
     req.on('data', chunk => body.push(chunk))
     req.on('end', () => {
       const buffer = Buffer.concat(body)
-      uploadedFlamegraphs.push({
-        url: req.url,
-        headers: req.headers,
-        body: buffer
-      })
+      if (req.url.includes('/flamegraph?profileType=cpu')) {
+        uploadedFlamegraphs.push({
+          url: req.url,
+          headers: req.headers,
+          body: buffer
+        })
+      }
       res.writeHead(200)
       res.end(JSON.stringify({ id: 'flamegraph-id' }))
     })

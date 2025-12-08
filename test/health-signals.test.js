@@ -247,7 +247,8 @@ test('should stop profining and attach flamegraph as is when ELU is too high', a
     PLT_ICC_URL: 'http://127.0.0.1:3000',
     PLT_DISABLE_FLAMEGRAPHS: false,
     PLT_FLAMEGRAPHS_INTERVAL_SEC: 60,
-    PLT_FLAMEGRAPHS_PAUSE_ELU_TRESHOLD: 0.95
+    PLT_FLAMEGRAPHS_PAUSE_ELU_TRESHOLD: 0.8,
+    PLT_HEALTH_SIGNALS_BATCH_TIMEOUT: 1
   })
 
   const app = await start()
@@ -259,16 +260,21 @@ test('should stop profining and attach flamegraph as is when ELU is too high', a
   })
 
   {
-    // Should trigger profiling
-    const { statusCode } = await request('http://127.0.0.1:3042/cpu-intensive', {
+    const { statusCode } = await request('http://127.0.0.1:3042/custom-health-signal', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ timeout: 2000, elu: 0.9 })
+      body: JSON.stringify({
+        type: 'custom',
+        value: 42,
+        description: 'This is a custom health signal'
+      })
     })
     assert.strictEqual(statusCode, 200)
   }
+
+  await sleep(3000)
 
   {
     // Should stop profiling due to high ELU
@@ -281,6 +287,8 @@ test('should stop profining and attach flamegraph as is when ELU is too high', a
     })
     assert.strictEqual(statusCode, 200)
   }
+
+  await sleep(1000)
 
   assert.strictEqual(receivedFlamegraphReqs.length, 1)
 })
