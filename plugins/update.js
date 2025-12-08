@@ -23,14 +23,14 @@ async function updatePlugin (app) {
       // Handle trigger-flamegraph command from ICC
       if (command === 'trigger-flamegraph') {
         app.log.info({ command }, 'Received trigger-flamegraph command from ICC')
-        app.sendFlamegraphs({ profileType: 'cpu' })
+        app.requestFlamegraphs({ profileType: 'cpu' })
         return
       }
 
       // Handle trigger-heapprofile command from ICC
       if (command === 'trigger-heapprofile') {
         app.log.info({ command }, 'Received trigger-heapprofile command from ICC')
-        app.sendFlamegraphs({ profileType: 'heap' })
+        app.requestFlamegraphs({ profileType: 'heap' })
         return
       }
 
