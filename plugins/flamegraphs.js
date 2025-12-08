@@ -14,6 +14,7 @@ export class Profiler {
   #onProfile
   #getProfileInterval
   #stopProfileTimeout
+  #nextProfileTimestamp
 
   constructor (options = {}) {
     const { type, duration, workerId, sourceMaps, app, onProfile } = options
@@ -63,6 +64,13 @@ export class Profiler {
     return this.#isProfiling
   }
 
+  get nextProfileTimestamp () {
+    if (this.#requests.length === 0) {
+      return null
+    }
+    return this.#nextProfileTimestamp ?? null
+  }
+
   async requestProfile (request = {}) {
     request.timestamp ??= Date.now()
     this.#requests.push(request)
@@ -82,6 +90,9 @@ export class Profiler {
       clearTimeout(this.#stopProfileTimeout)
       this.#stopProfileTimeout = null
     }
+
+    this.#nextProfileTimestamp = null
+
     if (this.#isProfiling) {
       const requests = this.#getProfileRequests()
       try {
@@ -100,6 +111,7 @@ export class Profiler {
 
   async #startProfilingLoop () {
     try {
+      this.#nextProfileTimestamp = Date.now() + this.#duration
       await this.#startProfiling()
     } catch (err) {
       this.#log.error({ err }, 'Failed to start profiling')
@@ -109,7 +121,10 @@ export class Profiler {
     }
 
     this.#getProfileInterval = setInterval(
-      () => this.#processProfile(),
+      () => {
+        this.#nextProfileTimestamp = Date.now() + this.#duration
+        this.#processProfile()
+      },
       this.#duration
     ).unref()
   }
@@ -199,6 +214,7 @@ export class Profiler {
 async function flamegraphs (app, _opts) {
   const isFlamegraphsDisabled = app.env.PLT_DISABLE_FLAMEGRAPHS
   const flamegraphsIntervalSec = app.env.PLT_FLAMEGRAPHS_INTERVAL_SEC
+  const statesRefreshInterval = app.env.PLT_FLAMEGRAPHS_STATES_REFRESH_INTERVAL
 
   const durationMillis = parseInt(flamegraphsIntervalSec) * 1000
 
@@ -220,6 +236,19 @@ async function flamegraphs (app, _opts) {
       const sourceMaps = appDetails.sourceMaps ?? false
       profilersConfigs[application.id] = { durationMillis, sourceMaps }
     }
+
+    setInterval(() => {
+      const states = getProfilersStates()
+      const applicationId = app.instanceConfig?.applicationId
+      if (applicationId && states.length > 0) {
+        sendProfilingStates(
+          applicationId,
+          app.instanceId,
+          statesRefreshInterval,
+          states
+        ).catch(err => app.log.warn({ err }, 'Failed to send profiling states'))
+      }
+    }, statesRefreshInterval).unref()
   }
 
   app.requestFlamegraphs = async (options = {}) => {
@@ -323,15 +352,46 @@ async function flamegraphs (app, _opts) {
   function isProfilingPaused (serviceId) {
     let isPaused = false
     let remainingTimeSec = 0
+    let pauseEndTimestamp = null
 
     const pauseReq = profilersPauseReqs[serviceId]
     if (pauseReq) {
       const now = Date.now()
       isPaused = pauseReq.timestamp > now
+      pauseEndTimestamp = pauseReq.timestamp
       remainingTimeSec = Math.round((pauseReq.timestamp - now) / 1000)
     }
 
-    return { isPaused, remainingTimeSec }
+    return { isPaused, pauseEndTimestamp, remainingTimeSec }
+  }
+
+  function getProfilersStates () {
+    const states = []
+
+    for (const serviceId in profilers) {
+      const serviceProfilers = profilers[serviceId]
+      const { isPaused, pauseEndTimestamp } = isProfilingPaused(serviceId)
+
+      for (const profileType in serviceProfilers) {
+        const profiler = serviceProfilers[profileType]
+
+        const isProfiling = profiler.isProfiling
+        const nextProfileTimestamp = profiler.nextProfileTimestamp
+
+        if (!isProfiling && !isPaused) continue
+
+        states.push({
+          serviceId,
+          profileType,
+          isProfiling,
+          isPaused,
+          pauseEndTimestamp,
+          nextProfileTimestamp
+        })
+      }
+    }
+
+    return states
   }
 
   function createProfileHandler (scalerUrl, workerId, profileType) {
@@ -480,6 +540,43 @@ async function flamegraphs (app, _opts) {
       }
 
       throw new Error(`Failed to attach flamegraph to alerts: ${error}`)
+    }
+  }
+
+  async function sendProfilingStates (
+    applicationId,
+    podId,
+    expiresIn,
+    states
+  ) {
+    const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
+    if (!scalerUrl) {
+      app.log.error('No scaler URL found in ICC services, cannot send flamegraph')
+      throw new Error('No scaler URL found in ICC services, cannot send flamegraph')
+    }
+
+    const url = `${scalerUrl}/flamegraphs/states`
+    app.log.debug('Sending profiling states')
+
+    const authHeaders = await app.getAuthorizationHeader()
+    const { statusCode, body } = await request(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders
+      },
+      body: JSON.stringify({
+        applicationId,
+        podId,
+        expiresIn,
+        states
+      })
+    })
+
+    if (statusCode !== 200) {
+      const error = await body.text()
+      app.log.error({ error }, 'Failed to send profiling states')
+      throw new Error(`Failed to send profiling states: ${error}`)
     }
   }
 

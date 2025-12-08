@@ -22,6 +22,7 @@ const schema = {
     PLT_FLAMEGRAPHS_GRACE_PERIOD: { type: 'number', default: 3000 },
     PLT_FLAMEGRAPHS_PAUSE_ELU_TRESHOLD: { type: 'number', default: 0.95 },
     PLT_FLAMEGRAPHS_PAUSE_TIMEOUT: { type: 'number', default: 5 * 60 * 1000 },
+    PLT_FLAMEGRAPHS_STATES_REFRESH_INTERVAL: { type: 'number', default: 10 * 1000 },
     PLT_JWT_EXPIRATION_OFFSET_SEC: { type: 'number', default: 60 },
     PLT_UPDATES_RECONNECT_INTERVAL_SEC: { type: 'number', default: 1 },
     PLT_ELU_HEALTH_SIGNAL_THRESHOLD: { type: 'number', default: 0.8 },

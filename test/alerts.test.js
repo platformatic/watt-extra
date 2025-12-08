@@ -51,6 +51,7 @@ test('should send alert when service becomes unhealthy', async (t) => {
 
   let alertReceived = null
   let flamegraphReceived = null
+  let flamegraphStateReceived = null
 
   const getAuthorizationHeader = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
@@ -70,6 +71,11 @@ test('should send alert when service becomes unhealthy', async (t) => {
       assert.strictEqual(alertId, 'test-alert-id')
       assert.strictEqual(req.headers.authorization, 'Bearer test-token')
       flamegraphReceived = req.body
+      return { id: 'test-flamegraph-id' }
+    },
+    processFlamegraphsStates: (req) => {
+      assert.strictEqual(req.headers.authorization, 'Bearer test-token')
+      flamegraphStateReceived = req.body
     }
   })
 
@@ -78,7 +84,8 @@ test('should send alert when service becomes unhealthy', async (t) => {
     PLT_APP_DIR: applicationPath,
     PLT_ICC_URL: 'http://127.0.0.1:3000',
     PLT_DISABLE_FLAMEGRAPHS: false,
-    PLT_FLAMEGRAPHS_INTERVAL_SEC: 2
+    PLT_FLAMEGRAPHS_INTERVAL_SEC: 2,
+    PLT_FLAMEGRAPHS_STATES_REFRESH_INTERVAL: 1000
   })
 
   const app = await start()
@@ -129,8 +136,22 @@ test('should send alert when service becomes unhealthy', async (t) => {
   assert.strictEqual(alertReceived.healthHistory[0].application, 'main')
   assert.strictEqual(alertReceived.healthHistory[0].service, 'main')
 
+  // Wait for flamegraph state to be sent
+  await sleep(1000)
+
+  assert.strictEqual(flamegraphStateReceived.applicationId, applicationId)
+  assert.strictEqual(flamegraphStateReceived.podId, app.instanceId)
+  assert.strictEqual(flamegraphStateReceived.expiresIn, 1000)
+  assert.strictEqual(flamegraphStateReceived.states.length, 1)
+  assert.strictEqual(flamegraphStateReceived.states[0].serviceId, 'main')
+  assert.strictEqual(flamegraphStateReceived.states[0].profileType, 'cpu')
+  assert.strictEqual(flamegraphStateReceived.states[0].isProfiling, true)
+  assert.strictEqual(flamegraphStateReceived.states[0].isPaused, false)
+  assert.strictEqual(flamegraphStateReceived.states[0].pauseEndTimestamp, null)
+  assert.ok(flamegraphStateReceived.states[0].nextProfileTimestamp)
+
   // Wait for flamegraph to be generated (duration is 2 seconds)
-  await sleep(2500)
+  await sleep(1500)
 
   assert.ok(flamegraphReceived, 'Flamegraph should have been received')
 
