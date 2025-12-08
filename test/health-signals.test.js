@@ -80,7 +80,7 @@ test('should send health signals when service becomes unhealthy', async (t) => {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ timeout: 3000 })
+      body: JSON.stringify({ timeout: 3000, elu: 0.99 })
     })
     assert.strictEqual(statusCode, 200)
   }
@@ -180,7 +180,7 @@ test('should not attach flamegraph if ELU is too high', async (t) => {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ timeout: 3000 })
+      body: JSON.stringify({ timeout: 3000, elu: 0.99 })
     })
     assert.strictEqual(statusCode, 200)
   }
