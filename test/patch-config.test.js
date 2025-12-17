@@ -329,3 +329,58 @@ test('should configure health based on runtime version', async (t) => {
     assert.ok(health.maxUnhealthyChecks, 'Health maxUnhealthyChecks should be set')
   }
 })
+
+test('should merge user telemetry config with ICC exporter', async (t) => {
+  const appName = 'test-app'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'runtime-telemetry')
+
+  await installDeps(t, applicationPath)
+
+  const icc = await startICC(t, {
+    applicationId,
+    applicationName: appName,
+    enableOpenTelemetry: true
+  })
+
+  setUpEnvironment({
+    PLT_APP_NAME: appName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000'
+  })
+
+  const app = await start()
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  const runtimeConfig = app.watt.runtime.getRuntimeConfig(true)
+  const { telemetry } = runtimeConfig
+
+  // applicationName should be set to watt-extra app name (not user's custom name)
+  assert.strictEqual(telemetry.applicationName, appName)
+
+  // Exporter should be an array with both user's and ICC exporters
+  assert.ok(Array.isArray(telemetry.exporter), 'Exporter should be an array when merging')
+  assert.strictEqual(telemetry.exporter.length, 2)
+
+  // First exporter should be user's Jaeger exporter
+  const jaegerExporter = telemetry.exporter[0]
+  assert.strictEqual(jaegerExporter.type, 'otlp')
+  assert.strictEqual(jaegerExporter.options.url, 'http://jaeger:4318/v1/traces')
+
+  // Second exporter should be ICC exporter
+  const iccExporter = telemetry.exporter[1]
+  assert.strictEqual(iccExporter.type, 'otlp')
+  assert.ok(iccExporter.options.url.includes('/risk-service/v1/traces'))
+  assert.strictEqual(iccExporter.options.headers['x-platformatic-application-id'], applicationId)
+
+  // Skip patterns should be merged
+  assert.ok(Array.isArray(telemetry.skip))
+  const hasUserSkip = telemetry.skip.some(s => s.path === '/health')
+  const hasDefaultSkip = telemetry.skip.some(s => s.path === '/documentation')
+  assert.ok(hasUserSkip, 'User skip pattern should be preserved')
+  assert.ok(hasDefaultSkip, 'Default skip pattern should be added')
+})
