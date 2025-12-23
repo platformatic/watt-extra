@@ -16,7 +16,7 @@ importers:
         version: 4.2.0
       '@platformatic/foundation':
         specifier: ^3.25.0
-        version: 3.25.0
+        version: 3.29.1
       '@platformatic/runtime':
         specifier: ^3.25.0
         version: 3.25.0
@@ -915,6 +915,10 @@ packages:
 
   '@platformatic/foundation@3.25.0':
     resolution: {integrity: sha512-hK+4D5MG034ohkBvIsUkcqq33+JrO5QD05GGpaT5t93KN2OmeVxJnDUMHZr9JV5ZjSHr/Xb7OM6qpYFIDk25wg==}
+    engines: {node: '>=22.19.0'}
+
+  '@platformatic/foundation@3.29.1':
+    resolution: {integrity: sha512-6GQmWf8C8CrZUToyS+D1PxKNLqHAbvZ4nHbeukuaL4bjcPiXWeGCgOBV9/HyvQjrhgofSxOwq4VmEspe+vdT+A==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/gateway@3.25.0':
@@ -2585,6 +2589,7 @@ packages:
   next@16.0.3:
     resolution: {integrity: sha512-Ka0/iNBblPFcIubTA1Jjh6gvwqfjrGq1Y2MTI5lbjeLIAfmC+p5bQmojpRZqgHHVu5cG4+qdIiwXiBSm/8lZ3w==}
     engines: {node: '>=20.9.0'}
+    deprecated: This version has a security vulnerability. Please upgrade to a patched version. See https://nextjs.org/blog/CVE-2025-66478 for more details.
     hasBin: true
     peerDependencies:
       '@opentelemetry/api': ^1.1.0
@@ -3419,6 +3424,11 @@ packages:
 
   yaml@2.8.1:
     resolution: {integrity: sha512-lcYcMxX2PO9XMGvAJkJ3OsNMw+/7FKes7/hgerGUYWIoWu5j/+YQqcZr5JnPZWzOsEBgMbSbiSTn/dv/69Mkpw==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
+  yaml@2.8.2:
+    resolution: {integrity: sha512-mplynKqc1C2hTVYxd0PU2xQAc22TI1vShAYGksCCfxbn/dFwnHTNi1bvYsBTkhdUNtGIf5xNOg938rrSSYvS9A==}
     engines: {node: '>= 14.6'}
     hasBin: true
 
@@ -4342,6 +4352,24 @@ snapshots:
       undici: 7.11.0
       yaml: 2.8.1
 
+  '@platformatic/foundation@3.29.1':
+    dependencies:
+      '@fastify/deepmerge': 2.0.2
+      '@fastify/error': 4.2.0
+      '@iarna/toml': 2.2.5
+      '@watchable/unpromise': 1.0.2
+      ajv: 8.17.1
+      boring-name-generator: 1.0.3
+      colorette: 2.0.20
+      fast-json-patch: 3.1.1
+      json5: 2.2.3
+      leven: 3.1.0
+      pino: 9.14.0
+      pino-pretty: 13.1.2
+      semver: 7.7.3
+      undici: 7.11.0
+      yaml: 2.8.2
+
   '@platformatic/gateway@3.25.0(typescript@5.9.3)':
     dependencies:
       '@fastify/error': 4.2.0
@@ -4352,7 +4380,7 @@ snapshots:
       '@fastify/view': 10.0.2
       '@platformatic/basic': 3.25.0
       '@platformatic/fastify-openapi-glue': 5.1.0
-      '@platformatic/foundation': 3.25.0
+      '@platformatic/foundation': 3.29.1
       '@platformatic/graphql-composer': 0.10.0
       '@platformatic/scalar-theme': 3.25.0
       '@platformatic/service': 3.25.0(typescript@5.9.3)
@@ -5098,7 +5126,7 @@ snapshots:
       execa: 9.6.0
       find-up: 7.0.0
       glob: 10.4.5
-      yaml: 2.8.1
+      yaml: 2.8.2
     transitivePeerDependencies:
       - monocart-coverage-reports
 
@@ -7424,6 +7452,8 @@ snapshots:
   yaml@2.8.0: {}
 
   yaml@2.8.1: {}
+
+  yaml@2.8.2: {}
 
   yargs-parser@21.1.1: {}
 
