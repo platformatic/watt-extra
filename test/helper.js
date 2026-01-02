@@ -203,6 +203,9 @@ async function startICC (t, opts = {}) {
     icc.post('/flamegraphs/:flamegraphId/alerts', async (req) => {
       return opts.attachFlamegraphToAlerts?.(req)
     })
+    icc.post('/flamegraphs/states', async (req) => {
+      return opts.processFlamegraphsStates?.(req)
+    })
   }, { prefix: '/scaler' })
 
   // Cron

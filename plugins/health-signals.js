@@ -51,6 +51,8 @@ async function healthSignals (app, _opts) {
       return
     }
 
+    const pauseEluThreshold = app.env.PLT_FLAMEGRAPHS_PAUSE_ELU_TRESHOLD
+    const pauseTimeout = app.env.PLT_FLAMEGRAPHS_PAUSE_TIMEOUT
     const eluThreshold = app.env.PLT_ELU_HEALTH_SIGNAL_THRESHOLD
 
     let heapThreshold = app.env.PLT_HEAP_HEALTH_SIGNAL_THRESHOLD
@@ -87,6 +89,10 @@ async function healthSignals (app, _opts) {
       } = healthInfo
 
       const { elu, heapUsed, heapTotal } = currentHealth
+
+      if (elu >= pauseEluThreshold) {
+        app.pauseProfiling({ serviceId, timeout: pauseTimeout })
+      }
 
       if (elu > eluThreshold) {
         healthSignals.push({
@@ -133,6 +139,8 @@ async function healthSignals (app, _opts) {
   app.setupHealthSignals = setupHealthSignals
 
   async function sendHealthSignalsWithTimeout (serviceId, workerId, signals) {
+    const batchTimeout = app.env.PLT_HEALTH_SIGNALS_BATCH_TIMEOUT
+
     signalsCaches[serviceId] ??= new HealthSignalsCache()
     servicesSendingStatuses[serviceId] ??= false
 
@@ -153,7 +161,7 @@ async function healthSignals (app, _opts) {
         } catch (err) {
           app.log.error({ err }, 'Failed to send health signals to scaler')
         }
-      }, 5000).unref()
+      }, batchTimeout).unref()
     }
   }
 
@@ -183,15 +191,10 @@ async function healthSignals (app, _opts) {
       app.log.error({ error }, 'Failed to send health signals to scaler')
     }
 
-    const alert = await body.json()
+    const response = await body.json()
 
-    app.sendFlamegraphs({
-      serviceIds: [serviceId],
-      workerIds: [workerId],
-      alertId: alert.id
-    }).catch(err => {
-      app.log.error({ err }, 'Failed to send a flamegraph')
-    })
+    app.requestFlamegraphs({ serviceIds: [serviceId], alertId: response.alertId })
+      .catch(err => app.log.error({ err }, 'Failed to send a flamegraph'))
   }
 }
 

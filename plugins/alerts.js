@@ -1,6 +1,9 @@
 import { request } from 'undici'
 
 async function alerts (app, _opts) {
+  const pauseEluThreshold = app.env.PLT_FLAMEGRAPHS_PAUSE_ELU_TRESHOLD
+  const pauseTimeout = app.env.PLT_FLAMEGRAPHS_PAUSE_TIMEOUT
+
   const healthCache = [] // It's OK to have this in memory, this is per-pod.
   const podHealthWindow =
     app.instanceConfig?.scaler?.podHealthWindow || 60 * 1000
@@ -60,6 +63,11 @@ async function alerts (app, _opts) {
       const serviceId = healthInfo.application
       const healthWithTimestamp = { ...healthInfo, timestamp, service: serviceId }
       delete healthWithTimestamp.healthConfig // we don't need to store this
+
+      const elu = healthInfo.currentHealth.elu
+      if (elu >= pauseEluThreshold) {
+        app.pauseProfiling({ serviceId, timeout: pauseTimeout })
+      }
 
       healthCache.push(healthWithTimestamp)
 
@@ -136,12 +144,8 @@ async function alerts (app, _opts) {
 
         const alert = await body.json()
 
-        app.sendFlamegraphs({
-          workerIds: [workerId],
-          alertId: alert.id
-        }).catch(err => {
-          app.log.error({ err }, 'Failed to send a flamegraph')
-        })
+        app.requestFlamegraphs({ serviceIds: [serviceId], alertId: alert.id })
+          .catch(err => app.log.error({ err }, 'Failed to send a flamegraph'))
       }
     }
 

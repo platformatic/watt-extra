@@ -19,15 +19,16 @@ const schema = {
     PLT_CACHE_CONFIG: { type: 'string' },
     PLT_DISABLE_FLAMEGRAPHS: { type: 'boolean', default: false },
     PLT_FLAMEGRAPHS_INTERVAL_SEC: { type: 'number', default: 60 },
-    PLT_FLAMEGRAPHS_ELU_THRESHOLD: { type: 'number', default: 0.4 },
     PLT_FLAMEGRAPHS_GRACE_PERIOD: { type: 'number', default: 3000 },
-    PLT_FLAMEGRAPHS_ATTEMPT_TIMEOUT: { type: 'number', default: 10000 },
-    PLT_FLAMEGRAPHS_CACHE_CLEANUP_INTERVAL: { type: 'number', default: 120000 },
+    PLT_FLAMEGRAPHS_PAUSE_ELU_TRESHOLD: { type: 'number', default: 0.95 },
+    PLT_FLAMEGRAPHS_PAUSE_TIMEOUT: { type: 'number', default: 5 * 60 * 1000 },
+    PLT_FLAMEGRAPHS_STATES_REFRESH_INTERVAL: { type: 'number', default: 10 * 1000 },
     PLT_JWT_EXPIRATION_OFFSET_SEC: { type: 'number', default: 60 },
     PLT_UPDATES_RECONNECT_INTERVAL_SEC: { type: 'number', default: 1 },
     PLT_ELU_HEALTH_SIGNAL_THRESHOLD: { type: 'number', default: 0.8 },
     PLT_HEAP_HEALTH_SIGNAL_THRESHOLD: { type: ['number', 'string'], default: '4GB' },
-    PLT_ALERTS_GRACE_PERIOD_SEC: { type: 'number', default: 30 }
+    PLT_ALERTS_GRACE_PERIOD_SEC: { type: 'number', default: 30 },
+    PLT_HEALTH_SIGNALS_BATCH_TIMEOUT: { type: 'number', default: 5000 }
   }
 }
 
