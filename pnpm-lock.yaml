@@ -37,7 +37,7 @@ importers:
         version: 7.0.0
       execa:
         specifier: ^9.6.0
-        version: 9.6.0
+        version: 9.6.1
       help-me:
         specifier: ^5.0.0
         version: 5.0.0
@@ -1932,8 +1932,8 @@ packages:
     resolution: {integrity: sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==}
     engines: {node: '>=0.8.x'}
 
-  execa@9.6.0:
-    resolution: {integrity: sha512-jpWzZ1ZhwUmeWRhS7Qv3mhpOhLfwI+uAX4e5fOcXqwMR7EcJ0pj2kV1CVzHVMX/LphnKWD3LObjZCoJ71lKpHw==}
+  execa@9.6.1:
+    resolution: {integrity: sha512-9Be3ZoN4LmYR90tUoVu2te2BsbzHfhJyfEiAVfz7N5/zv+jduIfLrV2xdQXOHbaD6KgpGdO9PRPM1Y4Q9QkPkA==}
     engines: {node: ^18.19.0 || >=20.5.0}
 
   fast-content-type-parse@3.0.0:
@@ -4403,7 +4403,7 @@ snapshots:
       '@platformatic/itc': 3.25.0
       '@platformatic/metrics': 3.25.0
       '@platformatic/telemetry': 3.25.0
-      execa: 9.6.0
+      execa: 9.6.1
       fast-json-patch: 3.1.1
       pino: 9.14.0
       pino-abstract-transport: 2.0.0
@@ -4423,7 +4423,7 @@ snapshots:
       '@platformatic/itc': 3.29.1
       '@platformatic/metrics': 3.29.1
       '@platformatic/telemetry': 3.29.1
-      execa: 9.6.0
+      execa: 9.6.1
       fast-json-patch: 3.1.1
       pino: 9.14.0
       pino-abstract-transport: 2.0.0
@@ -4522,7 +4522,7 @@ snapshots:
       '@scalar/fastify-api-reference': 1.34.6(typescript@5.9.3)
       ajv: 8.17.1
       console-table-printer: 2.15.0
-      execa: 9.6.0
+      execa: 9.6.1
       fast-deep-equal: 3.1.3
       fastify: 5.6.2
       fastify-plugin: 5.1.0
@@ -4552,7 +4552,7 @@ snapshots:
       '@fastify/error': 4.2.0
       '@platformatic/foundation': 3.25.0
       change-case-all: 2.1.0
-      execa: 9.6.0
+      execa: 9.6.1
       fastify: 5.6.2
       pino: 9.14.0
       undici: 7.16.0
@@ -4562,7 +4562,7 @@ snapshots:
       '@fastify/error': 4.2.0
       '@platformatic/foundation': 3.29.1
       change-case-all: 2.1.0
-      execa: 9.6.0
+      execa: 9.6.1
       fastify: 5.6.2
       pino: 9.14.0
       undici: 7.16.0
@@ -4761,7 +4761,7 @@ snapshots:
       colorette: 2.0.20
       console-table-printer: 2.15.0
       env-schema: 6.1.0
-      execa: 9.6.0
+      execa: 9.6.1
       fast-json-patch: 3.1.1
       fastify: 5.6.2
       fastify-plugin: 5.1.0
@@ -5338,7 +5338,7 @@ snapshots:
     dependencies:
       '@reporters/github': 1.11.0
       c8: 10.1.3
-      execa: 9.6.0
+      execa: 9.6.1
       find-up: 7.0.0
       glob: 10.5.0
       yaml: 2.8.2
@@ -5349,7 +5349,7 @@ snapshots:
     dependencies:
       '@reporters/github': 1.11.0
       c8: 10.1.3
-      execa: 9.6.0
+      execa: 9.6.1
       find-up: 7.0.0
       glob: 10.4.5
       yaml: 2.8.1
@@ -5891,7 +5891,7 @@ snapshots:
 
   events@3.3.0: {}
 
-  execa@9.6.0:
+  execa@9.6.1:
     dependencies:
       '@sindresorhus/merge-streams': 4.0.0
       cross-spawn: 7.0.6
