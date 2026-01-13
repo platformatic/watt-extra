@@ -80,7 +80,7 @@ importers:
         version: 3.29.1
       '@platformatic/node':
         specifier: ^3.25.0
-        version: 3.25.0
+        version: 3.29.1
       '@platformatic/service':
         specifier: ^3.25.0
         version: 3.29.1(typescript@5.9.3)
@@ -996,8 +996,8 @@ packages:
     resolution: {integrity: sha512-xrBVQ8ifi7iiEkpW5m/bHP6TTYuMDJIYNGL+ccwM/p7brd9Gwr8adodQsMiPjQ3QKhknwTezzTbj9PYERVDsXA==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/node@3.25.0':
-    resolution: {integrity: sha512-fww6I7btC6AJafJqCcoA13U+JG78OOCGOaF6eaDrB07NdLyJc3uS+hjx8GWW8LCBiT1QXtYPYs9yjNJOgFp2Wg==}
+  '@platformatic/node@3.29.1':
+    resolution: {integrity: sha512-WADlenq4/mqByqWyCSpYdmtgWQCedexnF72Cvi9S97elHGFsD4ZX2KP3uF8Buwuf4KzyUkmOuQlxJz5GyHmMJg==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/openapi-schema-validator@3.0.0':
@@ -1632,6 +1632,10 @@ packages:
 
   cookie@1.0.2:
     resolution: {integrity: sha512-9Kr/j4O16ISv8zBBhJoi4bXOYNTkFLOqSL3UDB0njXxCXNezjeyVrJyGOWtgfs/q2km1gwBcfH8q1yEGoMYunA==}
+    engines: {node: '>=18'}
+
+  cookie@1.1.1:
+    resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
     engines: {node: '>=18'}
 
   cron@4.3.3:
@@ -4603,11 +4607,11 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@platformatic/node@3.25.0':
+  '@platformatic/node@3.29.1':
     dependencies:
-      '@platformatic/basic': 3.25.0
-      '@platformatic/foundation': 3.25.0
-      '@platformatic/generators': 3.25.0
+      '@platformatic/basic': 3.29.1
+      '@platformatic/foundation': 3.29.1
+      '@platformatic/generators': 3.29.1
       '@watchable/unpromise': 1.0.2
       json5: 2.2.3
       light-my-request: 6.6.0
@@ -5431,6 +5435,8 @@ snapshots:
   convert-source-map@2.0.0: {}
 
   cookie@1.0.2: {}
+
+  cookie@1.1.1: {}
 
   cron@4.3.3:
     dependencies:
@@ -6414,7 +6420,7 @@ snapshots:
 
   light-my-request@6.6.0:
     dependencies:
-      cookie: 1.0.2
+      cookie: 1.1.1
       process-warning: 4.0.1
       set-cookie-parser: 2.7.2
 
