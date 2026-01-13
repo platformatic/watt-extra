@@ -31,6 +31,7 @@ test('should propagete a jwt token via runtime shared context', async (t) => {
     PLT_APP_NAME: applicationName,
     PLT_APP_DIR: applicationPath,
     PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_METRICS_PORT: 9091,
     PLT_TEST_TOKEN: jwt,
     PLT_JWT_EXPIRATION_OFFSET_SEC: 1
   })

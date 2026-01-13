@@ -51,6 +51,11 @@ async function initPlugin (app) {
     app.applicationName = applicationName
     app.instanceConfig = instanceConfig
     app.instanceId = instanceId
+
+    // If watt already exists (ICC recovery after startup), update its instance config
+    if (app.watt) {
+      await app.watt.updateInstanceConfig(instanceConfig)
+    }
   }
   try {
     await initApplication()

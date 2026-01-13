@@ -20,12 +20,15 @@ test('should spawn a service app settings labels for metrics', async (t) => {
     applicationId,
     applicationName,
     enableOpenTelemetry: true,
+    port: 3001
   })
 
   setUpEnvironment({
     PLT_APP_NAME: applicationName,
     PLT_APP_DIR: applicationPath,
-    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_ICC_URL: icc.iccUrl,
+    PLT_APP_PORT: 3043,
+    PLT_METRICS_PORT: 9092
   })
 
   const app = await start()
@@ -55,7 +58,7 @@ test('should spawn a service app settings labels for metrics', async (t) => {
     exporter: {
       type: 'otlp',
       options: {
-        url: 'http://127.0.0.1:3000/risk-service/v1/traces',
+        url: `${icc.iccUrl}/risk-service/v1/traces`,
         headers: {
           'x-platformatic-application-id': applicationId,
         },
@@ -74,7 +77,7 @@ test('should spawn a service app settings labels for metrics', async (t) => {
       enabled: true,
     },
     hostname: '127.0.0.1',
-    port: 9090,
+    port: 9092,
     labels: {
       serviceId: 'main',
       instanceId: app.instanceId,
@@ -94,13 +97,16 @@ test('should remove server https configs', async (t) => {
 
   const icc = await startICC(t, {
     applicationId,
+    port: 3001
   })
 
   setUpEnvironment({
     PLT_APP_NAME: appName,
     PLT_APP_DIR: applicationPath,
-    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_ICC_URL: icc.iccUrl,
     PLT_CONTROL_PLANE_URL: 'http://127.0.0.1:3002',
+    PLT_APP_PORT: 3043,
+    PLT_METRICS_PORT: 9092
   })
 
   const app = await start()
@@ -133,12 +139,15 @@ test('should configure health options', async (t) => {
 
   const icc = await startICC(t, {
     applicationId,
+    port: 3001
   })
 
   setUpEnvironment({
     PLT_APP_NAME: appName,
     PLT_APP_DIR: applicationPath,
-    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_ICC_URL: icc.iccUrl,
+    PLT_APP_PORT: 3043,
+    PLT_METRICS_PORT: 9092
   })
 
   const app = await start()
@@ -169,12 +178,15 @@ test('should not set opentelemetry if it is disabled', async (t) => {
     applicationId,
     applicationName,
     enableOpenTelemetry: false,
+    port: 3001
   })
 
   setUpEnvironment({
     PLT_APP_NAME: applicationName,
     PLT_APP_DIR: applicationPath,
-    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_ICC_URL: icc.iccUrl,
+    PLT_APP_PORT: 3043,
+    PLT_METRICS_PORT: 9092
   })
 
   const app = await start()
@@ -185,7 +197,7 @@ test('should not set opentelemetry if it is disabled', async (t) => {
   })
 
   // main config
-  const { statusCode, body } = await request('http://127.0.0.1:3042/config')
+  const { statusCode, body } = await request('http://127.0.0.1:3043/config')
   assert.strictEqual(statusCode, 200)
 
   const expectedTelemetry = {
@@ -204,7 +216,7 @@ test('should not set opentelemetry if it is disabled', async (t) => {
     exporter: {
       type: 'otlp',
       options: {
-        url: 'http://127.0.0.1:3000/risk-service/v1/traces',
+        url: `${icc.iccUrl}/risk-service/v1/traces`,
         headers: {
           'x-platformatic-application-id': applicationId,
         },
@@ -225,13 +237,16 @@ test('should expose runtimeSupportsNewHealthMetrics method', async (t) => {
 
   const icc = await startICC(t, {
     applicationId,
-    applicationName
+    applicationName,
+    port: 3001
   })
 
   setUpEnvironment({
     PLT_APP_NAME: applicationName,
     PLT_APP_DIR: applicationPath,
-    PLT_ICC_URL: 'http://127.0.0.1:3000'
+    PLT_ICC_URL: icc.iccUrl,
+    PLT_APP_PORT: 3043,
+    PLT_METRICS_PORT: 9092
   })
 
   const app = await start()
@@ -257,13 +272,16 @@ test('should expose getHealthConfig method', async (t) => {
 
   const icc = await startICC(t, {
     applicationId,
-    applicationName
+    applicationName,
+    port: 3001
   })
 
   setUpEnvironment({
     PLT_APP_NAME: applicationName,
     PLT_APP_DIR: applicationPath,
-    PLT_ICC_URL: 'http://127.0.0.1:3000'
+    PLT_ICC_URL: icc.iccUrl,
+    PLT_APP_PORT: 3043,
+    PLT_METRICS_PORT: 9092
   })
 
   const app = await start()
@@ -294,13 +312,16 @@ test('should configure health based on runtime version', async (t) => {
   await installDeps(t, applicationPath)
 
   const icc = await startICC(t, {
-    applicationId
+    applicationId,
+    port: 3001
   })
 
   setUpEnvironment({
     PLT_APP_NAME: appName,
     PLT_APP_DIR: applicationPath,
-    PLT_ICC_URL: 'http://127.0.0.1:3000'
+    PLT_ICC_URL: icc.iccUrl,
+    PLT_APP_PORT: 3043,
+    PLT_METRICS_PORT: 9092
   })
 
   const app = await start()
@@ -340,13 +361,16 @@ test('should merge user telemetry config with ICC exporter', async (t) => {
   const icc = await startICC(t, {
     applicationId,
     applicationName: appName,
-    enableOpenTelemetry: true
+    enableOpenTelemetry: true,
+    port: 3001
   })
 
   setUpEnvironment({
     PLT_APP_NAME: appName,
     PLT_APP_DIR: applicationPath,
-    PLT_ICC_URL: 'http://127.0.0.1:3000'
+    PLT_ICC_URL: icc.iccUrl,
+    PLT_APP_PORT: 3043,
+    PLT_METRICS_PORT: 9092
   })
 
   const app = await start()

@@ -32,36 +32,21 @@ function setUpEnvironment (env = {}) {
 }
 
 async function startICC (t, opts = {}) {
-  let {
+  const {
     applicationId,
     applicationName,
     applicationMetricsLabel,
     scaler,
-    iccServices,
+    iccServices: customIccServices,
     iccConfig = {},
     enableOpenTelemetry = false,
     enableSlicerInterceptor = false,
     enableTrafficInterceptor = false,
-    controlPlaneResponse
+    controlPlaneResponse,
+    port = 3000
   } = opts
 
-  iccServices = iccServices || {
-    riskEngine: {
-      url: 'http://127.0.0.1:3000/risk-service'
-    },
-    trafficInspector: {
-      url: 'http://127.0.0.1:3000/traffic-inspector'
-    },
-    compliance: {
-      url: 'http://127.0.0.1:3000/compliance'
-    },
-    cron: {
-      url: 'http://127.0.0.1:3000/cron'
-    },
-    scaler: {
-      url: 'http://127.0.0.1:3000/scaler'
-    }
-  }
+  let iccServices = customIccServices
 
   const icc = fastify({
     keepAliveTimeout: 1,
@@ -213,7 +198,33 @@ async function startICC (t, opts = {}) {
     })
   }, { prefix: '/cron' })
 
-  await icc.listen({ port: 3000 })
+  await icc.listen({ port })
+
+  // Set default iccServices if not provided
+  if (!iccServices) {
+    iccServices = {
+      riskEngine: {
+        url: `http://127.0.0.1:${port}/risk-service`
+      },
+      trafficInspector: {
+        url: `http://127.0.0.1:${port}/traffic-inspector`
+      },
+      compliance: {
+        url: `http://127.0.0.1:${port}/compliance`
+      },
+      cron: {
+        url: `http://127.0.0.1:${port}/cron`
+      },
+      scaler: {
+        url: `http://127.0.0.1:${port}/scaler`
+      }
+    }
+  }
+
+  // Attach iccServices and baseUrl to the icc instance for tests to access
+  icc.iccServices = iccServices
+  icc.iccUrl = `http://127.0.0.1:${port}`
+
   return icc
 }
 
