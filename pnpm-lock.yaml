@@ -22,7 +22,7 @@ importers:
         version: 3.29.1
       '@platformatic/wattpm-pprof-capture':
         specifier: ^3.25.0
-        version: 3.25.0
+        version: 3.29.1
       avvio:
         specifier: ^9.1.0
         version: 9.1.0
@@ -1039,8 +1039,8 @@ packages:
   '@platformatic/undici-cache-memory@0.8.4':
     resolution: {integrity: sha512-/JVfPhyUW0GQkmr5lGAGOgh0lpJbTcLG8VB2uNqgNgH1fhPPFAM0l4pLSyeDzpTj2r/GJPLqhzvCgangnSHfoQ==}
 
-  '@platformatic/wattpm-pprof-capture@3.25.0':
-    resolution: {integrity: sha512-4ewLo8qdyG2ydH3A/fc3puW0IzyFTcI+Q8BD9RwoCoCcZjzJUu0bZPn8fSasIwhDPe7g8UPfB9ApXMqT+oLwjw==}
+  '@platformatic/wattpm-pprof-capture@3.29.1':
+    resolution: {integrity: sha512-7q+5PaVqd2j1KpzMvjzGRekZdlk1gSo9pBOfdPtgMsX2cXZyjKBDFEr5do1ZznX6DFDIag9SGJoXLMSJoUJemQ==}
     engines: {node: '>=22.19.0'}
 
   '@protobufjs/aspromise@1.1.2':
@@ -3366,10 +3366,6 @@ packages:
     resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
     engines: {node: '>=14.0'}
 
-  undici@6.22.0:
-    resolution: {integrity: sha512-hU/10obOIu62MGYjdskASR3CUAiYaFTtC9Pa6vHyf//mAipSvSQg6od2CnJswq7fvzNS3zJhxoRkgNVaHurWKw==}
-    engines: {node: '>=18.17'}
-
   undici@6.23.0:
     resolution: {integrity: sha512-VfQPToRA5FZs/qJxLIinmU59u0r7LXqoJkCzinq3ckNJp3vKEh7jTWN589YQ5+aoAC/TGRLyJLCPKcLQbM8r9g==}
     engines: {node: '>=18.17'}
@@ -4825,11 +4821,11 @@ snapshots:
 
   '@platformatic/undici-cache-memory@0.8.4': {}
 
-  '@platformatic/wattpm-pprof-capture@3.25.0':
+  '@platformatic/wattpm-pprof-capture@3.29.1':
     dependencies:
       '@datadog/pprof': 5.13.1
       '@fastify/error': 4.2.0
-      undici: 6.22.0
+      undici: 6.23.0
 
   '@protobufjs/aspromise@1.1.2': {}
 
@@ -7504,8 +7500,6 @@ snapshots:
   undici@5.29.0:
     dependencies:
       '@fastify/busboy': 2.1.1
-
-  undici@6.22.0: {}
 
   undici@6.23.0: {}
 
