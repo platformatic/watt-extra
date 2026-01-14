@@ -296,6 +296,9 @@ test('init plugin calls updateInstanceConfig on watt when ICC becomes available 
     receivedInstanceConfig = config
   }
 
+  // Mock runtime to simulate that runtime has started
+  app.watt.runtime = {}
+
   // Now simulate ICC becoming available - update the URL and call initApplication
   app.env.PLT_ICC_URL = `http://127.0.0.1:${icc.server.address().port}`
   app.env.PLT_CONTROL_PLANE_URL = `http://127.0.0.1:${icc.server.address().port}/control-plane`
