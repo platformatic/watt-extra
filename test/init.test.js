@@ -296,6 +296,14 @@ test('init plugin calls updateInstanceConfig on watt when ICC becomes available 
     receivedInstanceConfig = config
   }
 
+  // Track if setup methods were called
+  let setupAlertsCalled = false
+  let setupHealthSignalsCalled = false
+  let setupFlamegraphsCalled = false
+  app.setupAlerts = async () => { setupAlertsCalled = true }
+  app.setupHealthSignals = async () => { setupHealthSignalsCalled = true }
+  app.setupFlamegraphs = async () => { setupFlamegraphsCalled = true }
+
   // Mock runtime to simulate that runtime has started
   app.watt.runtime = {}
 
@@ -310,6 +318,11 @@ test('init plugin calls updateInstanceConfig on watt when ICC becomes available 
   equal(receivedInstanceConfig.applicationId, applicationId)
   equal(app.instanceConfig.applicationId, applicationId)
   equal(app.instanceId, instanceId)
+
+  // Verify setup methods were called for ICC recovery
+  equal(setupAlertsCalled, true)
+  equal(setupHealthSignalsCalled, true)
+  equal(setupFlamegraphsCalled, true)
 })
 
 test('updateInstanceConfig calls runtime.updateMetricsConfig with merged config', async (t) => {

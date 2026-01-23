@@ -34,6 +34,9 @@ async function healthSignals (app, _opts) {
   // remove after depricating the Scaler v1 UI
   const servicesMetrics = {}
 
+  // Store listener reference for cleanup
+  let healthMetricsListener = null
+
   async function setupHealthSignals () {
     const scalerAlgorithmVersion = app.instanceConfig?.scaler?.version ?? 'v1'
     if (scalerAlgorithmVersion !== 'v2') {
@@ -74,7 +77,12 @@ async function healthSignals (app, _opts) {
       return
     }
 
-    runtime.on('application:worker:health:metrics', async (healthInfo) => {
+    // Remove old listener if it exists (for ICC recovery scenario)
+    if (healthMetricsListener) {
+      runtime.removeListener('application:worker:health:metrics', healthMetricsListener)
+    }
+
+    healthMetricsListener = async (healthInfo) => {
       if (!healthInfo) {
         app.log.error('No health metrics info received')
       }
@@ -128,7 +136,8 @@ async function healthSignals (app, _opts) {
       if (healthSignals.length > 0) {
         await sendHealthSignalsWithTimeout(serviceId, workerId, healthSignals)
       }
-    })
+    }
+    runtime.on('application:worker:health:metrics', healthMetricsListener)
   }
   app.setupHealthSignals = setupHealthSignals
 

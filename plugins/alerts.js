@@ -10,6 +10,10 @@ async function alerts (app, _opts) {
   const lastServicesAlertTime = {}
   const workerStartTimes = new Map() // Track per-worker start times for grace period
 
+  // Store listener references for cleanup
+  let workerStartedListener = null
+  let healthListener = null
+
   async function setupAlerts () {
     const scalerAlgorithmVersion = app.instanceConfig?.scaler?.version ?? 'v1'
     if (scalerAlgorithmVersion !== 'v1') {
@@ -37,17 +41,30 @@ async function alerts (app, _opts) {
       return
     }
 
+    const healthEventName = app.watt.runtimeSupportsNewHealthMetrics()
+      ? 'application:worker:health:metrics'
+      : 'application:worker:health'
+
+    // Remove old listeners if they exist (for ICC recovery scenario)
+    if (workerStartedListener) {
+      runtime.removeListener('application:worker:started', workerStartedListener)
+    }
+    if (healthListener) {
+      runtime.removeListener(healthEventName, healthListener)
+    }
+
     // Default start time for workers that started before the listener was registered
     const pluginStartTime = Date.now()
 
     // Listen for worker start events to track start times
-    runtime.on('application:worker:started', (workerInfo) => {
+    workerStartedListener = (workerInfo) => {
       const workerId = workerInfo?.id
       if (workerId) {
         workerStartTimes.set(workerId, Date.now())
         app.log.debug({ workerId }, 'Worker started, tracking for grace period')
       }
-    })
+    }
+    runtime.on('application:worker:started', workerStartedListener)
 
     const processHealthInfo = async (healthInfo) => {
       if (!healthInfo) {
@@ -147,7 +164,7 @@ async function alerts (app, _opts) {
 
     if (app.watt.runtimeSupportsNewHealthMetrics()) {
       // Runtime >= 3.18.0: Listen to health:metrics
-      runtime.on('application:worker:health:metrics', async (health) => {
+      healthListener = async (health) => {
         if (!health) {
           app.log.error('No health info received')
           return
@@ -177,11 +194,12 @@ async function alerts (app, _opts) {
         }
 
         await processHealthInfo(healthInfo)
-      })
+      }
     } else {
       // Runtime < 3.18.0:
-      runtime.on('application:worker:health', processHealthInfo)
+      healthListener = processHealthInfo
     }
+    runtime.on(healthEventName, healthListener)
   }
   app.setupAlerts = setupAlerts
 }
