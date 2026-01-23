@@ -73,6 +73,11 @@ async function flamegraphs (app, _opts) {
       }
     }
 
+    // Remove old listener if it exists (for ICC recovery scenario)
+    if (workerStartedListener) {
+      runtime.removeListener('application:worker:started', workerStartedListener)
+    }
+
     // Listen for new workers starting and start profiling on them
     workerStartedListener = ({ application, worker }) => {
       if (isFlamegraphsDisabled) {

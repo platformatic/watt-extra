@@ -55,6 +55,11 @@ async function initPlugin (app) {
     // If runtime already started (ICC recovery after startup), update its instance config
     if (app.watt?.runtime) {
       await app.watt.updateInstanceConfig(instanceConfig)
+      // Run setup methods that were skipped due to missing ICC config.
+      // Note that these calls are idempotent
+      await app.setupAlerts?.()
+      await app.setupHealthSignals?.()
+      await app.setupFlamegraphs?.()
     }
   }
   try {
