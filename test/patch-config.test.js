@@ -83,7 +83,10 @@ test('should spawn a service app settings labels for metrics', async (t) => {
       instanceId: app.instanceId,
       applicationId,
     },
-    applicationLabel: 'serviceId'
+    applicationLabel: 'serviceId',
+    httpCustomLabels: [
+      { name: 'callerTelemetryId', header: 'x-plt-telemetry-id', default: '' }
+    ]
   }
   assert.deepStrictEqual(metrics, expectedMetrics)
 })
