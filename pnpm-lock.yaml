@@ -74,7 +74,7 @@ importers:
         version: 11.2.0
       '@platformatic/composer':
         specifier: ^3.25.0
-        version: 3.35.0(typescript@5.9.3)
+        version: 3.36.0(typescript@5.9.3)
       '@platformatic/next':
         specifier: ^3.25.0
         version: 3.35.0
@@ -914,8 +914,8 @@ packages:
     resolution: {integrity: sha512-XLmyza3mCzBW8nmo2QNEB2CBIBxFQziWbBL98Qvj8/gVkhLi3vuvsesTkcs+hTlqEWTlqxw8ctPocGpVK8EwVA==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/composer@3.35.0':
-    resolution: {integrity: sha512-dQ1Nlrn5ztWDGPcwWR17WavqK2N0mdgHTTlka40csIC9jXJ0joF2kArm4dIO+4xLGCLD0oIFUkJDMVl9s26B7w==}
+  '@platformatic/composer@3.36.0':
+    resolution: {integrity: sha512-PM7lfjRe2oc/Y9QVCULxBIfQZdY7ZfqxSdV5ZYVL5W9lFg9GybdHFVkOO9GslWkihZpQISpL26A0J5KHuzgaAA==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/control@3.35.0':
@@ -933,8 +933,8 @@ packages:
     resolution: {integrity: sha512-sYP0/ggdGDcFN+/w6jBnGUo54M6ZLfRgpZ7YnNYC28CcYE6yG7vM8wnq4iODDlpv1Dg2ngtcS6JSL5LHDZtuzQ==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/gateway@3.35.0':
-    resolution: {integrity: sha512-AkBuLf6msJh1RnxyYuYjz6M9p1y6bepD/I3hSQsY3pNhtIf6F/+BZhyy1cDoB+AxtCTyHytQcp9DfTTYn1Hv3w==}
+  '@platformatic/gateway@3.36.0':
+    resolution: {integrity: sha512-YDc3Eg5XXlqqafwuyIOuI3FFPna0wGx6/zCRrDie9w7CeVUD7TH75ujMRH2fRqvYJ+rA3Xf3eUWtSLMtfgU/DQ==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/generators@3.35.0':
@@ -991,16 +991,8 @@ packages:
     resolution: {integrity: sha512-eiqgt+jpKdoJZ+grp4wl5zHTwhErGTH0rQIZGyOoBUXNI/yGCUkZOngWR79ThLTKvThikyTWsMpKA9ipfqB5Nw==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/scalar-theme@3.35.0':
-    resolution: {integrity: sha512-6/cCYc+0QUNtZHqQ6fhUDQ+c8Wysqx4gjLiCSlMdKOktAdJlgTMult0nmctI7bWe3hlSFXOkuslf9FXrgpUgnA==}
-    engines: {node: '>=22.19.0'}
-
   '@platformatic/scalar-theme@3.36.0':
     resolution: {integrity: sha512-Rlg99Lk9aIA8Wp4CoVAR6TeXSxkg29TJuPuMZE7mRJnfIwlQT8MrYhWqbn/nXdX4lOKIVOQjFfPhDqhDpRz7eg==}
-    engines: {node: '>=22.19.0'}
-
-  '@platformatic/service@3.35.0':
-    resolution: {integrity: sha512-TUSJFKSi3cTradQ+Nr1khrm+3JovrILLjn4fdUtuZyyRpVsI5KFpVUhFsvPrj2MvVQ3DcFGQaCdtRhz+pFC7aA==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/service@3.36.0':
@@ -1113,9 +1105,6 @@ packages:
 
   '@types/luxon@3.7.1':
     resolution: {integrity: sha512-H3iskjFIAn5SlJU7OuxUmTEpebK6TKB8rxZShDslBMZJ5u9S//KM1sbdAisiSrqwLQncVjnpi2OK2J51h+4lsg==}
-
-  '@types/node@22.19.7':
-    resolution: {integrity: sha512-MciR4AKGHWl7xwxkBa6xUGxQJ4VBOmPTF7sL+iGzuahOFaO0jHCsuEfS80pan1ef4gWId1oWOweIhrDEYLuaOw==}
 
   '@types/node@22.19.8':
     resolution: {integrity: sha512-ebO/Yl+EAvVe8DnMfi+iaAyIqYdK0q/q0y0rw82INWEKJOBe6b/P3YWE8NW7oOlF/nXFNrHwhARrN/hdgDkraA==}
@@ -4277,10 +4266,10 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@platformatic/composer@3.35.0(typescript@5.9.3)':
+  '@platformatic/composer@3.36.0(typescript@5.9.3)':
     dependencies:
-      '@platformatic/foundation': 3.35.0
-      '@platformatic/gateway': 3.35.0(typescript@5.9.3)
+      '@platformatic/foundation': 3.36.0
+      '@platformatic/gateway': 3.36.0(typescript@5.9.3)
     transitivePeerDependencies:
       - bufferutil
       - chokidar
@@ -4347,7 +4336,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@platformatic/gateway@3.35.0(typescript@5.9.3)':
+  '@platformatic/gateway@3.36.0(typescript@5.9.3)':
     dependencies:
       '@fastify/error': 4.2.0
       '@fastify/http-proxy': 11.4.1
@@ -4355,13 +4344,13 @@ snapshots:
       '@fastify/static': 8.3.0
       '@fastify/swagger': 9.6.1
       '@fastify/view': 10.0.2
-      '@platformatic/basic': 3.35.0
+      '@platformatic/basic': 3.36.0
       '@platformatic/fastify-openapi-glue': 5.1.0
-      '@platformatic/foundation': 3.35.0
+      '@platformatic/foundation': 3.36.0
       '@platformatic/graphql-composer': 0.10.1
-      '@platformatic/scalar-theme': 3.35.0
-      '@platformatic/service': 3.35.0(typescript@5.9.3)
-      '@platformatic/telemetry': 3.35.0
+      '@platformatic/scalar-theme': 3.36.0
+      '@platformatic/service': 3.36.0(typescript@5.9.3)
+      '@platformatic/telemetry': 3.36.0
       '@scalar/fastify-api-reference': 1.34.6(typescript@5.9.3)
       ajv: 8.17.1
       console-table-printer: 2.15.0
@@ -4537,56 +4526,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@platformatic/scalar-theme@3.35.0': {}
-
   '@platformatic/scalar-theme@3.36.0': {}
-
-  '@platformatic/service@3.35.0(typescript@5.9.3)':
-    dependencies:
-      '@fastify/accepts': 5.0.4
-      '@fastify/autoload': 6.3.1
-      '@fastify/cors': 10.1.0
-      '@fastify/deepmerge': 2.0.2
-      '@fastify/error': 4.2.0
-      '@fastify/static': 8.3.0
-      '@fastify/swagger': 9.6.1
-      '@fastify/under-pressure': 9.0.3
-      '@platformatic/basic': 3.35.0
-      '@platformatic/foundation': 3.35.0
-      '@platformatic/generators': 3.35.0
-      '@platformatic/metrics': 3.35.0
-      '@platformatic/scalar-theme': 3.35.0
-      '@platformatic/telemetry': 3.35.0
-      '@scalar/fastify-api-reference': 1.34.6(typescript@5.9.3)
-      '@types/node': 22.19.7
-      '@types/ws': 8.18.1
-      ajv: 8.17.1
-      cli-progress: 3.12.0
-      close-with-grace: 2.4.0
-      code-block-writer: 13.0.3
-      colorette: 2.0.20
-      console-table-printer: 2.15.0
-      env-schema: 7.0.0
-      execa: 9.6.1
-      fast-json-patch: 3.1.1
-      fastify: 5.7.2
-      fastify-plugin: 5.1.0
-      graphql: 16.12.0
-      help-me: 5.0.0
-      mercurius: 16.7.0(graphql@16.12.0)
-      minimist: 1.2.8
-      my-ua-parser: 2.0.4
-      ora: 6.3.1
-      pino: 9.14.0
-      pino-pretty: 13.1.3
-      rfdc: 1.4.1
-      semgrator: 0.3.0
-      undici: 7.20.0
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - typescript
-      - utf-8-validate
 
   '@platformatic/service@3.36.0(typescript@5.9.3)':
     dependencies:
@@ -4790,10 +4730,6 @@ snapshots:
   '@types/json-schema@7.0.15': {}
 
   '@types/luxon@3.7.1': {}
-
-  '@types/node@22.19.7':
-    dependencies:
-      undici-types: 6.21.0
 
   '@types/node@22.19.8':
     dependencies:
