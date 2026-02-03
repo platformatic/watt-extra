@@ -77,7 +77,7 @@ importers:
         version: 3.35.0(typescript@5.9.3)
       '@platformatic/next':
         specifier: ^3.25.0
-        version: 3.35.0
+        version: 3.36.0
       '@platformatic/node':
         specifier: ^3.25.0
         version: 3.35.0
@@ -967,8 +967,8 @@ packages:
     resolution: {integrity: sha512-3425t+/45wSzW5nETy1an4lUvJqnqaTgAdB0MmrjXSm+TutNP4fKOUo8uUg+jyB+PJJkb+USlCQR14/IRRiJUQ==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/next@3.35.0':
-    resolution: {integrity: sha512-P2DA5lXsPwAlTWPtwLS/9i9aL9MjPnrGfkMR1RETgGr9KccM1y0v77JvCYsID1xpXhLWhnBkAlUhYRnfOceaIA==}
+  '@platformatic/next@3.36.0':
+    resolution: {integrity: sha512-+LYSgHW6shQNdL70mk33cbnfbNBTpj93wb4tJRl9sCYb1HBA7ufLVHLzUO6V4Ix7Ie8vH0dbwqATROJY5a0yzA==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/node@3.35.0':
@@ -4450,14 +4450,14 @@ snapshots:
       '@platformatic/prom-client': 1.0.0
       '@platformatic/promotel': 0.1.0
 
-  '@platformatic/next@3.35.0':
+  '@platformatic/next@3.36.0':
     dependencies:
       '@babel/generator': 7.29.0
       '@babel/parser': 7.29.0
       '@babel/traverse': 7.29.0
       '@babel/types': 7.29.0
-      '@platformatic/basic': 3.35.0
-      '@platformatic/foundation': 3.35.0
+      '@platformatic/basic': 3.36.0
+      '@platformatic/foundation': 3.36.0
       amaro: 0.3.2
       iovalkey: 0.3.3
       msgpackr: 1.11.8
