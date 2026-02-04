@@ -73,3 +73,20 @@ test('CLI should show version with version command', async (t) => {
     'Version output should include version number'
   )
 })
+
+test('CLI should output JSON log without banner in non-TTY mode (version command)', async (t) => {
+  const { code, stdout } = await runCLI(['version'])
+  assert.strictEqual(code, 0, 'Process should exit with code 0')
+
+  // In non-TTY mode, should NOT have the banner box characters
+  assert.ok(
+    !stdout.includes('+======'),
+    'Non-TTY output should not include banner box'
+  )
+
+  // Should have JSON log with version
+  assert.ok(
+    stdout.includes('"msg":"WattExtra v'),
+    'Non-TTY output should include JSON log with version'
+  )
+})

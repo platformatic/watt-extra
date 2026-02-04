@@ -4,13 +4,15 @@ import { fileURLToPath } from 'node:url'
 
 const logger = pino({
   level: process.env.PLT_LOG_LEVEL || 'info',
-  transport: {
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: true
+  ...(process.stdout.isTTY && {
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: true
+      }
     }
-  }
+  })
 })
 
 // This starts the app and sends the info to ICC, so it's the main entry point

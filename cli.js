@@ -20,14 +20,20 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 const commistInstance = commist()
 
 function version () {
-  console.log(getSimpleBanner(pkg.version))
-  logger.info(`WattExtra v${pkg.version}`)
+  if (process.stdout.isTTY) {
+    console.log(getSimpleBanner(pkg.version))
+  } else {
+    logger.info(`WattExtra v${pkg.version}`)
+  }
 }
 
 // Handle start command
 async function startCommand (argv) {
-  const banner = getSimpleBanner(pkg.version)
-  console.log(banner)
+  if (process.stdout.isTTY) {
+    console.log(getSimpleBanner(pkg.version))
+  } else {
+    logger.info(`WattExtra v${pkg.version}`)
+  }
 
   const args = minimist(argv, {
     alias: {
