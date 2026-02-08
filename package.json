@@ -24,7 +24,7 @@
     "@platformatic/node": "^3.25.0",
     "@platformatic/service": "^3.25.0",
     "atomic-sleep": "^1.0.0",
-    "borp": "^0.21.0",
+    "borp": "^1.0.0",
     "eslint": "9",
     "fastify": "^5.4.0",
     "fastify-plugin": "^5.0.1",
