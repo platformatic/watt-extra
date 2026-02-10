@@ -419,7 +419,12 @@ test('should configure next service with cache', async (t) => {
   const nextServicePath = join(applicationPath, 'web', 'next')
 
   await installDeps(t, applicationPath)
-  await installDeps(t, nextServicePath, ['@platformatic/next'])
+  await installDeps(t, nextServicePath, ['@platformatic/next', 'next'])
+
+  const { execa } = await import('execa')
+  await execa(join(__dirname, '../node_modules/.bin/plt'), ['build'], {
+    cwd: applicationPath,
+  })
 
   const icc = await startICC(t, {
     applicationId,
