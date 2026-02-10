@@ -411,3 +411,55 @@ test('should merge user telemetry config with ICC exporter', async (t) => {
   assert.ok(hasUserSkip, 'User skip pattern should be preserved')
   assert.ok(hasDefaultSkip, 'Default skip pattern should be added')
 })
+
+test('should configure next service with cache', async (t) => {
+  const appName = 'test-app'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'runtime-next')
+  const nextServicePath = join(applicationPath, 'web', 'next')
+
+  await installDeps(t, applicationPath)
+  await installDeps(t, nextServicePath, ['@platformatic/next'])
+
+  const icc = await startICC(t, {
+    applicationId,
+    port: 3001,
+    controlPlaneResponse: {
+      applicationId,
+      httpCache: {
+        clientOpts: {
+          keyPrefix: 'test-prefix',
+          host: '127.0.0.1',
+          port: 6379,
+          username: 'user',
+          password: 'pass'
+        }
+      }
+    }
+  })
+
+  setUpEnvironment({
+    PLT_APP_NAME: appName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: icc.iccUrl,
+    PLT_APP_PORT: 3043,
+    PLT_METRICS_PORT: 9092
+  })
+
+  const app = await start()
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  const runtimeConfig = app.watt.runtime.getRuntimeConfig(true)
+  const nextApp = runtimeConfig.applications.find(a => a.type === '@platformatic/next')
+  assert.ok(nextApp, 'Next service should be found in applications')
+
+  const nextConfig = await app.watt.runtime.getApplicationConfig(nextApp.id)
+  assert.ok(nextConfig.cache, 'Cache should be configured for next service')
+  assert.strictEqual(nextConfig.cache.adapter, 'valkey')
+  assert.strictEqual(nextConfig.cache.prefix, 'test-prefix')
+  assert.strictEqual(nextConfig.cache.maxTTL, 604800)
+})
