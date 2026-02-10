@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@datadog/pprof':
         specifier: ^5.9.0
-        version: 5.13.2
+        version: 5.13.3
       '@fastify/error':
         specifier: ^4.2.0
         version: 4.2.0
@@ -170,8 +170,8 @@ packages:
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
 
-  '@datadog/pprof@5.13.2':
-    resolution: {integrity: sha512-Th8u7pvoguTfbUx/mlZLHD9TxFCHO+wRAvlEaYFAYAmMvbPLww4YowvTy1UMvpi8LbUbwil3Fo8rKCrilvXHhQ==}
+  '@datadog/pprof@5.13.3':
+    resolution: {integrity: sha512-G25IicP7pc5CXmAfVz7nrIERsKK9hvPz6p7xsLTUwG4Qs+Zgd5KFedKCVsnvNasLc7l7OXQ6839ajowgQLWTyw==}
     engines: {node: '>=16'}
 
   '@emnapi/core@1.8.1':
@@ -3455,7 +3455,7 @@ snapshots:
 
   '@bcoe/v8-coverage@1.0.2': {}
 
-  '@datadog/pprof@5.13.2':
+  '@datadog/pprof@5.13.3':
     dependencies:
       delay: 5.0.0
       node-gyp-build: 3.9.0
@@ -4520,7 +4520,7 @@ snapshots:
 
   '@platformatic/wattpm-pprof-capture@3.37.0':
     dependencies:
-      '@datadog/pprof': 5.13.2
+      '@datadog/pprof': 5.13.3
       '@fastify/error': 4.2.0
       undici: 7.21.0
 
