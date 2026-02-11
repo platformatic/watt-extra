@@ -6,7 +6,8 @@ import updatePlugin from '../plugins/update.js'
 import { once, EventEmitter } from 'node:events'
 import { setTimeout as sleep } from 'node:timers/promises'
 
-function createMockApp (port) {
+function createMockApp (port, options = {}) {
+  let runtimeId = null
   return {
     log: {
       info: () => {},
@@ -19,6 +20,12 @@ function createMockApp (port) {
     },
     getAuthorizationHeader: async () => {
       return { Authorization: 'Bearer test-token' }
+    },
+    getRuntimeId: () => {
+      if (!runtimeId) {
+        runtimeId = options.runtimeId || 'test-runtime-id'
+      }
+      return runtimeId
     },
     env: {
       PLT_APP_NAME: 'test-app',
@@ -90,6 +97,46 @@ test('update plugin connects to websocket', async (t) => {
       entry === 'Received subscription acknowledgment from updates websocket'
   )
   equal(!!subscriptionAckLog, true, 'Should log subscription acknowledgment')
+})
+
+test('update plugin includes runtimeId in websocket URL', async (t) => {
+  const ee = new EventEmitter()
+  setUpEnvironment()
+
+  const expectedRuntimeId = 'test-runtime-id-12345'
+  let receivedUrl = null
+
+  // Setup WebSocket server
+  const wss = new WebSocketServer({ port })
+  t.after(async () => wss.close())
+
+  wss.on('connection', (ws, req) => {
+    receivedUrl = req.url
+
+    ws.on('message', (data) => {
+      const message = JSON.parse(data.toString())
+      if (message.command === 'subscribe' && message.topic === '/config') {
+        ws.send(JSON.stringify({ command: 'ack' }))
+        ee.emit('subscriptionAckSent')
+      }
+    })
+  })
+
+  const app = createMockApp(port, { runtimeId: expectedRuntimeId })
+  t.after(() => app.closeUpdates())
+
+  await updatePlugin(app)
+
+  const ack = once(ee, 'subscriptionAckSent')
+  app.connectToUpdates()
+  await ack
+
+  // Verify runtimeId is in the URL query params
+  equal(
+    receivedUrl.includes(`runtimeId=${expectedRuntimeId}`),
+    true,
+    `WebSocket URL should include runtimeId query param. Received URL: ${receivedUrl}`
+  )
 })
 
 test('update plugin handles config update messages', async (t) => {
