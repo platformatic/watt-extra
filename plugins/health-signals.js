@@ -146,7 +146,7 @@ async function healthSignals (app, _opts) {
 
       signalsCache.addServiceSignal(serviceId, 'elu', {
         workerId,
-        value: elu,
+        value: Math.round(elu * 100) / 100,
         timestamp: now
       })
       signalsCache.addServiceSignal(serviceId, 'heap', {
