@@ -101,8 +101,10 @@ test('should send health signals when service becomes unhealthy', async (t) => {
   assert.strictEqual(receivedSignalReq.applicationId, applicationId)
   assert.ok(receivedSignalReq.runtimeId, 'runtimeId should be present')
   assert.ok(typeof receivedSignalReq.runtimeId === 'string', 'runtimeId should be a string')
+  assert.ok(receivedSignalReq.batchStartedAt, 'batchStartedAt should be present')
+  assert.ok(typeof receivedSignalReq.batchStartedAt === 'number', 'batchStartedAt should be a number')
 
-  // Verify v2 signals format: { serviceId: { elu: { values, options }, heap: { values, options } } }
+  // Verify v2 signals format: { serviceId: { elu: { options, workers }, heap: { options, workers } } }
   const signals = receivedSignalReq.signals
   assert.ok(signals, 'signals should be present')
   assert.ok(signals.main, 'main service signals should be present')
@@ -110,35 +112,60 @@ test('should send health signals when service becomes unhealthy', async (t) => {
   // Check ELU signals structure
   const eluSignals = signals.main.elu
   assert.ok(eluSignals, 'ELU signals should be present')
-  assert.ok(Array.isArray(eluSignals.values), 'ELU values should be an array')
   assert.ok(eluSignals.options, 'ELU options should be present')
   assert.ok(typeof eluSignals.options.threshold === 'number', 'ELU threshold should be a number')
+  assert.ok(eluSignals.workers, 'ELU workers should be present')
+  assert.ok(typeof eluSignals.workers === 'object', 'ELU workers should be an object')
 
   // Check heap signals structure
   const heapSignals = signals.main.heap
   assert.ok(heapSignals, 'Heap signals should be present')
-  assert.ok(Array.isArray(heapSignals.values), 'Heap values should be an array')
   assert.ok(heapSignals.options, 'Heap options should be present')
   assert.ok(typeof heapSignals.options.threshold === 'number', 'Heap threshold should be a number')
+  assert.ok(heapSignals.workers, 'Heap workers should be present')
+  assert.ok(typeof heapSignals.workers === 'object', 'Heap workers should be an object')
 
-  // Verify ELU values have the correct structure with workerId
-  assert.ok(eluSignals.values.length > 0, 'Should have ELU values')
-  for (const eluValue of eluSignals.values) {
-    assert.ok(typeof eluValue.value === 'number', 'ELU value should be a number')
-    assert.ok(typeof eluValue.timestamp === 'number', 'ELU timestamp should be a number')
-    assert.ok(typeof eluValue.workerId === 'string', 'ELU workerId should be a string')
+  // Verify ELU workers have values in tuple format [timestamp, value]
+  const eluWorkerIds = Object.keys(eluSignals.workers)
+  assert.ok(eluWorkerIds.length > 0, 'Should have at least one ELU worker')
+  for (const workerId of eluWorkerIds) {
+    const worker = eluSignals.workers[workerId]
+    assert.ok(Array.isArray(worker.values), 'ELU worker values should be an array')
+    assert.ok(worker.values.length > 0, 'ELU worker should have values')
+    for (const tuple of worker.values) {
+      assert.ok(Array.isArray(tuple), 'ELU value should be a tuple')
+      assert.strictEqual(tuple.length, 2, 'ELU tuple should have 2 elements')
+      assert.ok(typeof tuple[0] === 'number', 'ELU timestamp should be a number')
+      assert.ok(typeof tuple[1] === 'number', 'ELU value should be a number')
+    }
   }
 
   // Check that at least one ELU value is high (from CPU intensive operation)
-  const highEluValue = eluSignals.values.find(v => v.value > 0.9)
-  assert.ok(highEluValue, 'Should have at least one high ELU value')
+  let highEluFound = false
+  for (const workerId of eluWorkerIds) {
+    for (const [, value] of eluSignals.workers[workerId].values) {
+      if (value > 0.9) {
+        highEluFound = true
+        break
+      }
+    }
+    if (highEluFound) break
+  }
+  assert.ok(highEluFound, 'Should have at least one high ELU value')
 
-  // Verify heap values have the correct structure with workerId
-  assert.ok(heapSignals.values.length > 0, 'Should have heap values')
-  for (const heapValue of heapSignals.values) {
-    assert.ok(typeof heapValue.value === 'number', 'Heap value should be a number')
-    assert.ok(typeof heapValue.timestamp === 'number', 'Heap timestamp should be a number')
-    assert.ok(typeof heapValue.workerId === 'string', 'Heap workerId should be a string')
+  // Verify heap workers have values in tuple format [timestamp, value]
+  const heapWorkerIds = Object.keys(heapSignals.workers)
+  assert.ok(heapWorkerIds.length > 0, 'Should have at least one heap worker')
+  for (const workerId of heapWorkerIds) {
+    const worker = heapSignals.workers[workerId]
+    assert.ok(Array.isArray(worker.values), 'Heap worker values should be an array')
+    assert.ok(worker.values.length > 0, 'Heap worker should have values')
+    for (const tuple of worker.values) {
+      assert.ok(Array.isArray(tuple), 'Heap value should be a tuple')
+      assert.strictEqual(tuple.length, 2, 'Heap tuple should have 2 elements')
+      assert.ok(typeof tuple[0] === 'number', 'Heap timestamp should be a number')
+      assert.ok(typeof tuple[1] === 'number', 'Heap value should be a number')
+    }
   }
 
   // Wait for the second flamegraph to be generated

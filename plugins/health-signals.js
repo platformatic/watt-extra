@@ -14,14 +14,16 @@ class HealthSignalsCache {
   }
 
   addServiceSignal (serviceId, signalType, signal) {
+    const { workerId, value, timestamp } = signal
     this.#signalsByService[serviceId] ??= {}
-    this.#signalsByService[serviceId][signalType] ??= []
+    this.#signalsByService[serviceId][signalType] ??= {}
+    this.#signalsByService[serviceId][signalType][workerId] ??= []
 
-    const signals = this.#signalsByService[serviceId][signalType]
-    signals.push(signal)
+    const values = this.#signalsByService[serviceId][signalType][workerId]
+    values.push([timestamp, value])
 
-    if (signals.length > this.#maxSize) {
-      signals.splice(0, signals.length - this.#maxSize)
+    if (values.length > this.#maxSize) {
+      values.splice(0, values.length - this.#maxSize)
     }
   }
 
@@ -42,10 +44,6 @@ async function healthSignals (app, _opts) {
 
   const signalsCache = new HealthSignalsCache()
   const heapTotalByService = {}
-
-  // TODO: needed to the UI compatibility
-  // remove after depricating the Scaler v1 UI
-  let servicesMetrics = {}
 
   // Store listener reference for cleanup
   let healthMetricsListener = null
@@ -99,7 +97,10 @@ async function healthSignals (app, _opts) {
 
     let batchHasHighValue = false
     let batchStartedAt = null
+
     setInterval(() => {
+      if (batchStartedAt === null) return
+
       const now = Date.now()
       const batchTimeout = batchHasHighValue
         ? batchShortTimeout
@@ -107,15 +108,14 @@ async function healthSignals (app, _opts) {
 
       if (now - batchStartedAt >= batchTimeout) {
         batchHasHighValue = false
-        batchStartedAt = null
 
         const signals = signalsCache.getAllSignals()
-        const metrics = servicesMetrics
-        servicesMetrics = {}
 
-        sendHealthSignals(signals, metrics).catch(err => {
+        sendHealthSignals(signals, batchStartedAt).catch(err => {
           app.log.error({ err }, 'Failed to send health signals to scaler')
         })
+
+        batchStartedAt = Date.now()
       }
     }, 1000).unref()
 
@@ -140,6 +140,10 @@ async function healthSignals (app, _opts) {
       const heapUsedMb = Math.round(heapUsed / 1024 / 1024)
       const now = Date.now()
 
+      if (batchStartedAt === null) {
+        batchStartedAt = now
+      }
+
       signalsCache.addServiceSignal(serviceId, 'elu', {
         workerId,
         value: elu,
@@ -153,46 +157,44 @@ async function healthSignals (app, _opts) {
       heapTotalByService[serviceId] = heapTotal
       signalsCache.addServiceSignals(serviceId, healthSignals)
 
-      batchStartedAt ??= now
       if (elu > eluThreshold || heapUsedMb > heapThresholdMb) {
         batchHasHighValue = true
-      }
-
-      // TODO: needed to the UI compatibility
-      // remove after depricating the Scaler v1 UI
-      servicesMetrics[serviceId] ??= { elu: 0, heapUsed: 0, heapTotal: 0 }
-      const metrics = servicesMetrics[serviceId]
-      if (elu > metrics.elu) {
-        metrics.elu = elu
-      }
-      if (heapUsed > metrics.heapUsed) {
-        metrics.heapUsed = heapUsed
-        metrics.heapTotal = heapTotal
       }
     }
     runtime.on('application:worker:health:metrics', healthMetricsListener)
   }
   app.setupHealthSignals = setupHealthSignals
 
-  async function sendHealthSignals (rawSignals) {
+  async function sendHealthSignals (rawSignals, batchStartedAt) {
     const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
     const applicationId = app.instanceConfig?.applicationId
     const authHeaders = await app.getAuthorizationHeader()
 
     // Transform signals to the format expected by ICC LoadPredictor
+    // Format: { serviceId: { elu: { options, workers: { workerId: { values: [[ts, val], ...] } } } } }
     const signals = {}
     for (const [serviceId, serviceSignals] of Object.entries(rawSignals)) {
+      const eluWorkerMetrics = {}
+      const heapWorkerMetrics = {}
+
+      for (const [workerId, values] of Object.entries(serviceSignals.elu || {})) {
+        eluWorkerMetrics[workerId] = { values }
+      }
+      for (const [workerId, values] of Object.entries(serviceSignals.heap || {})) {
+        heapWorkerMetrics[workerId] = { values }
+      }
+
       signals[serviceId] = {
         elu: {
-          values: serviceSignals.elu || [],
-          options: { threshold: eluThreshold }
+          options: { threshold: eluThreshold },
+          workers: eluWorkerMetrics
         },
         heap: {
-          values: serviceSignals.heap || [],
           options: {
             threshold: heapThresholdMb,
             heapTotal: heapTotalByService[serviceId] || 0
-          }
+          },
+          workers: heapWorkerMetrics
         }
       }
     }
@@ -205,7 +207,7 @@ async function healthSignals (app, _opts) {
         'Content-Type': 'application/json',
         ...authHeaders
       },
-      body: JSON.stringify({ applicationId, runtimeId, signals })
+      body: JSON.stringify({ applicationId, runtimeId, signals, batchStartedAt })
     })
 
     if (statusCode !== 200) {
