@@ -80,7 +80,7 @@ importers:
         version: 3.37.0
       '@platformatic/node':
         specifier: ^3.25.0
-        version: 3.37.0
+        version: 3.38.0
       '@platformatic/service':
         specifier: ^3.25.0
         version: 3.38.0(typescript@5.9.3)
@@ -999,8 +999,8 @@ packages:
     resolution: {integrity: sha512-EdbM/eCpBo9bbzgF9+YXKZfLU6L3hcf2XJnFbj7k0w+QElwcvbtNBmARokTi+VPZNrUVVq6WUJoEmv+O2RXgXA==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/node@3.37.0':
-    resolution: {integrity: sha512-ySa63VXTMVmsK+37yn1EjXKTciJrs74tW8N034OReRaZT0PDFMHRWWQfFhzDem/Qi00jBhwrvT0Z+D8dEEk2Mw==}
+  '@platformatic/node@3.38.0':
+    resolution: {integrity: sha512-Gi7rOa5YzOkHMs42Co6x4/Jqr6ETrUT5sBgloO89alvUlAOfpn6lws3xGNlJ5zrRWMvoMkeKH2i0tuXu1t+Jig==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/openapi-schema-validator@3.0.0':
@@ -4552,11 +4552,11 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@platformatic/node@3.37.0':
+  '@platformatic/node@3.38.0':
     dependencies:
-      '@platformatic/basic': 3.37.0
-      '@platformatic/foundation': 3.37.0
-      '@platformatic/generators': 3.37.0
+      '@platformatic/basic': 3.38.0
+      '@platformatic/foundation': 3.38.0
+      '@platformatic/generators': 3.38.0
       '@watchable/unpromise': 1.0.2
       json5: 2.2.3
       light-my-request: 6.6.0
