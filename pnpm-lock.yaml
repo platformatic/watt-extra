@@ -19,7 +19,7 @@ importers:
         version: 3.38.0
       '@platformatic/runtime':
         specifier: ^3.25.0
-        version: 3.37.0
+        version: 3.38.0
       '@platformatic/wattpm-pprof-capture':
         specifier: ^3.25.0
         version: 3.38.0
@@ -1014,10 +1014,6 @@ packages:
     resolution: {integrity: sha512-PpbXGiGef+zW9LAbD3JP1ehTDhRXXcrBz+cg1fd5kZamMqqf3leXSjOBlagqxaMk8e1M1GggnmB4RxGBvoAcGQ==}
     engines: {node: '>=18'}
     hasBin: true
-
-  '@platformatic/runtime@3.37.0':
-    resolution: {integrity: sha512-Fcnyd98kMFT7P/JUX7x+lUK8gLP/FErfywpM/doQOd9+D0yIGZ9mEelk+s2pAzep5/tKo/uZl3wi3ZrapCRitA==}
-    engines: {node: '>=22.19.0'}
 
   '@platformatic/runtime@3.38.0':
     resolution: {integrity: sha512-OQLs84zj5L1R6XM6b9eFeBG70SKXJc2V/jDMAOpUvFT0wf0AM8+z7KgfeJx13IBQSFcmExox9dc5MxtA8AiFLQ==}
@@ -3189,12 +3185,6 @@ packages:
   swap-case@3.0.3:
     resolution: {integrity: sha512-6p4op8wE9CQv7uDFzulI6YXUw4lD9n4oQierdbFThEKVWVQcbQcUjdP27W8XE7V4QnWmnq9jueSHceyyQnqQVA==}
 
-  systeminformation@5.30.7:
-    resolution: {integrity: sha512-33B/cftpaWdpvH+Ho9U1b08ss8GQuLxrWHelbJT1yw4M48Taj8W3ezcPuaLoIHZz5V6tVHuQPr5BprEfnBLBMw==}
-    engines: {node: '>=8.0.0'}
-    os: [darwin, linux, win32, freebsd, openbsd, netbsd, sunos, android]
-    hasBin: true
-
   systeminformation@5.31.0:
     resolution: {integrity: sha512-z5pjzvC8UnQJ/iu34z+mo3lAeMzTGdArjPQoG5uPyV5XY4BY+M6ZcRTl4XnZqudz6sP713LhWMKv6e0kGFGCgQ==}
     engines: {node: '>=8.0.0'}
@@ -3301,9 +3291,6 @@ packages:
 
   undici-slicer-interceptor@0.4.1:
     resolution: {integrity: sha512-picEWNqX+xZoBPqJJV8aFhvDWtpwkRXyz0jHtJQ2CxlY3B2u7ES+fLJQ6g2DhW4P7+pSsRHDiBsekfjlhHInfQ==}
-
-  undici-thread-interceptor@1.3.0:
-    resolution: {integrity: sha512-JoLOjiEBZv6ISIeKk3Jwbv3SO7Df3RNK8v5xQ6OBPlsYMQu2wL4CehSvJ8IauSoBpnYn6K88XznYpXHruNJcCw==}
 
   undici-thread-interceptor@1.3.1:
     resolution: {integrity: sha512-s/TUkGeVj+C4Rr3Vsy84Kewj97m2QBNx6IjMGM1nzfoKWqNlcLqtFQCbXQjobRJQKi3u9Hc796/YvJIv7W7qWQ==}
@@ -4582,45 +4569,6 @@ snapshots:
       prom-client: 15.1.3
       protobufjs: 7.5.4
       undici: 6.23.0
-
-  '@platformatic/runtime@3.37.0':
-    dependencies:
-      '@fastify/accepts': 5.0.4
-      '@fastify/basic-auth': 6.2.0
-      '@fastify/error': 4.2.0
-      '@fastify/websocket': 11.2.0
-      '@opentelemetry/api': 1.9.0
-      '@platformatic/basic': 3.37.0
-      '@platformatic/foundation': 3.37.0
-      '@platformatic/generators': 3.37.0
-      '@platformatic/itc': 3.37.0
-      '@platformatic/metrics': 3.37.0
-      '@platformatic/prom-client': 1.0.0
-      '@platformatic/telemetry': 3.37.0
-      '@platformatic/undici-cache-memory': 0.8.4
-      '@watchable/unpromise': 1.0.2
-      change-case-all: 2.1.0
-      close-with-grace: 2.4.0
-      colorette: 2.0.20
-      cron: 4.4.0
-      debounce: 2.2.0
-      fastest-levenshtein: 1.0.16
-      fastify: 5.7.4
-      graphql: 16.12.0
-      help-me: 5.0.0
-      minimist: 1.2.8
-      pino: 9.14.0
-      pino-pretty: 13.1.3
-      semgrator: 0.3.0
-      sonic-boom: 4.2.0
-      systeminformation: 5.30.7
-      undici: 7.21.0
-      undici-thread-interceptor: 1.3.0
-      ws: 8.19.0
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
 
   '@platformatic/runtime@3.38.0':
     dependencies:
@@ -6822,7 +6770,7 @@ snapshots:
       '@protobufjs/path': 1.1.2
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.0
-      '@types/node': 22.19.11
+      '@types/node': 25.2.3
       long: 5.3.2
 
   pump@3.0.3:
@@ -7207,8 +7155,6 @@ snapshots:
 
   swap-case@3.0.3: {}
 
-  systeminformation@5.30.7: {}
-
   systeminformation@5.31.0: {}
 
   table@6.9.0:
@@ -7337,13 +7283,6 @@ snapshots:
       bl: 6.1.6
       fgh: 2.4.1
       find-my-way: 9.4.0
-
-  undici-thread-interceptor@1.3.0:
-    dependencies:
-      fastq: 1.20.1
-      hyperid: 3.3.0
-      light-my-request: 6.6.0
-      undici: 7.21.0
 
   undici-thread-interceptor@1.3.1:
     dependencies:
