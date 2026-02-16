@@ -83,7 +83,7 @@ importers:
         version: 3.38.1
       '@platformatic/service':
         specifier: ^3.25.0
-        version: 3.38.0(typescript@5.9.3)
+        version: 3.38.1(typescript@5.9.3)
       atomic-sleep:
         specifier: ^1.0.0
         version: 1.0.0
@@ -999,16 +999,8 @@ packages:
     resolution: {integrity: sha512-8/gq21ik+Yb2S1Z3agakhxQw6mzPlB8iNvBC+ysxJL0C4DRWFdJvV6x2CvjwTgpZJkMd4kNrn0abf08PogK7gw==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/scalar-theme@3.38.0':
-    resolution: {integrity: sha512-QoZ8I+sgbNH/KQDYd2gj0dmXinDBP10NAk0gLz6sJ63rwYfXKyqtsCKxW1mbRf4XPDMMJfToWmy1fpk9RP4xqg==}
-    engines: {node: '>=22.19.0'}
-
   '@platformatic/scalar-theme@3.38.1':
     resolution: {integrity: sha512-JEkpl1qeK01Bji/qvtw/QumTk1nxC57Fzp7CPhSH48pfNzbjdOhLfKaRVCEK+2RgoQOz1gHCUnn2PflN/Q3rcA==}
-    engines: {node: '>=22.19.0'}
-
-  '@platformatic/service@3.38.0':
-    resolution: {integrity: sha512-316Car7Au4kgUujW45oQyyXjHzvTkZ3G9Xm1Tm2vedaNAsosX2D5lQPV12sSv7l7lR12FmAv4EasXjnw8CNyrQ==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/service@3.38.1':
@@ -4610,56 +4602,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@platformatic/scalar-theme@3.38.0': {}
-
   '@platformatic/scalar-theme@3.38.1': {}
-
-  '@platformatic/service@3.38.0(typescript@5.9.3)':
-    dependencies:
-      '@fastify/accepts': 5.0.4
-      '@fastify/autoload': 6.3.1
-      '@fastify/cors': 10.1.0
-      '@fastify/deepmerge': 2.0.2
-      '@fastify/error': 4.2.0
-      '@fastify/static': 8.3.0
-      '@fastify/swagger': 9.7.0
-      '@fastify/under-pressure': 9.0.3
-      '@platformatic/basic': 3.38.0
-      '@platformatic/foundation': 3.38.0
-      '@platformatic/generators': 3.38.0
-      '@platformatic/metrics': 3.38.0
-      '@platformatic/scalar-theme': 3.38.0
-      '@platformatic/telemetry': 3.38.0
-      '@scalar/fastify-api-reference': 1.34.6(typescript@5.9.3)
-      '@types/node': 22.19.11
-      '@types/ws': 8.18.1
-      ajv: 8.18.0
-      cli-progress: 3.12.0
-      close-with-grace: 2.4.0
-      code-block-writer: 13.0.3
-      colorette: 2.0.20
-      console-table-printer: 2.15.0
-      env-schema: 7.0.0
-      execa: 9.6.1
-      fast-json-patch: 3.1.1
-      fastify: 5.7.4
-      fastify-plugin: 5.1.0
-      graphql: 16.12.0
-      help-me: 5.0.0
-      mercurius: 16.7.0(graphql@16.12.0)
-      minimist: 1.2.8
-      my-ua-parser: 2.0.4
-      ora: 6.3.1
-      pino: 9.14.0
-      pino-pretty: 13.1.3
-      rfdc: 1.4.1
-      semgrator: 0.3.0
-      undici: 7.22.0
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - typescript
-      - utf-8-validate
 
   '@platformatic/service@3.38.1(typescript@5.9.3)':
     dependencies:
