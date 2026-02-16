@@ -77,7 +77,7 @@ importers:
         version: 3.38.0(typescript@5.9.3)
       '@platformatic/next':
         specifier: ^3.25.0
-        version: 3.37.0
+        version: 3.38.0
       '@platformatic/node':
         specifier: ^3.25.0
         version: 3.38.0
@@ -133,8 +133,8 @@ packages:
     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/generator@7.29.0':
-    resolution: {integrity: sha512-vSH118/wwM/pLR38g/Sgk05sNtro6TlTJKuiMXDaZqPUfjTFcudpCOt00IhOfj+1BFAX+UFAlzCU+6WXr3GLFQ==}
+  '@babel/generator@7.29.1':
+    resolution: {integrity: sha512-qsaF+9Qcm2Qv8SRIMMscAvG4O3lJ0F1GuMo5HR/Bp02LopNgnZBC/EkbevHFeGs4ls/oPz9v+Bsmzbkbe+0dUw==}
     engines: {node: '>=6.9.0'}
 
   '@babel/helper-globals@7.28.0':
@@ -995,8 +995,8 @@ packages:
     resolution: {integrity: sha512-6uDYPXFmosZTsaHdZHVjvHP1ZMct3ETOLGe4vwb5t4vFPA+GgobXzPfH/Q4yCXEAGPOWkNRgG6C+0Hs0nuzUMw==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/next@3.37.0':
-    resolution: {integrity: sha512-EdbM/eCpBo9bbzgF9+YXKZfLU6L3hcf2XJnFbj7k0w+QElwcvbtNBmARokTi+VPZNrUVVq6WUJoEmv+O2RXgXA==}
+  '@platformatic/next@3.38.0':
+    resolution: {integrity: sha512-zb8JarDxJdl4CZ56hBpC5E+scxzjsX92TOowIEc2m2SRT6DnAGkneiW7PoL5/ehhkIpPFYSiSRjb0pAzE4eKpA==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/node@3.38.0':
@@ -3482,7 +3482,7 @@ snapshots:
       js-tokens: 4.0.0
       picocolors: 1.1.1
 
-  '@babel/generator@7.29.0':
+  '@babel/generator@7.29.1':
     dependencies:
       '@babel/parser': 7.29.0
       '@babel/types': 7.29.0
@@ -3509,7 +3509,7 @@ snapshots:
   '@babel/traverse@7.29.0':
     dependencies:
       '@babel/code-frame': 7.29.0
-      '@babel/generator': 7.29.0
+      '@babel/generator': 7.29.1
       '@babel/helper-globals': 7.28.0
       '@babel/parser': 7.29.0
       '@babel/template': 7.28.6
@@ -4522,14 +4522,14 @@ snapshots:
       '@platformatic/prom-client': 1.0.0
       '@platformatic/promotel': 0.1.0
 
-  '@platformatic/next@3.37.0':
+  '@platformatic/next@3.38.0':
     dependencies:
-      '@babel/generator': 7.29.0
+      '@babel/generator': 7.29.1
       '@babel/parser': 7.29.0
       '@babel/traverse': 7.29.0
       '@babel/types': 7.29.0
-      '@platformatic/basic': 3.37.0
-      '@platformatic/foundation': 3.37.0
+      '@platformatic/basic': 3.38.0
+      '@platformatic/foundation': 3.38.0
       amaro: 0.3.2
       iovalkey: 0.3.3
       msgpackr: 1.11.8
