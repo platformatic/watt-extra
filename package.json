@@ -41,7 +41,7 @@
     "@platformatic/runtime": "^3.25.0",
     "@platformatic/wattpm-pprof-capture": "^3.25.0",
     "avvio": "^9.1.0",
-    "chalk": "^4.1.2",
+    "chalk": "^5.0.0",
     "commist": "^3.2.0",
     "env-schema": "^7.0.0",
     "execa": "^9.6.0",
