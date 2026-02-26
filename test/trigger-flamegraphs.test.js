@@ -79,6 +79,7 @@ function createMockApp (port, includeScalerUrl = true, env = {}) {
     }
   }
 
+  let runtimeId = null
   const app = {
     log: {
       info: () => {},
@@ -92,6 +93,12 @@ function createMockApp (port, includeScalerUrl = true, env = {}) {
     instanceId: 'test-pod-123',
     getAuthorizationHeader: async () => {
       return { Authorization: 'Bearer test-token' }
+    },
+    getRuntimeId: () => {
+      if (!runtimeId) {
+        runtimeId = 'test-runtime-id'
+      }
+      return runtimeId
     },
     env: {
       PLT_APP_NAME: 'test-app',

@@ -2,11 +2,14 @@ import WebSocket from 'ws'
 import { once } from 'node:events'
 import { setTimeout as sleep } from 'node:timers/promises'
 
-function createWebSocketUrl (httpUrl, path) {
+function createWebSocketUrl (httpUrl, path, queryParams = {}) {
   const url = new URL(httpUrl)
   url.protocol = url.protocol.replace('http', 'ws')
   const basePath = url.pathname.endsWith('/') ? url.pathname : `${url.pathname}/`
   url.pathname = `${basePath}${path}`
+  for (const [key, value] of Object.entries(queryParams)) {
+    url.searchParams.set(key, value)
+  }
   return url.toString()
 }
 
@@ -64,8 +67,9 @@ async function updatePlugin (app) {
       return null
     }
 
-    const wsUrl = createWebSocketUrl(iccUrl, `api/updates/applications/${applicationId}`)
-    app.log.info(`Connecting to updates websocket at ${wsUrl}`)
+    const runtimeId = app.getRuntimeId()
+    const wsUrl = createWebSocketUrl(iccUrl, `api/updates/applications/${applicationId}`, { runtimeId })
+    app.log.info({ runtimeId }, `Connecting to updates websocket at ${wsUrl}`)
 
     try {
       const headers = await app.getAuthorizationHeader()

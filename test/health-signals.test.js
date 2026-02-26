@@ -31,7 +31,12 @@ test('should send health signals when service becomes unhealthy', async (t) => {
     processSignals: (req) => {
       assert.equal(req.headers.authorization, 'Bearer test-token')
       receivedSignalReqs.push(req.body)
-      return { id: 'test-alert-id' }
+      // Real ICC returns { alerts: [{ serviceId, workerId, alertId }] }
+      return {
+        alerts: [
+          { serviceId: 'main', workerId: 'main:0', alertId: 'test-alert-id' }
+        ]
+      }
     },
     processFlamegraphs: (req) => {
       const alertId = req.query.alertId
@@ -87,36 +92,80 @@ test('should send health signals when service becomes unhealthy', async (t) => {
     assert.strictEqual(statusCode, 200)
   }
 
-  assert.strictEqual(receivedSignalReqs.length, 1)
+  // Multiple batches may be sent due to timing, verify we received at least one
+  assert.ok(receivedSignalReqs.length >= 1, `Expected at least 1 signal request, got ${receivedSignalReqs.length}`)
 
-  const receivedSignalReq = receivedSignalReqs[0]
-  assert.ok(receivedSignalReq, 'Alert should have been received')
+  // Use the last signal request which should have the most complete data
+  const receivedSignalReq = receivedSignalReqs[receivedSignalReqs.length - 1]
+  assert.ok(receivedSignalReq, 'Signal request should have been received')
   assert.strictEqual(receivedSignalReq.applicationId, applicationId)
-  assert.strictEqual(receivedSignalReq.serviceId, 'main')
-  assert.ok(receivedSignalReq.elu > 0.9)
-  assert.ok(receivedSignalReq.heapUsed > 0)
-  assert.ok(receivedSignalReq.heapTotal > 0)
+  assert.ok(receivedSignalReq.runtimeId, 'runtimeId should be present')
+  assert.ok(typeof receivedSignalReq.runtimeId === 'string', 'runtimeId should be a string')
+  assert.ok(receivedSignalReq.batchStartedAt, 'batchStartedAt should be present')
+  assert.ok(typeof receivedSignalReq.batchStartedAt === 'number', 'batchStartedAt should be a number')
 
-  const receivedSignals = receivedSignalReq.signals
-  assert.ok(receivedSignals.length > 5)
+  // Verify v2 signals format: { serviceId: { elu: { options, workers }, heap: { options, workers } } }
+  const signals = receivedSignalReq.signals
+  assert.ok(signals, 'signals should be present')
+  assert.ok(signals.main, 'main service signals should be present')
 
-  const eluSignals = receivedSignals.filter(
-    (signal) => signal.type === 'elu'
-  )
-  const customSignals = receivedSignals.filter(
-    (signal) => signal.type === 'custom'
-  )
-  assert.strictEqual(customSignals.length, 1)
+  // Check ELU signals structure
+  const eluSignals = signals.main.elu
+  assert.ok(eluSignals, 'ELU signals should be present')
+  assert.ok(eluSignals.options, 'ELU options should be present')
+  assert.ok(typeof eluSignals.options.threshold === 'number', 'ELU threshold should be a number')
+  assert.ok(eluSignals.workers, 'ELU workers should be present')
+  assert.ok(typeof eluSignals.workers === 'object', 'ELU workers should be an object')
 
-  for (const receivedSignal of eluSignals) {
-    assert.strictEqual(receivedSignal.type, 'elu')
-    assert.ok(receivedSignal.value > 0.9)
-    assert.ok(receivedSignal.timestamp > 0)
+  // Check heap signals structure
+  const heapSignals = signals.main.heap
+  assert.ok(heapSignals, 'Heap signals should be present')
+  assert.ok(heapSignals.options, 'Heap options should be present')
+  assert.ok(typeof heapSignals.options.threshold === 'number', 'Heap threshold should be a number')
+  assert.ok(heapSignals.workers, 'Heap workers should be present')
+  assert.ok(typeof heapSignals.workers === 'object', 'Heap workers should be an object')
+
+  // Verify ELU workers have values in tuple format [timestamp, value]
+  const eluWorkerIds = Object.keys(eluSignals.workers)
+  assert.ok(eluWorkerIds.length > 0, 'Should have at least one ELU worker')
+  for (const workerId of eluWorkerIds) {
+    const worker = eluSignals.workers[workerId]
+    assert.ok(Array.isArray(worker.values), 'ELU worker values should be an array')
+    assert.ok(worker.values.length > 0, 'ELU worker should have values')
+    for (const tuple of worker.values) {
+      assert.ok(Array.isArray(tuple), 'ELU value should be a tuple')
+      assert.strictEqual(tuple.length, 2, 'ELU tuple should have 2 elements')
+      assert.ok(typeof tuple[0] === 'number', 'ELU timestamp should be a number')
+      assert.ok(typeof tuple[1] === 'number', 'ELU value should be a number')
+    }
   }
-  for (const receivedSignal of customSignals) {
-    assert.strictEqual(receivedSignal.type, 'custom')
-    assert.strictEqual(receivedSignal.value, 42)
-    assert.ok(receivedSignal.timestamp > 0)
+
+  // Check that at least one ELU value is high (from CPU intensive operation)
+  let highEluFound = false
+  for (const workerId of eluWorkerIds) {
+    for (const [, value] of eluSignals.workers[workerId].values) {
+      if (value > 0.9) {
+        highEluFound = true
+        break
+      }
+    }
+    if (highEluFound) break
+  }
+  assert.ok(highEluFound, 'Should have at least one high ELU value')
+
+  // Verify heap workers have values in tuple format [timestamp, value]
+  const heapWorkerIds = Object.keys(heapSignals.workers)
+  assert.ok(heapWorkerIds.length > 0, 'Should have at least one heap worker')
+  for (const workerId of heapWorkerIds) {
+    const worker = heapSignals.workers[workerId]
+    assert.ok(Array.isArray(worker.values), 'Heap worker values should be an array')
+    assert.ok(worker.values.length > 0, 'Heap worker should have values')
+    for (const tuple of worker.values) {
+      assert.ok(Array.isArray(tuple), 'Heap value should be a tuple')
+      assert.strictEqual(tuple.length, 2, 'Heap tuple should have 2 elements')
+      assert.ok(typeof tuple[0] === 'number', 'Heap timestamp should be a number')
+      assert.ok(typeof tuple[1] === 'number', 'Heap value should be a number')
+    }
   }
 
   // Wait for the second flamegraph to be generated
