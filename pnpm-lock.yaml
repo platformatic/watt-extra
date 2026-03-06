@@ -95,7 +95,7 @@ importers:
         version: 9.39.2
       fastify:
         specifier: ^5.4.0
-        version: 5.7.4
+        version: 5.8.1
       fastify-plugin:
         specifier: ^5.0.1
         version: 5.1.0
@@ -910,10 +910,6 @@ packages:
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
 
-  '@platformatic/basic@3.38.0':
-    resolution: {integrity: sha512-i+MMzj36TvckXwHvSEphr7Aa/t8i3MzPetI1v41o1hqJavAARkogzebAe+13KtSRJQLei+HJ5i9UEobLPsvffw==}
-    engines: {node: '>=22.19.0'}
-
   '@platformatic/basic@3.38.1':
     resolution: {integrity: sha512-zZCRE5LR4x7XJ17JwQ/A5pvDhnbBXVloCHOwobTdjDiCSYTkQdVbJ0BgYU/93P0PSgU6Tp3nLYYYk+klY4s3eg==}
     engines: {node: '>=22.19.0'}
@@ -929,20 +925,12 @@ packages:
   '@platformatic/fastify-openapi-glue@5.1.0':
     resolution: {integrity: sha512-R5bHPQast/w5p+I+/Y5X1r+A8Fxqn7z0etWeaSYrFkbLvvGTEFGvldu0QGXnKjHo6XQo0P2o6D6gNr5uc36ZEA==}
 
-  '@platformatic/foundation@3.38.0':
-    resolution: {integrity: sha512-4Xg2mGb722cFwGOrXLtFyvlZSwr31KEYj/t4ZTPpY5XFk3MCxcHe9BexmeBzT9lBn47JgvF8IiaSBq1OhjRIlw==}
-    engines: {node: '>=22.19.0'}
-
   '@platformatic/foundation@3.38.1':
     resolution: {integrity: sha512-BJVD3ap+2eJjaWJAKq+9rbLN1g7I+n1hgfzVdrmr0OKGV5e4GhRiEjDvBH3cj6R5sDVbI9Dnna4MJoElCFeULw==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/gateway@3.38.1':
     resolution: {integrity: sha512-5bvXDcAoUc9rBlKizjp5ZKiWh1nEWJg/8DyUQHyzJpi9KVK/r0VBPt6mOyrlPe95p02kkxMfW7c23NUhoA3Xng==}
-    engines: {node: '>=22.19.0'}
-
-  '@platformatic/generators@3.38.0':
-    resolution: {integrity: sha512-FVISsjWey8aaKuggAEA3ihCAt0hNpZAa27HpqmhfB+Zg3Bd74NTEPR+2VAdpmQRgOFYoo5xeSn/SepLHMVAQBg==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/generators@3.38.1':
@@ -955,16 +943,8 @@ packages:
   '@platformatic/http-metrics@0.3.0':
     resolution: {integrity: sha512-e+wQJDCd9v7yKeV4u30ibAe5uGB14k+jDw1w9FqsM3tDgFY0UEHb24hJR9j2bVa6091e+ppGy3L4LhyUR92M0w==}
 
-  '@platformatic/itc@3.38.0':
-    resolution: {integrity: sha512-B/hUnLLM3bYm1fK+dhwfTw4zKvTRQUmmo2DMxuPDGKFoP0vsNJKuazjnGnZHZQ2PB+8GVZQAbWIK+hXR3Vthwg==}
-    engines: {node: '>=22.19.0'}
-
   '@platformatic/itc@3.38.1':
     resolution: {integrity: sha512-kTa88+vNIK/NVZ/1a6HXYdryKaZGr2k1ohtVhRAIEYs9oSB1136QQmOxDUp3QoUpErGf95+v0eBL+i1tiPMxKg==}
-    engines: {node: '>=22.19.0'}
-
-  '@platformatic/metrics@3.38.0':
-    resolution: {integrity: sha512-6uDYPXFmosZTsaHdZHVjvHP1ZMct3ETOLGe4vwb5t4vFPA+GgobXzPfH/Q4yCXEAGPOWkNRgG6C+0Hs0nuzUMw==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/metrics@3.38.1':
@@ -1001,10 +981,6 @@ packages:
 
   '@platformatic/service@3.38.1':
     resolution: {integrity: sha512-ehMFrGKx2sxystcag5l8V+06sLvXywvGyJwYSOH0ncGkVB8aUmpEG76Z0EziiQ2ngK4Zz72GmYVte48YbMZ7oA==}
-    engines: {node: '>=22.19.0'}
-
-  '@platformatic/telemetry@3.38.0':
-    resolution: {integrity: sha512-P5gs04hHFZQU54nJvc5U0X81EGi+4vlfwgpem/BvlZwHdhOiw22NnhydOL4DV+QLX96lAtgyEUiwTaJDv0HJBg==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/telemetry@3.38.1':
@@ -1927,8 +1903,8 @@ packages:
   fast-json-stringify@5.16.1:
     resolution: {integrity: sha512-KAdnLvy1yu/XrRtP+LJnxbBGrhN+xXu+gt3EUvZhYGKCr3lFHq/7UFJHHFgmJKoqlh6B40bZLEv7w46B0mqn1g==}
 
-  fast-json-stringify@6.2.0:
-    resolution: {integrity: sha512-Eaf/KNIDwHkzfyeQFNfLXJnQ7cl1XQI3+zRqmPlvtkMigbXnAcasTrvJQmquBSxKfFGeRA6PFog8t+hFmpDoWw==}
+  fast-json-stringify@6.3.0:
+    resolution: {integrity: sha512-oRCntNDY/329HJPlmdNLIdogNtt6Vyjb1WuT01Soss3slIdyUp8kAcDU3saQTOquEK8KFVfwIIF7FebxUAu+yA==}
 
   fast-levenshtein@2.0.6:
     resolution: {integrity: sha512-DCXu6Ifhqcks7TZKY3Hxp3y6qphY5SJZmrWMDrKcERSOXWQdMhU9Ig/PYrzyw/ul9jOIyh0N4M0tbC5hodg8dw==}
@@ -1955,8 +1931,8 @@ packages:
   fastify-plugin@5.1.0:
     resolution: {integrity: sha512-FAIDA8eovSt5qcDgcBvDuX/v0Cjz0ohGhENZ/wpc3y+oZCY2afZ9Baqql3g/lC+OHRnciQol4ww7tuthOb9idw==}
 
-  fastify@5.7.4:
-    resolution: {integrity: sha512-e6l5NsRdaEP8rdD8VR0ErJASeyaRbzXYpmkrpr2SuvuMq6Si3lvsaVy5C+7gLanEkvjpMDzBXWE5HPeb/hgTxA==}
+  fastify@5.8.1:
+    resolution: {integrity: sha512-y0kicFvvn7CYWoPOVLOcvn4YyKQz03DIY7UxmyOy21/J8eXm09R+tmb+tVDBW5h+pja30cHI5dqUcSlvY86V2A==}
 
   fastparallel@2.4.1:
     resolution: {integrity: sha512-qUmhxPgNHmvRjZKBFUNI0oZuuH9OlSIOXmJ98lhKPxMZZ7zS/Fi0wRHOihDSz0R1YiIOjxzOY4bq65YTcdBi2Q==}
@@ -1987,6 +1963,10 @@ packages:
 
   find-my-way@9.4.0:
     resolution: {integrity: sha512-5Ye4vHsypZRYtS01ob/iwHzGRUDELlsoCftI/OZFhcLs1M0tkGPcXldE80TAZC5yYuJMBPJQQ43UHlqbJWiX2w==}
+    engines: {node: '>=20'}
+
+  find-my-way@9.5.0:
+    resolution: {integrity: sha512-VW2RfnmscZO5KgBY5XVyKREMW5nMZcxDy+buTOsL+zIPnBlbKm+00sgzoQzq1EVh4aALZLfKdwv6atBGcjvjrQ==}
     engines: {node: '>=20'}
 
   find-up@5.0.0:
@@ -3604,7 +3584,7 @@ snapshots:
 
   '@fastify/fast-json-stringify-compiler@5.0.3':
     dependencies:
-      fast-json-stringify: 6.2.0
+      fast-json-stringify: 6.3.0
 
   '@fastify/forwarded@3.0.1': {}
 
@@ -4253,26 +4233,6 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
-  '@platformatic/basic@3.38.0':
-    dependencies:
-      '@fastify/error': 4.2.0
-      '@platformatic/foundation': 3.38.0
-      '@platformatic/itc': 3.38.0
-      '@platformatic/metrics': 3.38.0
-      '@platformatic/telemetry': 3.38.0
-      execa: 9.6.1
-      fast-json-patch: 3.1.1
-      pino: 9.14.0
-      pino-abstract-transport: 2.0.0
-      semver: 7.7.4
-      split2: 4.2.0
-      undici: 7.22.0
-      ws: 8.19.0
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-
   '@platformatic/basic@3.38.1':
     dependencies:
       '@fastify/error': 4.2.0
@@ -4325,27 +4285,6 @@ snapshots:
       fastify-plugin: 5.1.0
       js-yaml: 4.1.1
 
-  '@platformatic/foundation@3.38.0':
-    dependencies:
-      '@fastify/deepmerge': 2.0.2
-      '@fastify/error': 4.2.0
-      '@iarna/toml': 2.2.5
-      '@watchable/unpromise': 1.0.2
-      ajv: 8.18.0
-      boring-name-generator: 1.0.3
-      colorette: 2.0.20
-      debug: 4.4.3
-      fast-json-patch: 3.1.1
-      json5: 2.2.3
-      leven: 3.1.0
-      pino: 9.14.0
-      pino-pretty: 13.1.3
-      semver: 7.7.4
-      undici: 7.18.2
-      yaml: 2.8.2
-    transitivePeerDependencies:
-      - supports-color
-
   '@platformatic/foundation@3.38.1':
     dependencies:
       '@fastify/deepmerge': 2.0.2
@@ -4387,7 +4326,7 @@ snapshots:
       console-table-printer: 2.15.0
       execa: 9.6.1
       fast-deep-equal: 3.1.3
-      fastify: 5.7.4
+      fastify: 5.8.1
       fastify-plugin: 5.1.0
       graphql: 16.12.0
       help-me: 5.0.0
@@ -4409,25 +4348,13 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@platformatic/generators@3.38.0':
-    dependencies:
-      '@fastify/error': 4.2.0
-      '@platformatic/foundation': 3.38.0
-      change-case-all: 2.1.0
-      execa: 9.6.1
-      fastify: 5.7.4
-      pino: 9.14.0
-      undici: 7.22.0
-    transitivePeerDependencies:
-      - supports-color
-
   '@platformatic/generators@3.38.1':
     dependencies:
       '@fastify/error': 4.2.0
       '@platformatic/foundation': 3.38.1
       change-case-all: 2.1.0
       execa: 9.6.1
-      fastify: 5.7.4
+      fastify: 5.8.1
       pino: 9.14.0
       undici: 7.22.0
     transitivePeerDependencies:
@@ -4436,7 +4363,7 @@ snapshots:
   '@platformatic/graphql-composer@0.10.1':
     dependencies:
       abstract-logger: 0.2.5
-      fastify: 5.7.4
+      fastify: 5.8.1
       graphql: 16.12.0
       mercurius: 16.7.0(graphql@16.12.0)
       metaline: 1.1.0
@@ -4450,21 +4377,10 @@ snapshots:
     dependencies:
       '@platformatic/prom-client': 1.0.0
 
-  '@platformatic/itc@3.38.0':
-    dependencies:
-      '@fastify/error': 4.2.0
-      '@watchable/unpromise': 1.0.2
-
   '@platformatic/itc@3.38.1':
     dependencies:
       '@fastify/error': 4.2.0
       '@watchable/unpromise': 1.0.2
-
-  '@platformatic/metrics@3.38.0':
-    dependencies:
-      '@platformatic/http-metrics': 0.3.0
-      '@platformatic/prom-client': 1.0.0
-      '@platformatic/promotel': 0.1.0
 
   '@platformatic/metrics@3.38.1':
     dependencies:
@@ -4542,7 +4458,7 @@ snapshots:
       cron: 4.4.0
       debounce: 2.2.0
       fastest-levenshtein: 1.0.16
-      fastify: 5.7.4
+      fastify: 5.8.1
       graphql: 16.12.0
       help-me: 5.0.0
       minimist: 1.2.8
@@ -4589,7 +4505,7 @@ snapshots:
       env-schema: 7.0.0
       execa: 9.6.1
       fast-json-patch: 3.1.1
-      fastify: 5.7.4
+      fastify: 5.8.1
       fastify-plugin: 5.1.0
       graphql: 16.12.0
       help-me: 5.0.0
@@ -4607,26 +4523,6 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
-
-  '@platformatic/telemetry@3.38.0':
-    dependencies:
-      '@fastify/swagger': 9.7.0
-      '@opentelemetry/api': 1.9.0
-      '@opentelemetry/core': 2.5.1(@opentelemetry/api@1.9.0)
-      '@opentelemetry/exporter-trace-otlp-proto': 0.203.0(@opentelemetry/api@1.9.0)
-      '@opentelemetry/exporter-zipkin': 2.5.1(@opentelemetry/api@1.9.0)
-      '@opentelemetry/instrumentation': 0.203.0(@opentelemetry/api@1.9.0)
-      '@opentelemetry/instrumentation-http': 0.203.0(@opentelemetry/api@1.9.0)
-      '@opentelemetry/instrumentation-undici': 0.14.0(@opentelemetry/api@1.9.0)
-      '@opentelemetry/resources': 2.5.1(@opentelemetry/api@1.9.0)
-      '@opentelemetry/sdk-node': 0.203.0(@opentelemetry/api@1.9.0)
-      '@opentelemetry/sdk-trace-base': 2.5.1(@opentelemetry/api@1.9.0)
-      '@opentelemetry/semantic-conventions': 1.36.0
-      '@platformatic/foundation': 3.38.0
-      fast-uri: 3.1.0
-      fastify-plugin: 5.1.0
-    transitivePeerDependencies:
-      - supports-color
 
   '@platformatic/telemetry@3.38.1':
     dependencies:
@@ -5732,7 +5628,7 @@ snapshots:
       json-schema-ref-resolver: 1.0.1
       rfdc: 1.4.1
 
-  fast-json-stringify@6.2.0:
+  fast-json-stringify@6.3.0:
     dependencies:
       '@fastify/merge-json-schemas': 0.2.1
       ajv: 8.18.0
@@ -5759,7 +5655,7 @@ snapshots:
 
   fastify-plugin@5.1.0: {}
 
-  fastify@5.7.4:
+  fastify@5.8.1:
     dependencies:
       '@fastify/ajv-compiler': 4.0.5
       '@fastify/error': 4.2.0
@@ -5767,8 +5663,8 @@ snapshots:
       '@fastify/proxy-addr': 5.1.0
       abstract-logging: 2.0.1
       avvio: 9.2.0
-      fast-json-stringify: 6.2.0
-      find-my-way: 9.4.0
+      fast-json-stringify: 6.3.0
+      find-my-way: 9.5.0
       light-my-request: 6.6.0
       pino: 10.3.1
       process-warning: 5.0.0
@@ -5803,6 +5699,12 @@ snapshots:
       flat-cache: 4.0.1
 
   find-my-way@9.4.0:
+    dependencies:
+      fast-deep-equal: 3.1.3
+      fast-querystring: 1.1.2
+      safe-regex2: 5.0.0
+
+  find-my-way@9.5.0:
     dependencies:
       fast-deep-equal: 3.1.3
       fast-querystring: 1.1.2
