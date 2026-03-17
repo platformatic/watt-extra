@@ -19,6 +19,7 @@ test('should send health signals when service becomes unhealthy', async (t) => {
 
   const receivedSignalReqs = []
   const receivedFlamegraphReqs = []
+  let receivedReadyReq = null
 
   const getAuthorizationHeader = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
@@ -28,6 +29,10 @@ test('should send health signals when service becomes unhealthy', async (t) => {
     applicationId,
     applicationName,
     scaler: { version: 'v2' },
+    processReady: (req) => {
+      receivedReadyReq = req.body
+      return { success: true }
+    },
     processSignals: (req) => {
       assert.equal(req.headers.authorization, 'Bearer test-token')
       receivedSignalReqs.push(req.body)
@@ -91,6 +96,12 @@ test('should send health signals when service becomes unhealthy', async (t) => {
     })
     assert.strictEqual(statusCode, 200)
   }
+
+  // Verify ready signal was sent to /ready endpoint
+  assert.ok(receivedReadyReq, 'Ready request should have been received')
+  assert.strictEqual(receivedReadyReq.applicationId, applicationId)
+  assert.ok(receivedReadyReq.runtimeId, 'runtimeId should be present')
+  assert.ok(typeof receivedReadyReq.timestamp === 'number', 'timestamp should be a number')
 
   // Multiple batches may be sent due to timing, verify we received at least one
   assert.ok(receivedSignalReqs.length >= 1, `Expected at least 1 signal request, got ${receivedSignalReqs.length}`)
