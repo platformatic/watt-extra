@@ -185,7 +185,6 @@ async function healthSignals (app, _opts) {
     if (statusCode !== 200) {
       const error = await body.text()
       app.log.error({ error }, 'Failed to send the instance ready status to scaler')
-      return
     }
   }
 
