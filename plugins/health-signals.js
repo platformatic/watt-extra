@@ -162,8 +162,31 @@ async function healthSignals (app, _opts) {
       }
     }
     runtime.on('application:worker:health:metrics', healthMetricsListener)
+    await sendReadyStatus()
   }
   app.setupHealthSignals = setupHealthSignals
+
+  async function sendReadyStatus () {
+    const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
+    const applicationId = app.instanceConfig?.applicationId
+    const runtimeId = app.getRuntimeId()
+    const timestamp = Date.now()
+    const authHeaders = await app.getAuthorizationHeader()
+
+    const { statusCode, body } = await request(`${scalerUrl}/ready`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders
+      },
+      body: JSON.stringify({ applicationId, runtimeId, timestamp })
+    })
+
+    if (statusCode !== 200) {
+      const error = await body.text()
+      app.log.error({ error }, 'Failed to send the instance ready status to scaler')
+    }
+  }
 
   async function sendHealthSignals (rawSignals, batchStartedAt) {
     const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url

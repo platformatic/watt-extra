@@ -182,6 +182,9 @@ async function startICC (t, opts = {}) {
     icc.post('/signals', async (req) => {
       return opts.processSignals?.(req)
     })
+    icc.post('/ready', async (req) => {
+      return opts.processReady?.(req) ?? { success: true }
+    })
     icc.post('/pods/:podId/services/:serviceId/flamegraph', async (req) => {
       return opts.processFlamegraphs?.(req)
     })
