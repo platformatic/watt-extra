@@ -86,14 +86,30 @@ async function healthSignals (app, _opts) {
     const runtime = app.watt.runtime
     const batchShortTimeout = app.env.PLT_HEALTH_SIGNALS_SHORT_BATCH_TIMEOUT
     const batchLongTimeout = app.env.PLT_HEALTH_SIGNALS_LONG_BATCH_TIMEOUT
+
     eluThreshold = app.env.PLT_ELU_HEALTH_SIGNAL_THRESHOLD
 
-    // TODO: get the used heap and use the 0.8 by default as a threshold
+    let eluBatchThreshold = app.env.PLT_HEALTH_SIGNALS_ELU_BATCH_THRESHOLD
+    if (eluBatchThreshold > eluThreshold) {
+      eluBatchThreshold = eluThreshold
+    }
+
     let heapThreshold = app.env.PLT_HEAP_HEALTH_SIGNAL_THRESHOLD
     if (typeof heapThreshold === 'string') {
       heapThreshold = parseMemorySize(heapThreshold)
     }
+
+    let heapBatchThreshold = app.env.PLT_HEALTH_SIGNALS_HEAP_BATCH_THRESHOLD
+    if (typeof heapBatchThreshold === 'string') {
+      heapBatchThreshold = parseMemorySize(heapBatchThreshold)
+    }
+
     heapThresholdMb = Math.round(heapThreshold / 1024 / 1024)
+
+    let heapBatchThresholdMb = Math.round(heapBatchThreshold / 1024 / 1024)
+    if (heapBatchThresholdMb > heapThresholdMb) {
+      heapBatchThresholdMb = heapThresholdMb
+    }
 
     let batchHasHighValue = false
     let batchStartedAt = null
@@ -157,7 +173,7 @@ async function healthSignals (app, _opts) {
       heapTotalByService[serviceId] = heapTotal
       signalsCache.addServiceSignals(serviceId, healthSignals)
 
-      if (elu > eluThreshold || heapUsedMb > heapThresholdMb) {
+      if (elu > eluBatchThreshold || heapUsedMb > heapBatchThresholdMb) {
         batchHasHighValue = true
       }
     }
