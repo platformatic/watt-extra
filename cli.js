@@ -19,8 +19,10 @@ const helpMe = helpMeInit({
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 const commistInstance = commist()
 
-async function version () {
-  const logger = await createLogger()
+async function version (logger) {
+  if (!logger) {
+    logger = await createLogger()
+  }
 
   if (process.stdout.isTTY) {
     console.log(getSimpleBanner(pkg.version))
@@ -31,14 +33,6 @@ async function version () {
 
 // Handle start command
 async function startCommand (argv) {
-  const logger = await createLogger()
-
-  if (process.stdout.isTTY) {
-    console.log(getSimpleBanner(pkg.version))
-  } else {
-    logger.info(`WattExtra v${pkg.version}`)
-  }
-
   const args = minimist(argv, {
     alias: {
       h: 'help',
@@ -54,6 +48,10 @@ async function startCommand (argv) {
       'app-dir': process.cwd()
     }
   })
+
+  const logger = await createLogger(args['app-dir'])
+
+  await version(logger)
 
   logger.debug({ args, argv }, 'Start command arguments')
 

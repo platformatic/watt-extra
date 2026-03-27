@@ -1,11 +1,14 @@
 import buildApp from './app.js'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
-import { createCliLogger, findConfigurationFileRecursive, loadConfigurationFile } from '@platformatic/foundation'
+import {
+  createCliLogger,
+  findConfigurationFileRecursive,
+  loadConfigurationFile
+} from '@platformatic/foundation'
 
-async function createLogger () {
-  const root = (process.env.PLT_APP_DIR && resolve(process.env.PLT_APP_DIR)) ||
-    process.cwd()
+async function createLogger (appDir) {
+  const root = (appDir && resolve(appDir)) || process.cwd()
   const configPath = await findConfigurationFileRecursive(root)
   const config = configPath ? await loadConfigurationFile(configPath) : {}
 
