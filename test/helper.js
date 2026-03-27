@@ -2,6 +2,7 @@ import { Agent, setGlobalDispatcher } from 'undici'
 import { mkdir, symlink, writeFile, rm } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { spawn } from 'node:child_process'
 import fastify from 'fastify'
 import fp from 'fastify-plugin'
 import why from 'why-is-node-running'
@@ -288,9 +289,51 @@ function createJwtToken (expiresInSeconds) {
   return `${base64Header}.${base64Payload}.${signature}`
 }
 
+function runCLI (args = [], opts = {}) {
+  const { spawnOpts = {}, onStdout, onStderr, onProcess } = opts
+
+  return new Promise((resolve, reject) => {
+    const cliPath = join(__dirname, '..', 'cli.js')
+    const proc = spawn('node', [cliPath, ...args], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      ...spawnOpts
+    })
+
+    onProcess?.(proc)
+
+    const stdout = []
+    const stderr = []
+
+    proc.stdout.on('data', onStdout
+      ? (data) => onStdout(data, { resolve, reject })
+      : (data) => stdout.push(data.toString())
+    )
+
+    proc.stderr.on('data', onStderr
+      ? (data) => onStderr(data, { resolve, reject })
+      : (data) => stderr.push(data.toString())
+    )
+
+    proc.on('error', reject)
+
+    proc.on('close', (code) => {
+      if (onStdout || onStderr) {
+        reject(new Error(`Process exited (code ${code}) before the handler resolved`))
+      } else {
+        resolve({
+          code,
+          stdout: stdout.join(''),
+          stderr: stderr.join('')
+        })
+      }
+    })
+  })
+}
+
 export {
   setUpEnvironment,
   startICC,
   installDeps,
-  createJwtToken
+  createJwtToken,
+  runCLI
 }

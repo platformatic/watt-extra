@@ -1,22 +1,33 @@
 import buildApp from './app.js'
-import pino from 'pino'
 import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
+import {
+  createCliLogger,
+  findConfigurationFileRecursive,
+  loadConfigurationFile
+} from '@platformatic/foundation'
 
-const logger = pino({
-  level: process.env.PLT_LOG_LEVEL || 'info',
-  ...(process.stdout.isTTY && {
-    transport: {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: true
-      }
-    }
-  })
-})
+async function createLogger (appDir) {
+  const root = (appDir && resolve(appDir)) || process.cwd()
+  const configPath = await findConfigurationFileRecursive(root)
+  const config = configPath ? await loadConfigurationFile(configPath) : {}
+
+  const loggerConfig = config?.logger ?? {}
+  const noPretty = !process.stdout.isTTY
+
+  return createCliLogger(
+    process.env.PLT_LOG_LEVEL || 'info',
+    noPretty,
+    loggerConfig
+  )
+}
 
 // This starts the app and sends the info to ICC, so it's the main entry point
-async function start () {
+async function start (logger) {
+  if (!logger) {
+    logger = await createLogger()
+  }
+
   const app = await buildApp(logger)
 
   app.log.info('Starting Runtime')
@@ -44,5 +55,5 @@ if (isMain) {
 
 export {
   start,
-  logger
+  createLogger
 }
