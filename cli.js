@@ -5,7 +5,7 @@ import { resolve, join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import helpMeInit from 'help-me'
 import { readFileSync } from 'node:fs'
-import { start, logger } from './index.js'
+import { start, createLogger } from './index.js'
 import { getSimpleBanner } from './lib/banner.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -19,7 +19,9 @@ const helpMe = helpMeInit({
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 const commistInstance = commist()
 
-function version () {
+async function version () {
+  const logger = await createLogger()
+
   if (process.stdout.isTTY) {
     console.log(getSimpleBanner(pkg.version))
   } else {
@@ -29,6 +31,8 @@ function version () {
 
 // Handle start command
 async function startCommand (argv) {
+  const logger = await createLogger()
+
   if (process.stdout.isTTY) {
     console.log(getSimpleBanner(pkg.version))
   } else {
@@ -75,7 +79,7 @@ async function startCommand (argv) {
     process.env.PLT_APP_DIR = resolve(args['app-dir']) // Ensure the path is absolute
   }
 
-  await start()
+  await start(logger)
   return true
 }
 
@@ -94,6 +98,8 @@ commistInstance.register('-h', help)
 commistInstance.register('--help', help)
 
 async function run () {
+  const logger = await createLogger()
+
   try {
     logger.debug('Parsing command line arguments')
     const args = process.argv.slice(2)
@@ -128,7 +134,7 @@ async function run () {
       }
 
       if (command === 'version') {
-        version()
+        await version()
         return
       }
 
