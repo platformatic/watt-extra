@@ -60,13 +60,13 @@ async function metadata (app, _opts) {
           // There is a better way? We need to set the default headers for the client
           // every time, because the token might be expired
           // And we cannot set the global dispatcher because it's shared with the runtime main thread.
-          setDefaultHeaders(await app.getAuthorizationHeader())
+          setDefaultHeaders(await app.getAuthorizationHeaders())
           await controlPlaneClient.saveApplicationInstanceState({
             id: app.instanceId,
             services,
             metadata: runtimeMetadata
           }, {
-            headers: await app.getAuthorizationHeader()
+            headers: await app.getAuthorizationHeaders()
           })
         } catch (error) {
           app.log.error('Failed to save application state to Control Plane', error)

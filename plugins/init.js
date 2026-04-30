@@ -8,7 +8,7 @@ async function initPlugin (app) {
     // There is a better way? We need to set the default headers for the client
     // every time, because the token might be expired
     // And we cannot set the global dispatcher because it's shared with the runtime main thread.
-    setDefaultHeaders(await app.getAuthorizationHeader())
+    setDefaultHeaders(await app.getAuthorizationHeaders())
     const request = {
       podId,
       apiVersion: 'v3'
@@ -80,7 +80,7 @@ async function initPlugin (app) {
   app.watt = watt
   app.initApplication = initApplication
 
-  const headers = await app.getAuthorizationHeader()
+  const headers = await app.getAuthorizationHeaders()
   await app.watt.updateSharedContext({ iccAuthHeaders: headers })
 }
 

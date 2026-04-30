@@ -20,7 +20,7 @@ const createMockApp = (env = {}) => {
       warn: () => {},
       error: () => {}
     },
-    getAuthorizationHeader: async () => 'Bearer test-token',
+    getAuthorizationHeaders: async () => 'Bearer test-token',
     logMessages
   }
 }

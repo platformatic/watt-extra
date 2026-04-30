@@ -18,7 +18,7 @@ function createMockApp (port, options = {}) {
     instanceConfig: {
       applicationId: 'test-application-id',
     },
-    getAuthorizationHeader: async () => {
+    getAuthorizationHeaders: async () => {
       return { Authorization: 'Bearer test-token' }
     },
     getRuntimeId: () => {

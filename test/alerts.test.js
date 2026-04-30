@@ -52,7 +52,7 @@ test('should send alert when service becomes unhealthy', async (t) => {
   let alertReceived = null
   let flamegraphReceived = null
 
-  const getAuthorizationHeader = async (headers) => {
+  const getAuthorizationHeaders = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
   }
 
@@ -83,7 +83,7 @@ test('should send alert when service becomes unhealthy', async (t) => {
   })
 
   const app = await start()
-  app.getAuthorizationHeader = getAuthorizationHeader
+  app.getAuthorizationHeaders = getAuthorizationHeaders
 
   t.after(async () => {
     await app.close()
@@ -146,7 +146,7 @@ test('should not send alert when application is healthy', async (t) => {
 
   let alertReceived = null
 
-  const getAuthorizationHeader = async (headers) => {
+  const getAuthorizationHeaders = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
   }
 
@@ -168,7 +168,7 @@ test('should not send alert when application is healthy', async (t) => {
   })
 
   const app = await start()
-  app.getAuthorizationHeader = getAuthorizationHeader
+  app.getAuthorizationHeaders = getAuthorizationHeaders
 
   t.after(async () => {
     await app.close()
@@ -211,7 +211,7 @@ test('should cache health data and include it in alerts', async (t) => {
 
   let alertReceived = null
 
-  const getAuthorizationHeader = async (headers) => {
+  const getAuthorizationHeaders = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
   }
 
@@ -234,7 +234,7 @@ test('should cache health data and include it in alerts', async (t) => {
   })
 
   const app = await start()
-  app.getAuthorizationHeader = getAuthorizationHeader
+  app.getAuthorizationHeaders = getAuthorizationHeaders
 
   t.after(async () => {
     await app.close()
@@ -328,7 +328,7 @@ test('should not fail when health info is missing', async (t) => {
 
   let alertReceived = null
 
-  const getAuthorizationHeader = async (headers) => {
+  const getAuthorizationHeaders = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
   }
 
@@ -350,7 +350,7 @@ test('should not fail when health info is missing', async (t) => {
   })
 
   const app = await start()
-  app.getAuthorizationHeader = getAuthorizationHeader
+  app.getAuthorizationHeaders = getAuthorizationHeaders
 
   t.after(async () => {
     await app.close()
@@ -371,7 +371,7 @@ test('should respect alert retention window', async (t) => {
 
   const alertsReceived = []
 
-  const getAuthorizationHeader = async (headers) => {
+  const getAuthorizationHeaders = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
   }
 
@@ -397,7 +397,7 @@ test('should respect alert retention window', async (t) => {
 
   const app = await start()
 
-  app.getAuthorizationHeader = getAuthorizationHeader
+  app.getAuthorizationHeaders = getAuthorizationHeaders
 
   t.after(async () => {
     await app.close()
@@ -495,7 +495,7 @@ test('should send alert when flamegraphs are disabled', async (t) => {
 
   let alertReceived = null
 
-  const getAuthorizationHeader = async (headers) => {
+  const getAuthorizationHeaders = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
   }
 
@@ -519,7 +519,7 @@ test('should send alert when flamegraphs are disabled', async (t) => {
   })
 
   const app = await start()
-  app.getAuthorizationHeader = getAuthorizationHeader
+  app.getAuthorizationHeaders = getAuthorizationHeaders
 
   t.after(async () => {
     await app.close()
@@ -577,7 +577,7 @@ test('should send alert when failed to send a flamegraph', async (t) => {
 
   let alertReceived = null
 
-  const getAuthorizationHeader = async (headers) => {
+  const getAuthorizationHeaders = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
   }
 
@@ -604,7 +604,7 @@ test('should send alert when failed to send a flamegraph', async (t) => {
   })
 
   const app = await start()
-  app.getAuthorizationHeader = getAuthorizationHeader
+  app.getAuthorizationHeaders = getAuthorizationHeaders
 
   t.after(async () => {
     await app.close()
@@ -662,7 +662,7 @@ test('should handle old runtime (< 3.18.0) health events', async (t) => {
 
   let alertReceived = null
 
-  const getAuthorizationHeader = async (headers) => {
+  const getAuthorizationHeaders = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
   }
 
@@ -684,7 +684,7 @@ test('should handle old runtime (< 3.18.0) health events', async (t) => {
   })
 
   const app = await start()
-  app.getAuthorizationHeader = getAuthorizationHeader
+  app.getAuthorizationHeaders = getAuthorizationHeaders
 
   // Mock the runtime version check to simulate old runtime
   const originalFn = app.watt.runtimeSupportsNewHealthMetrics
@@ -748,7 +748,7 @@ test('should attach one flamegraph to multiple alerts', async (t) => {
   const receivedFlamegraphs = []
   const receivedAttachedFlamegraphs = []
 
-  const getAuthorizationHeader = async (headers) => {
+  const getAuthorizationHeaders = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
   }
 
@@ -792,7 +792,7 @@ test('should attach one flamegraph to multiple alerts', async (t) => {
   })
 
   const app = await start()
-  app.getAuthorizationHeader = getAuthorizationHeader
+  app.getAuthorizationHeaders = getAuthorizationHeaders
 
   t.after(async () => {
     await app.close()
@@ -855,7 +855,7 @@ test('should send flamegraphs if attaching fails', async (t) => {
   const receivedAlerts = []
   const receivedFlamegraphs = []
 
-  const getAuthorizationHeader = async (headers) => {
+  const getAuthorizationHeaders = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
   }
 
@@ -895,7 +895,7 @@ test('should send flamegraphs if attaching fails', async (t) => {
   })
 
   const app = await start()
-  app.getAuthorizationHeader = getAuthorizationHeader
+  app.getAuthorizationHeaders = getAuthorizationHeaders
 
   t.after(async () => {
     await app.close()
@@ -956,7 +956,7 @@ test('should skip alerts during grace period but still cache health data', async
 
   let alertReceived = null
 
-  const getAuthorizationHeader = async (headers) => {
+  const getAuthorizationHeaders = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
   }
 
@@ -979,7 +979,7 @@ test('should skip alerts during grace period but still cache health data', async
   })
 
   const app = await start()
-  app.getAuthorizationHeader = getAuthorizationHeader
+  app.getAuthorizationHeaders = getAuthorizationHeaders
 
   t.after(async () => {
     await app.close()
@@ -1033,7 +1033,7 @@ test('should reset grace period when worker restarts', async (t) => {
 
   const alertsReceived = []
 
-  const getAuthorizationHeader = async (headers) => {
+  const getAuthorizationHeaders = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
   }
 
@@ -1059,7 +1059,7 @@ test('should reset grace period when worker restarts', async (t) => {
   })
 
   const app = await start()
-  app.getAuthorizationHeader = getAuthorizationHeader
+  app.getAuthorizationHeaders = getAuthorizationHeaders
 
   t.after(async () => {
     await app.close()
