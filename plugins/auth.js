@@ -81,7 +81,7 @@ async function createK8sStrategy (app, offset) {
         app.log.error({ err }, 'Failed to update jwt token in shared context')
       })
     }
-    return app.token ? { authorization: `Bearer ${app.token}` } : {}
+    return { authorization: `Bearer ${app.token}` }
   }
 }
 
