@@ -48,7 +48,12 @@ async function resolveEcsIdentity (log) {
     if (!res.ok) throw new Error(`status ${res.status}`)
     const meta = await res.json()
     const id = meta.TaskARN?.split('/').pop()
-    const namespace = meta.Cluster
+    // meta.Cluster may be either the short name or the full cluster ARN
+    // (e.g. 'arn:aws:ecs:us-east-1:123456789012:cluster/my-cluster'). We
+    // strip down to the short name so callers can interpolate it into
+    // URL paths without producing extra path segments.
+    const cluster = meta.Cluster
+    const namespace = cluster?.includes('/') ? cluster.split('/').pop() : cluster
     if (!id || !namespace) throw new Error('TaskARN or Cluster missing in metadata')
     log.info({ id, namespace }, 'Resolved ECS task identity')
     return { id, namespace }

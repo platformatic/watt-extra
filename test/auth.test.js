@@ -214,3 +214,42 @@ test('auth plugin sends ECS identity headers when running on ECS', async (t) => 
   equal(responseBody.headers['x-ecs-cluster'], 'my-cluster')
   equal(responseBody.headers.authorization, undefined, 'No Authorization header on ECS')
 })
+
+test('auth plugin strips cluster ARN to short name in x-ecs-cluster header', async (t) => {
+  const originalEnv = { ...process.env }
+
+  t.after(() => {
+    process.env = originalEnv
+  })
+
+  // ECS task metadata sometimes returns the full cluster ARN in the Cluster
+  // field. ICC interpolates this value into URL paths, so the short name
+  // (which contains no slashes) is the only safe form to send.
+  const metadata = fastify()
+  metadata.get('/task', async () => ({
+    TaskARN: 'arn:aws:ecs:us-east-1:123456789012:task/my-cluster/abcdef0123',
+    Cluster: 'arn:aws:ecs:us-east-1:123456789012:cluster/my-cluster'
+  }))
+  await metadata.listen({ port: 0 })
+  const metadataUrl = `http://localhost:${metadata.server.address().port}`
+  t.after(() => metadata.close())
+
+  process.env.ECS_CONTAINER_METADATA_URI_V4 = metadataUrl
+
+  const server = fastify()
+  server.get('/', async (request) => {
+    return { headers: request.headers }
+  })
+  await server.listen({ port: 0 })
+  const url = `http://localhost:${server.server.address().port}`
+  t.after(() => server.close())
+
+  const app = createMockApp('ecs')
+  await authPlugin(app)
+
+  equal(app.machineIdentity?.namespace, 'my-cluster', 'Namespace should be stripped to cluster short name')
+
+  const response = await request(url, { dispatcher: app.dispatcher })
+  const responseBody = await response.body.json()
+  equal(responseBody.headers['x-ecs-cluster'], 'my-cluster')
+})
