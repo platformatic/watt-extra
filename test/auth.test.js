@@ -5,8 +5,9 @@ import { request } from 'undici'
 import { setUpEnvironment, createJwtToken } from './helper.js'
 import authPlugin from '../plugins/auth.js'
 
-const createMockApp = () => {
+const createMockApp = (provider = 'k8s') => {
   return {
+    provider,
     log: {
       info: () => {},
       warn: () => {},
@@ -188,8 +189,6 @@ test('auth plugin sends ECS identity headers when running on ECS', async (t) => 
   const metadataUrl = `http://localhost:${metadata.server.address().port}`
   t.after(() => metadata.close())
 
-  // Make detectProvider() pick ECS.
-  delete process.env.KUBERNETES_SERVICE_HOST
   process.env.ECS_CONTAINER_METADATA_URI_V4 = metadataUrl
 
   const server = fastify()
@@ -200,7 +199,7 @@ test('auth plugin sends ECS identity headers when running on ECS', async (t) => 
   const url = `http://localhost:${server.server.address().port}`
   t.after(() => server.close())
 
-  const app = createMockApp()
+  const app = createMockApp('ecs')
   await authPlugin(app)
 
   equal(app.machineIdentity?.id, 'abcdef0123', 'Task id should be the TaskARN suffix')

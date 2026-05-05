@@ -23,12 +23,6 @@ function isTokenExpired (token, offset = 0) {
   return payload.exp <= Math.floor(Date.now() / 1000) + offset
 }
 
-function detectProvider () {
-  if (process.env.ECS_CONTAINER_METADATA_URI_V4) return 'ecs'
-  if (process.env.KUBERNETES_SERVICE_HOST) return 'k8s'
-  return 'k8s' // safe default
-}
-
 async function loadK8sToken (log) {
   let token
   try {
@@ -105,9 +99,8 @@ async function createEcsStrategy (app) {
 async function authPlugin (app) {
   // 1 min offset to refresh the token before it actually expires.
   const offset = parseInt(process.env.PLT_JWT_EXPIRATION_OFFSET_SEC ?? 0)
-  const provider = detectProvider()
 
-  const getProviderHeaders = provider === 'ecs'
+  const getProviderHeaders = app.provider === 'ecs'
     ? await createEcsStrategy(app)
     : await createK8sStrategy(app, offset)
 

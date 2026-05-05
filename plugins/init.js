@@ -24,7 +24,7 @@ async function initPlugin (app) {
 
     let applicationName = app.env.PLT_APP_NAME
     const applicationDir = app.env.PLT_APP_DIR
-    const instanceId = os.hostname()
+    const instanceId = app.provider === 'k8s' ? os.hostname() : app.machineIdentity?.id
 
     app.log.info({ applicationName, applicationDir }, 'Loading watt-extra application')
 
@@ -73,7 +73,7 @@ async function initPlugin (app) {
     if (!app.applicationName) {
       app.applicationName = app.env.PLT_APP_NAME
       app.instanceConfig = null
-      app.instanceId = os.hostname()
+      app.instanceId = app.provider === 'k8s' ? os.hostname() : app.machineIdentity?.id
     }
   }
   const watt = new Watt(app)
