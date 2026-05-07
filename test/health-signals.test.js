@@ -21,7 +21,7 @@ test('should send health signals when service becomes unhealthy', async (t) => {
   const receivedFlamegraphReqs = []
   let receivedReadyReq = null
 
-  const getAuthorizationHeader = async (headers) => {
+  const getAuthorizationHeaders = async (headers) => {
     return { ...headers, authorization: 'Bearer test-token' }
   }
 
@@ -61,7 +61,7 @@ test('should send health signals when service becomes unhealthy', async (t) => {
   })
 
   const app = await start()
-  app.getAuthorizationHeader = getAuthorizationHeader
+  app.getAuthorizationHeaders = getAuthorizationHeaders
 
   t.after(async () => {
     await app.close()

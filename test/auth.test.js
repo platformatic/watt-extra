@@ -5,8 +5,9 @@ import { request } from 'undici'
 import { setUpEnvironment, createJwtToken } from './helper.js'
 import authPlugin from '../plugins/auth.js'
 
-const createMockApp = () => {
+const createMockApp = (provider = 'k8s') => {
   return {
+    provider,
     log: {
       info: () => {},
       warn: () => {},
@@ -169,4 +170,86 @@ test('auth plugin does not reload when token is undefined', async (t) => {
   equal(responseBody.headers.authorization, 'Bearer undefined')
   const reloadLogMessage = logMessages.find(msg => msg === 'JWT token expired, reloading')
   equal(reloadLogMessage, undefined, 'Should not attempt to reload undefined token')
+})
+
+test('auth plugin sends ECS identity headers when running on ECS', async (t) => {
+  const originalEnv = { ...process.env }
+
+  t.after(() => {
+    process.env = originalEnv
+  })
+
+  // Mock ECS task metadata endpoint.
+  const metadata = fastify()
+  metadata.get('/task', async () => ({
+    TaskARN: 'arn:aws:ecs:us-east-1:123456789012:task/my-cluster/abcdef0123',
+    Cluster: 'my-cluster'
+  }))
+  await metadata.listen({ port: 0 })
+  const metadataUrl = `http://localhost:${metadata.server.address().port}`
+  t.after(() => metadata.close())
+
+  process.env.ECS_CONTAINER_METADATA_URI_V4 = metadataUrl
+
+  const server = fastify()
+  server.get('/', async (request) => {
+    return { headers: request.headers }
+  })
+  await server.listen({ port: 0 })
+  const url = `http://localhost:${server.server.address().port}`
+  t.after(() => server.close())
+
+  const app = createMockApp('ecs')
+  await authPlugin(app)
+
+  equal(app.machineIdentity?.id, 'abcdef0123', 'Task id should be the TaskARN suffix')
+  equal(app.machineIdentity?.namespace, 'my-cluster', 'Namespace should be the ECS cluster')
+  equal(app.token, undefined, 'No K8s JWT should be loaded on ECS')
+
+  const response = await request(url, { dispatcher: app.dispatcher })
+  const responseBody = await response.body.json()
+
+  equal(response.statusCode, 200)
+  equal(responseBody.headers['x-ecs-task-id'], 'abcdef0123')
+  equal(responseBody.headers['x-ecs-cluster'], 'my-cluster')
+  equal(responseBody.headers.authorization, undefined, 'No Authorization header on ECS')
+})
+
+test('auth plugin strips cluster ARN to short name in x-ecs-cluster header', async (t) => {
+  const originalEnv = { ...process.env }
+
+  t.after(() => {
+    process.env = originalEnv
+  })
+
+  // ECS task metadata sometimes returns the full cluster ARN in the Cluster
+  // field. ICC interpolates this value into URL paths, so the short name
+  // (which contains no slashes) is the only safe form to send.
+  const metadata = fastify()
+  metadata.get('/task', async () => ({
+    TaskARN: 'arn:aws:ecs:us-east-1:123456789012:task/my-cluster/abcdef0123',
+    Cluster: 'arn:aws:ecs:us-east-1:123456789012:cluster/my-cluster'
+  }))
+  await metadata.listen({ port: 0 })
+  const metadataUrl = `http://localhost:${metadata.server.address().port}`
+  t.after(() => metadata.close())
+
+  process.env.ECS_CONTAINER_METADATA_URI_V4 = metadataUrl
+
+  const server = fastify()
+  server.get('/', async (request) => {
+    return { headers: request.headers }
+  })
+  await server.listen({ port: 0 })
+  const url = `http://localhost:${server.server.address().port}`
+  t.after(() => server.close())
+
+  const app = createMockApp('ecs')
+  await authPlugin(app)
+
+  equal(app.machineIdentity?.namespace, 'my-cluster', 'Namespace should be stripped to cluster short name')
+
+  const response = await request(url, { dispatcher: app.dispatcher })
+  const responseBody = await response.body.json()
+  equal(responseBody.headers['x-ecs-cluster'], 'my-cluster')
 })

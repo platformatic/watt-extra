@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { startICC } from './helper.js'
 import initPlugin from '../plugins/init.js'
 
-const createMockApp = (env = {}) => {
+const createMockApp = (env = {}, overrides = {}) => {
   const logMessages = []
   return {
     env: {
@@ -20,8 +20,10 @@ const createMockApp = (env = {}) => {
       warn: () => {},
       error: () => {}
     },
-    getAuthorizationHeader: async () => 'Bearer test-token',
-    logMessages
+    getAuthorizationHeaders: async () => 'Bearer test-token',
+    provider: 'k8s',
+    logMessages,
+    ...overrides
   }
 }
 
@@ -192,6 +194,53 @@ test('init plugin sends correct request structure when PLT_APP_NAME provided', a
   equal(capturedRequest.body.applicationName, applicationName)
   equal(capturedRequest.body.podId, instanceId)
   equal(capturedRequest.body.apiVersion, 'v3')
+})
+
+test('init plugin uses machineIdentity.id as podId when provider is ecs', async (t) => {
+  const applicationName = 'test-app-ecs'
+  const applicationId = randomUUID()
+  const taskId = 'abcdef0123456789'
+
+  let capturedRequest = null
+
+  const icc = await startICC(t, {
+    applicationId,
+    controlPlaneResponse: (req) => {
+      capturedRequest = {
+        params: req.params,
+        body: req.body
+      }
+      return {
+        applicationId,
+        applicationName,
+        iccServices: {
+          riskEngine: { url: 'http://127.0.0.1:3000/risk-service' },
+          trafficInspector: { url: 'http://127.0.0.1:3000/traffic-inspector' },
+          compliance: { url: 'http://127.0.0.1:3000/compliance' },
+          cron: { url: 'http://127.0.0.1:3000/cron' },
+          scaler: { url: 'http://127.0.0.1:3000/scaler' }
+        },
+        config: {}
+      }
+    }
+  })
+
+  t.after(async () => {
+    await icc.close()
+  })
+
+  const app = createMockApp(
+    { PLT_APP_NAME: applicationName, PLT_APP_DIR: '/test/dir' },
+    { provider: 'ecs', machineIdentity: { id: taskId, namespace: 'my-cluster' } }
+  )
+
+  await initPlugin(app)
+
+  // The podId in URL and body must be the ECS task id, not os.hostname()
+  // (which on ECS Fargate contains dots and would break ICC's URL routing).
+  equal(capturedRequest.params.podId, taskId)
+  equal(capturedRequest.body.podId, taskId)
+  equal(app.instanceId, taskId)
 })
 
 test('init plugin sends request without applicationName when not provided', async (t) => {

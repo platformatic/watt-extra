@@ -18,7 +18,7 @@ async function scheduler (app, _opts) {
         return
       }
       const cronClient = build(cronUrl)
-      setDefaultHeaders(await app.getAuthorizationHeader())
+      setDefaultHeaders(await app.getAuthorizationHeaders())
 
       const jobs = config.scheduler || []
 

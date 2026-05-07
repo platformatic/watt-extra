@@ -187,7 +187,7 @@ async function healthSignals (app, _opts) {
     const applicationId = app.instanceConfig?.applicationId
     const runtimeId = app.getRuntimeId()
     const timestamp = Date.now()
-    const authHeaders = await app.getAuthorizationHeader()
+    const authHeaders = await app.getAuthorizationHeaders()
 
     const { statusCode, body } = await request(`${scalerUrl}/ready`, {
       method: 'POST',
@@ -207,7 +207,7 @@ async function healthSignals (app, _opts) {
   async function sendHealthSignals (rawSignals, batchStartedAt) {
     const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
     const applicationId = app.instanceConfig?.applicationId
-    const authHeaders = await app.getAuthorizationHeader()
+    const authHeaders = await app.getAuthorizationHeaders()
 
     // Transform signals to the format expected by ICC LoadPredictor
     // Format: { serviceId: { elu: { options, workers: { workerId: { values: [[ts, val], ...] } } } } }

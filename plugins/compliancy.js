@@ -30,7 +30,7 @@ async function compliancy (app, _opts) {
     // There is a better way? We need to set the default headers for the client
     // every time, because the token might be expired
     // And we cannot set the global dispatcher because it's shared with the runtime main thread.
-    setDefaultHeaders(await app.getAuthorizationHeader())
+    setDefaultHeaders(await app.getAuthorizationHeaders())
     const compliancyMetadata = await getCompliancyMetadata({
       projectDir: appDir,
       runtime

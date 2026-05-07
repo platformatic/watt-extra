@@ -63,6 +63,7 @@ async function envPlugin (app) {
     ...env
   }
 
+  app.provider = process.env.ECS_CONTAINER_METADATA_URI_V4 ? 'ecs' : 'k8s'
   app.log.info('Environment variables set up')
 }
 

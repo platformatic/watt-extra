@@ -8,7 +8,7 @@ async function initPlugin (app) {
     // There is a better way? We need to set the default headers for the client
     // every time, because the token might be expired
     // And we cannot set the global dispatcher because it's shared with the runtime main thread.
-    setDefaultHeaders(await app.getAuthorizationHeader())
+    setDefaultHeaders(await app.getAuthorizationHeaders())
     const request = {
       podId,
       apiVersion: 'v3'
@@ -24,7 +24,7 @@ async function initPlugin (app) {
 
     let applicationName = app.env.PLT_APP_NAME
     const applicationDir = app.env.PLT_APP_DIR
-    const instanceId = os.hostname()
+    const instanceId = app.provider === 'k8s' ? os.hostname() : app.machineIdentity?.id
 
     app.log.info({ applicationName, applicationDir }, 'Loading watt-extra application')
 
@@ -73,14 +73,14 @@ async function initPlugin (app) {
     if (!app.applicationName) {
       app.applicationName = app.env.PLT_APP_NAME
       app.instanceConfig = null
-      app.instanceId = os.hostname()
+      app.instanceId = app.provider === 'k8s' ? os.hostname() : app.machineIdentity?.id
     }
   }
   const watt = new Watt(app)
   app.watt = watt
   app.initApplication = initApplication
 
-  const headers = await app.getAuthorizationHeader()
+  const headers = await app.getAuthorizationHeaders()
   await app.watt.updateSharedContext({ iccAuthHeaders: headers })
 }
 

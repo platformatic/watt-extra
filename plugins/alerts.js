@@ -130,7 +130,7 @@ async function alerts (app, _opts) {
         lastServicesAlertTime[serviceId] = currentTime
         delete healthInfo.healthConfig
 
-        const authHeaders = await app.getAuthorizationHeader()
+        const authHeaders = await app.getAuthorizationHeaders()
 
         const { statusCode, body } = await request(`${scalerUrl}/alerts`, {
           method: 'POST',

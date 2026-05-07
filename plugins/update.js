@@ -72,7 +72,7 @@ async function updatePlugin (app) {
     app.log.info({ runtimeId }, `Connecting to updates websocket at ${wsUrl}`)
 
     try {
-      const headers = await app.getAuthorizationHeader()
+      const headers = await app.getAuthorizationHeaders()
 
       socket = new WebSocket(wsUrl, { headers })
       await once(socket, 'open')

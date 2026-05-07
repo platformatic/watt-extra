@@ -281,7 +281,7 @@ async function flamegraphs (app, _opts) {
       query.alertId = alertId
     }
 
-    const authHeaders = await app.getAuthorizationHeader()
+    const authHeaders = await app.getAuthorizationHeaders()
     const { statusCode, body } = await request(url, {
       method: 'POST',
       headers: {
@@ -350,7 +350,7 @@ async function flamegraphs (app, _opts) {
     const url = `${scalerUrl}/flamegraphs/${flamegraphId}/alerts`
     app.log.info({ flamegraphId, alerts: alertIds }, 'Attaching flamegraph to alerts')
 
-    const authHeaders = await app.getAuthorizationHeader()
+    const authHeaders = await app.getAuthorizationHeaders()
     const { statusCode, body } = await request(url, {
       method: 'POST',
       headers: {

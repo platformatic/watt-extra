@@ -91,7 +91,7 @@ function createMockApp (port, includeScalerUrl = true, env = {}) {
       applicationId: 'test-application-id'
     },
     instanceId: 'test-pod-123',
-    getAuthorizationHeader: async () => {
+    getAuthorizationHeaders: async () => {
       return { Authorization: 'Bearer test-token' }
     },
     getRuntimeId: () => {
