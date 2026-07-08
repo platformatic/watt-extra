@@ -52,6 +52,15 @@ async function initPlugin (app) {
     app.instanceConfig = instanceConfig
     app.instanceId = instanceId
 
+    // workerMissingVersion is true only when the runtime
+    // already spawned without this value (ICC was unreachable at boot).
+    const newDeploymentVersion = instanceConfig?.deploymentVersion
+    const workerMissingVersion = !!newDeploymentVersion &&
+      process.env.PLT_DEPLOYMENT_VERSION !== newDeploymentVersion
+    if (newDeploymentVersion) {
+      process.env.PLT_DEPLOYMENT_VERSION = newDeploymentVersion
+    }
+
     // If runtime already started (ICC recovery after startup), update its instance config
     if (app.watt?.runtime) {
       await app.watt.updateInstanceConfig(instanceConfig)
@@ -60,6 +69,14 @@ async function initPlugin (app) {
       await app.setupAlerts?.()
       await app.setupHealthSignals?.()
       await app.setupFlamegraphs?.()
+
+      // The app already spawned (ICC was unreachable at boot), so its worker's env is
+      // frozen without the version. Push it via the shared context: the runtime
+      // delivers it live to the running worker (no restart).
+      if (workerMissingVersion) {
+        app.log.info({ deploymentVersion: newDeploymentVersion }, 'Publishing deployment version to the shared context after startup')
+        await app.watt.updateSharedContext({ deploymentVersion: newDeploymentVersion })
+      }
     }
   }
   try {

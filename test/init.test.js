@@ -374,6 +374,58 @@ test('init plugin calls updateInstanceConfig on watt when ICC becomes available 
   equal(setupFlamegraphsCalled, true)
 })
 
+test('init plugin sets PLT_DEPLOYMENT_VERSION and pushes it to the shared context on ICC recovery', async (t) => {
+  const applicationName = 'test-app-version-recovery'
+  const applicationId = randomUUID()
+
+  const icc = await startICC(t, {
+    applicationId,
+    controlPlaneResponse: {
+      applicationId,
+      applicationName,
+      deploymentVersion: 'v9',
+      config: {}
+    }
+  })
+  t.after(async () => { await icc.close() })
+
+  const originalVersion = process.env.PLT_DEPLOYMENT_VERSION
+  delete process.env.PLT_DEPLOYMENT_VERSION
+  t.after(() => {
+    if (originalVersion) process.env.PLT_DEPLOYMENT_VERSION = originalVersion
+    else delete process.env.PLT_DEPLOYMENT_VERSION
+  })
+
+  // Boot with ICC unavailable -> the app starts without a version.
+  const app = createMockApp({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: '/test/dir',
+    PLT_ICC_URL: 'http://127.0.0.1:9999',
+    PLT_CONTROL_PLANE_URL: 'http://127.0.0.1:9999/control-plane'
+  })
+  await initPlugin(app)
+  equal(app.instanceConfig, null)
+  equal(process.env.PLT_DEPLOYMENT_VERSION, undefined)
+
+  // Runtime already spawned (env frozen without the version); capture pushes.
+  let pushedContext = null
+  app.watt.runtime = {}
+  app.watt.updateInstanceConfig = async () => {}
+  app.watt.updateSharedContext = async (ctx) => { pushedContext = ctx }
+  app.setupAlerts = async () => {}
+  app.setupHealthSignals = async () => {}
+  app.setupFlamegraphs = async () => {}
+
+  // ICC becomes available.
+  app.env.PLT_ICC_URL = `http://127.0.0.1:${icc.server.address().port}`
+  app.env.PLT_CONTROL_PLANE_URL = `http://127.0.0.1:${icc.server.address().port}/control-plane`
+  await app.initApplication()
+
+  // Applied to the env (for future spawns) and pushed live to the running worker.
+  equal(process.env.PLT_DEPLOYMENT_VERSION, 'v9')
+  equal(pushedContext?.deploymentVersion, 'v9')
+})
+
 test('updateInstanceConfig calls runtime.updateMetricsConfig with merged config', async (t) => {
   const applicationName = 'test-app-metrics'
   const applicationId = randomUUID()
