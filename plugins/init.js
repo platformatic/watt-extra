@@ -54,7 +54,7 @@ async function initPlugin (app) {
 
     // workerMissingVersion is true only when the runtime
     // already spawned without this value (ICC was unreachable at boot).
-    const newDeploymentVersion = instanceConfig.deploymentVersion
+    const newDeploymentVersion = instanceConfig?.deploymentVersion
     const workerMissingVersion = !!newDeploymentVersion &&
       process.env.PLT_DEPLOYMENT_VERSION !== newDeploymentVersion
     if (newDeploymentVersion) {
