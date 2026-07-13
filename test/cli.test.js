@@ -1,8 +1,9 @@
 import assert from 'node:assert'
 import { test } from 'node:test'
 import { spawn } from 'node:child_process'
-import { join, dirname } from 'node:path'
+import { join, resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { applyStartArgs } from '../cli.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -89,4 +90,52 @@ test('CLI should output JSON log without banner in non-TTY mode (version command
     stdout.includes('"msg":"WattExtra v'),
     'Non-TTY output should include JSON log with version'
   )
+})
+
+test('applyStartArgs: --log-level flag overrides env-provided PLT_LOG_LEVEL', () => {
+  const env = { PLT_LOG_LEVEL: 'warn' }
+  applyStartArgs(['--log-level', 'debug'], env)
+  assert.strictEqual(env.PLT_LOG_LEVEL, 'debug')
+})
+
+test('applyStartArgs: -l short flag also overrides env', () => {
+  const env = { PLT_LOG_LEVEL: 'warn' }
+  applyStartArgs(['-l', 'trace'], env)
+  assert.strictEqual(env.PLT_LOG_LEVEL, 'trace')
+})
+
+// Regression test: cli.js used to have `default: { 'log-level': 'info' }` in its
+// minimist config, which populated args['log-level'] with 'info' whenever the flag
+// was not passed. The subsequent unconditional write to process.env.PLT_LOG_LEVEL
+// then silently clobbered the value provided by the deployment environment (e.g.
+// PLT_LOG_LEVEL=warn from k8s), forcing the runtime to log at info regardless.
+test('applyStartArgs: preserves env-provided PLT_LOG_LEVEL when --log-level is not passed', () => {
+  const env = { PLT_LOG_LEVEL: 'warn' }
+  applyStartArgs([], env)
+  assert.strictEqual(env.PLT_LOG_LEVEL, 'warn')
+})
+
+test('applyStartArgs: defaults PLT_LOG_LEVEL to "info" when neither env nor flag is set', () => {
+  const env = {}
+  applyStartArgs([], env)
+  assert.strictEqual(env.PLT_LOG_LEVEL, 'info')
+})
+
+test('applyStartArgs: passes through other CLI options to env', () => {
+  const env = {}
+  applyStartArgs([
+    '--icc-url', 'http://icc.example',
+    '--app-name', 'my-app',
+    '--app-dir', 'test/fixtures/runtime-service'
+  ], env)
+  assert.strictEqual(env.PLT_ICC_URL, 'http://icc.example')
+  assert.strictEqual(env.PLT_APP_NAME, 'my-app')
+  assert.strictEqual(env.PLT_APP_DIR, resolve('test/fixtures/runtime-service'))
+})
+
+test('applyStartArgs: --help short-circuits without mutating env', () => {
+  const env = {}
+  const res = applyStartArgs(['--help'], env)
+  assert.strictEqual(res.help, true)
+  assert.strictEqual(env.PLT_LOG_LEVEL, undefined)
 })

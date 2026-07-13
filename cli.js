@@ -2,7 +2,7 @@
 import commist from 'commist'
 import minimist from 'minimist'
 import { resolve, join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import helpMeInit from 'help-me'
 import { readFileSync } from 'node:fs'
 import { start, logger } from './index.js'
@@ -27,14 +27,11 @@ function version () {
   }
 }
 
-// Handle start command
-async function startCommand (argv) {
-  if (process.stdout.isTTY) {
-    console.log(getSimpleBanner(pkg.version))
-  } else {
-    logger.info(`WattExtra v${pkg.version}`)
-  }
-
+// Parse start command argv and apply CLI options to env.
+// Precedence for PLT_LOG_LEVEL: --log-level flag > pre-set env > 'info' default.
+// Do NOT add a minimist default for `log-level`: that would make args['log-level']
+// always truthy and unconditionally clobber an env-provided value.
+export function applyStartArgs (argv, env = process.env) {
   const args = minimist(argv, {
     alias: {
       h: 'help',
@@ -46,33 +43,50 @@ async function startCommand (argv) {
     boolean: ['help'],
     string: ['log-level', 'icc-url', 'app-name', 'app-dir'],
     default: {
-      'log-level': 'info',
       'app-dir': process.cwd()
     }
   })
 
-  logger.debug({ args, argv }, 'Start command arguments')
-
   if (args.help) {
-    helpMe.toStdout('start')
-    return true
+    return { args, help: true }
   }
 
-  // Set environment variables based on CLI options
   if (args['log-level']) {
-    process.env.PLT_LOG_LEVEL = args['log-level']
+    env.PLT_LOG_LEVEL = args['log-level']
+  } else if (!env.PLT_LOG_LEVEL) {
+    env.PLT_LOG_LEVEL = 'info'
   }
 
   if (args['icc-url']) {
-    process.env.PLT_ICC_URL = args['icc-url']
+    env.PLT_ICC_URL = args['icc-url']
   }
 
   if (args['app-name']) {
-    process.env.PLT_APP_NAME = args['app-name']
+    env.PLT_APP_NAME = args['app-name']
   }
 
   if (args['app-dir']) {
-    process.env.PLT_APP_DIR = resolve(args['app-dir']) // Ensure the path is absolute
+    env.PLT_APP_DIR = resolve(args['app-dir']) // Ensure the path is absolute
+  }
+
+  return { args, help: false }
+}
+
+// Handle start command
+async function startCommand (argv) {
+  if (process.stdout.isTTY) {
+    console.log(getSimpleBanner(pkg.version))
+  } else {
+    logger.info(`WattExtra v${pkg.version}`)
+  }
+
+  const { args, help } = applyStartArgs(argv)
+
+  logger.debug({ args, argv }, 'Start command arguments')
+
+  if (help) {
+    helpMe.toStdout('start')
+    return true
   }
 
   await start()
@@ -144,4 +158,6 @@ async function run () {
   }
 }
 
-run()
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  run()
+}
