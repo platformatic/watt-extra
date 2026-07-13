@@ -37,6 +37,14 @@ async function updatePlugin (app) {
         return
       }
 
+      // Handle a centrally coordinated cron job execution: ICC dispatches
+      // each tick to exactly one pod of the application, this one.
+      if (command === 'run-scheduled-job') {
+        app.log.info({ command, job: message.params?.name }, 'Received run-scheduled-job command from ICC')
+        await app.runScheduledJob(message.params ?? {})
+        return
+      }
+
       // Handle updates websocket format: { type: '...', topic: '...', data: {...} }
       if (!topic || !type) {
         app.log.warn({ message }, 'Received invalid message from updates websocket')

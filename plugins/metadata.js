@@ -56,6 +56,16 @@ async function metadata (app, _opts) {
           }
         }
 
+        // Report the cron jobs defined in the runtime (scheduler config and
+        // application-level scheduled tasks), so that ICC can register and
+        // coordinate them centrally. Failures must not prevent the state report.
+        let scheduler = null
+        try {
+          scheduler = await app.collectSchedulerJobs()
+        } catch (error) {
+          app.log.warn(error, 'Failed to collect the scheduler jobs, not reporting them')
+        }
+
         try {
           // There is a better way? We need to set the default headers for the client
           // every time, because the token might be expired
@@ -64,7 +74,8 @@ async function metadata (app, _opts) {
           await controlPlaneClient.saveApplicationInstanceState({
             id: app.instanceId,
             services,
-            metadata: runtimeMetadata
+            metadata: runtimeMetadata,
+            ...(scheduler ? { scheduler } : {})
           }, {
             headers: await app.getAuthorizationHeaders()
           })
