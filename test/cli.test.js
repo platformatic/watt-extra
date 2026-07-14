@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { spawn } from 'node:child_process'
 import { join, resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { applyStartArgs } from '../cli.js'
+import { applyStartArgs } from '../lib/start-args.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
