@@ -275,11 +275,8 @@ test('sendFlamegraphs should upload flamegraphs from all services', async (t) =>
 
   const mockProfile = new Uint8Array([1, 2, 3, 4, 5])
 
-  app.watt.runtime.sendCommandToApplication = async (serviceId, command) => {
-    if (command === 'getLastProfile') {
-      return mockProfile
-    }
-    return { success: false }
+  app.watt.runtime.getApplicationLastProfile = async (workerId, options) => {
+    return { profile: mockProfile, timestamp: Date.now(), preserved: false }
   }
 
   // Mock HTTP server to receive flamegraphs
@@ -328,12 +325,9 @@ test('sendFlamegraphs should handle missing profile data', async (t) => {
     errors.push(obj)
   }
 
-  app.watt.runtime.sendCommandToApplication = async (serviceId, command) => {
-    if (command === 'getLastProfile') {
-      // Return invalid data (not Uint8Array)
-      return null
-    }
-    return { success: false }
+  app.watt.runtime.getApplicationLastProfile = async (workerId, options) => {
+    // Return invalid data (not Uint8Array)
+    return { profile: null, timestamp: null, preserved: false }
   }
 
   await flamegraphsPlugin(app)
@@ -348,12 +342,9 @@ test('sendFlamegraphs should filter by workerIds when provided', async (t) => {
   const app = createMockApp(port + 12)
   const getProfileCalls = []
 
-  app.watt.runtime.sendCommandToApplication = async (workerId, command) => {
-    if (command === 'getLastProfile') {
-      getProfileCalls.push(workerId)
-      return new Uint8Array([1, 2, 3])
-    }
-    return { success: false }
+  app.watt.runtime.getApplicationLastProfile = async (workerId, options) => {
+    getProfileCalls.push(workerId)
+    return { profile: new Uint8Array([1, 2, 3]), timestamp: Date.now(), preserved: false }
   }
 
   // Mock HTTP server
@@ -383,15 +374,12 @@ test('sendFlamegraphs should try to get the profile from a service if worker is 
   const app = createMockApp(port + 12)
   const getProfileCalls = []
 
-  app.watt.runtime.sendCommandToApplication = async (workerId, command) => {
-    if (command === 'getLastProfile') {
-      getProfileCalls.push(workerId)
-      if (workerId === 'service-1:2') {
-        throw new Error('Worker not available')
-      }
-      return new Uint8Array([1, 2, 3])
+  app.watt.runtime.getApplicationLastProfile = async (workerId, options) => {
+    getProfileCalls.push(workerId)
+    if (workerId === 'service-1:2') {
+      throw new Error('Worker not available')
     }
-    return { success: false }
+    return { profile: new Uint8Array([1, 2, 3]), timestamp: Date.now(), preserved: false }
   }
 
   // Mock HTTP server
@@ -424,12 +412,9 @@ test('sendFlamegraphs should skip when PLT_DISABLE_FLAMEGRAPHS is set', async (t
 
   const getProfileCalls = []
 
-  app.watt.runtime.sendCommandToApplication = async (workerId, command) => {
-    if (command === 'getLastProfile') {
-      getProfileCalls.push(workerId)
-      return new Uint8Array([1, 2, 3])
-    }
-    return { success: false }
+  app.watt.runtime.getApplicationLastProfile = async (workerId, options) => {
+    getProfileCalls.push(workerId)
+    return { profile: new Uint8Array([1, 2, 3]), timestamp: Date.now(), preserved: false }
   }
 
   await flamegraphsPlugin(app)
@@ -484,14 +469,15 @@ test('should handle trigger-flamegraph command and upload flamegraphs from servi
     if (command === 'startProfiling') {
       return { success: true }
     }
-    if (command === 'getLastProfile') {
-      getFlamegraphReqs.push({ serviceId })
-      if (getFlamegraphReqs.length === 2) {
-        uploadResolve()
-      }
-      return new Uint8Array([1, 2, 3, 4, 5])
-    }
     return { success: false }
+  }
+
+  app.watt.runtime.getApplicationLastProfile = async (serviceId, options) => {
+    getFlamegraphReqs.push({ serviceId })
+    if (getFlamegraphReqs.length === 2) {
+      uploadResolve()
+    }
+    return { profile: new Uint8Array([1, 2, 3, 4, 5]), timestamp: Date.now(), preserved: false }
   }
 
   await updatePlugin(app)
@@ -593,6 +579,10 @@ test('should handle trigger-flamegraph when flamegraph upload fails', async (t) 
     return { success: false }
   }
 
+  app.watt.runtime.getApplicationLastProfile = async (serviceId, options) => {
+    return { profile: new Uint8Array([1, 2, 3, 4, 5]), timestamp: Date.now(), preserved: false }
+  }
+
   await updatePlugin(app)
   await flamegraphsPlugin(app)
 
@@ -645,14 +635,16 @@ test('should handle trigger-heapprofile command and upload heap profiles from se
     if (command === 'startProfiling') {
       return { success: true }
     }
-    if (command === 'getLastProfile') {
-      getHeapProfileReqs.push({ serviceId })
-      if (getHeapProfileReqs.length === 2) {
-        uploadResolve()
-      }
-      return new Uint8Array([1, 2, 3, 4, 5])
-    }
     return { success: false }
+  }
+
+  app.watt.runtime.getApplicationLastProfile = async (serviceId, options) => {
+    equal(options.type, 'heap')
+    getHeapProfileReqs.push({ serviceId })
+    if (getHeapProfileReqs.length === 2) {
+      uploadResolve()
+    }
+    return { profile: new Uint8Array([1, 2, 3, 4, 5]), timestamp: Date.now(), preserved: false }
   }
 
   await updatePlugin(app)
@@ -728,16 +720,17 @@ test('should handle PLT_PPROF_NO_PROFILE_AVAILABLE error with info log', async (
     if (command === 'startProfiling') {
       return { success: true }
     }
-    if (command === 'getLastProfile') {
-      const now = Date.now()
-      if (now < profileGenerationDate) {
-        const error = new Error('No profile available - wait for profiling to complete or trigger manual capture')
-        error.code = 'PLT_PPROF_NO_PROFILE_AVAILABLE'
-        throw error
-      }
-      return mockProfile
-    }
     return { success: false }
+  }
+
+  app.watt.runtime.getApplicationLastProfile = async (serviceId, options) => {
+    const now = Date.now()
+    if (now < profileGenerationDate) {
+      const error = new Error('No profile available - wait for profiling to complete or trigger manual capture')
+      error.code = 'PLT_PPROF_NO_PROFILE_AVAILABLE'
+      throw error
+    }
+    return { profile: mockProfile, timestamp: now, preserved: false }
   }
 
   await updatePlugin(app)
@@ -844,12 +837,13 @@ test('should handle PLT_PPROF_NOT_ENOUGH_ELU error with info log', async (t) => 
     if (command === 'startProfiling') {
       return { success: true }
     }
-    if (command === 'getLastProfile') {
-      const error = new Error('No profile available - event loop utilization has been below threshold for too long')
-      error.code = 'PLT_PPROF_NOT_ENOUGH_ELU'
-      throw error
-    }
     return { success: false }
+  }
+
+  app.watt.runtime.getApplicationLastProfile = async (serviceId, options) => {
+    const error = new Error('No profile available - event loop utilization has been below threshold for too long')
+    error.code = 'PLT_PPROF_NOT_ENOUGH_ELU'
+    throw error
   }
 
   await updatePlugin(app)
@@ -1016,11 +1010,8 @@ test('sendFlamegraphs should include alertId in query params when provided', asy
 
   const app = createMockApp(port + 18)
 
-  app.watt.runtime.sendCommandToApplication = async (serviceId, command) => {
-    if (command === 'getLastProfile') {
-      return new Uint8Array([1, 2, 3])
-    }
-    return { success: false }
+  app.watt.runtime.getApplicationLastProfile = async (workerId, options) => {
+    return { profile: new Uint8Array([1, 2, 3]), timestamp: Date.now(), preserved: false }
   }
 
   // Mock HTTP server to capture requests
@@ -1049,4 +1040,82 @@ test('sendFlamegraphs should include alertId in query params when provided', asy
   for (const req of uploadedRequests) {
     ok(req.url.includes('alertId=test-alert-123'), 'URL should include alertId query param')
   }
+})
+
+test('sendFlamegraphs should log info when worker is blocked and no preserved profile exists', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port + 19)
+  const infoLogs = []
+  const getProfileCalls = []
+
+  const originalInfo = app.log.info
+  app.log.info = (...args) => {
+    originalInfo(...args)
+    infoLogs.push(args)
+  }
+
+  app.watt.runtime.getApplicationLastProfile = async (workerId, options) => {
+    getProfileCalls.push(workerId)
+    const error = new Error('Timed out while waiting for the last profile')
+    error.code = 'PLT_RUNTIME_LAST_PROFILE_TIMEOUT'
+    throw error
+  }
+
+  await flamegraphsPlugin(app)
+  await app.sendFlamegraphs({ workerIds: ['service-1:0'] })
+
+  equal(getProfileCalls.length, 1, 'Should not retry on profile timeout')
+
+  const timeoutLog = infoLogs.find(
+    ([, message]) => typeof message === 'string' && message.includes('did not provide a profile in time')
+  )
+  ok(timeoutLog, 'Should log info about the profile timeout')
+})
+
+test('sendFlamegraphs should upload preserved profiles and log the preserved flag', async (t) => {
+  setUpEnvironment()
+
+  const uploadedFlamegraphs = []
+  const httpPort = port + 20
+  const app = createMockApp(httpPort)
+  const infoLogs = []
+
+  const originalInfo = app.log.info
+  app.log.info = (...args) => {
+    originalInfo(...args)
+    infoLogs.push(args)
+  }
+
+  const mockProfile = new Uint8Array([9, 8, 7])
+
+  app.watt.runtime.getApplicationLastProfile = async (workerId, options) => {
+    return { profile: mockProfile, timestamp: Date.now(), preserved: true }
+  }
+
+  // Mock HTTP server to receive flamegraphs
+  const { createServer } = await import('node:http')
+  const server = createServer((req, res) => {
+    const body = []
+    req.on('data', chunk => body.push(chunk))
+    req.on('end', () => {
+      uploadedFlamegraphs.push({ url: req.url, body: Buffer.concat(body) })
+      res.writeHead(200)
+      res.end()
+    })
+  })
+
+  await new Promise(resolve => server.listen(httpPort, resolve))
+  t.after(() => server.close())
+
+  await flamegraphsPlugin(app)
+  await app.sendFlamegraphs()
+
+  equal(uploadedFlamegraphs.length, 2, 'Should upload preserved profiles for both services')
+  deepEqual(uploadedFlamegraphs[0].body, Buffer.from(mockProfile))
+
+  const preservedLog = infoLogs.find(
+    ([options, message]) => message === 'Got profile from worker' && options.preserved === true
+  )
+  ok(preservedLog, 'Should log that the profile is a preserved one')
 })

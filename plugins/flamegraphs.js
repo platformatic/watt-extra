@@ -242,11 +242,12 @@ async function flamegraphs (app, _opts) {
     app.log.info({ workerId, attempt, maxAttempts, attemptTimeout }, 'Getting profile from worker')
 
     try {
-      const [state, profile] = await Promise.all([
-        runtime.sendCommandToApplication(workerId, 'getProfilingState', { type: profileType }),
-        runtime.sendCommandToApplication(workerId, 'getLastProfile', { type: profileType })
-      ])
-      return { data: profile, timestamp: state.latestProfileTimestamp }
+      const { profile, timestamp, preserved } = await runtime.getApplicationLastProfile(
+        workerId,
+        { type: profileType }
+      )
+      app.log.info({ workerId, profileType, preserved }, 'Got profile from worker')
+      return { data: profile, timestamp }
     } catch (err) {
       if (err.code === 'PLT_PPROF_NO_PROFILE_AVAILABLE') {
         app.log.info(
@@ -259,6 +260,11 @@ async function flamegraphs (app, _opts) {
         }
       } else if (err.code === 'PLT_PPROF_NOT_ENOUGH_ELU') {
         app.log.info({ workerId }, 'ELU low, CPU profiling not active')
+      } else if (err.code === 'PLT_RUNTIME_LAST_PROFILE_TIMEOUT') {
+        app.log.info(
+          { workerId },
+          'Worker did not provide a profile in time and no preserved profile is available'
+        )
       } else {
         app.log.warn({ err, workerId }, 'Failed to get profile from a worker')
 
