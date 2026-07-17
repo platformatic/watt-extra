@@ -239,14 +239,21 @@ async function flamegraphs (app, _opts) {
   async function getServiceFlamegraph (workerId, profileType, attempt = 1) {
     const runtime = app.watt.runtime
 
+    // The runtime may have been closed while waiting between attempts
+    if (!runtime) {
+      app.log.warn({ workerId }, 'Runtime not available, cannot get profile')
+      return
+    }
+
     app.log.info({ workerId, attempt, maxAttempts, attemptTimeout }, 'Getting profile from worker')
 
     try {
-      const [state, profile] = await Promise.all([
-        runtime.sendCommandToApplication(workerId, 'getProfilingState', { type: profileType }),
-        runtime.sendCommandToApplication(workerId, 'getLastProfile', { type: profileType })
-      ])
-      return { data: profile, timestamp: state.latestProfileTimestamp }
+      const { profile, timestamp, preserved } = await runtime.getApplicationLastProfile(
+        workerId,
+        { type: profileType }
+      )
+      app.log.info({ workerId, profileType, preserved }, 'Got profile from worker')
+      return { data: profile, timestamp }
     } catch (err) {
       if (err.code === 'PLT_PPROF_NO_PROFILE_AVAILABLE') {
         app.log.info(
@@ -259,6 +266,15 @@ async function flamegraphs (app, _opts) {
         }
       } else if (err.code === 'PLT_PPROF_NOT_ENOUGH_ELU') {
         app.log.info({ workerId }, 'ELU low, CPU profiling not active')
+      } else if (err.code === 'PLT_RUNTIME_LAST_PROFILE_TIMEOUT') {
+        // The runtime throws this when the worker event loop is unresponsive
+        // (e.g. saturated by high ELU or hard-blocked) and no preserved
+        // overload profile has been captured yet
+        app.log.warn(
+          { workerId },
+          'Worker event loop is not responding, likely saturated (ELU too high), ' +
+            'and no preserved overload profile is available yet'
+        )
       } else {
         app.log.warn({ err, workerId }, 'Failed to get profile from a worker')
 
