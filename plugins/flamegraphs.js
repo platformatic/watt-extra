@@ -267,9 +267,13 @@ async function flamegraphs (app, _opts) {
       } else if (err.code === 'PLT_PPROF_NOT_ENOUGH_ELU') {
         app.log.info({ workerId }, 'ELU low, CPU profiling not active')
       } else if (err.code === 'PLT_RUNTIME_LAST_PROFILE_TIMEOUT') {
-        app.log.info(
+        // The runtime throws this when the worker event loop is unresponsive
+        // (e.g. saturated by high ELU or hard-blocked) and no preserved
+        // overload profile has been captured yet
+        app.log.warn(
           { workerId },
-          'Worker did not provide a profile in time and no preserved profile is available'
+          'Worker event loop is not responding, likely saturated (ELU too high), ' +
+            'and no preserved overload profile is available yet'
         )
       } else {
         app.log.warn({ err, workerId }, 'Failed to get profile from a worker')

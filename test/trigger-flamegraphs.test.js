@@ -1042,17 +1042,17 @@ test('sendFlamegraphs should include alertId in query params when provided', asy
   }
 })
 
-test('sendFlamegraphs should log info when worker is blocked and no preserved profile exists', async (t) => {
+test('sendFlamegraphs should log warn when worker is blocked and no preserved profile exists', async (t) => {
   setUpEnvironment()
 
   const app = createMockApp(port + 19)
-  const infoLogs = []
+  const warnLogs = []
   const getProfileCalls = []
 
-  const originalInfo = app.log.info
-  app.log.info = (...args) => {
-    originalInfo(...args)
-    infoLogs.push(args)
+  const originalWarn = app.log.warn
+  app.log.warn = (...args) => {
+    originalWarn(...args)
+    warnLogs.push(args)
   }
 
   app.watt.runtime.getApplicationLastProfile = async (workerId, options) => {
@@ -1067,10 +1067,10 @@ test('sendFlamegraphs should log info when worker is blocked and no preserved pr
 
   equal(getProfileCalls.length, 1, 'Should not retry on profile timeout')
 
-  const timeoutLog = infoLogs.find(
-    ([, message]) => typeof message === 'string' && message.includes('did not provide a profile in time')
+  const timeoutLog = warnLogs.find(
+    ([, message]) => typeof message === 'string' && message.includes('Worker event loop is not responding')
   )
-  ok(timeoutLog, 'Should log info about the profile timeout')
+  ok(timeoutLog, 'Should log warn about the profile timeout')
 })
 
 test('sendFlamegraphs should upload preserved profiles and log the preserved flag', async (t) => {
