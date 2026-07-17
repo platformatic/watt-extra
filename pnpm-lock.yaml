@@ -22,7 +22,7 @@ importers:
         version: 3.60.0
       '@platformatic/wattpm-pprof-capture':
         specifier: ^3.25.0
-        version: 3.60.0
+        version: 3.62.2
       avvio:
         specifier: ^9.1.0
         version: 9.2.0
@@ -1020,6 +1020,10 @@ packages:
     resolution: {integrity: sha512-2+XnLCZMKVYOfCMtRTIpN8NQmi3wNC3UNVDS4o64UAxKyXN6kuicsZGBo4i+Bd22qO/jUqmdNgVu4qvXMQWQAg==}
     engines: {node: '>=22.19.0'}
 
+  '@platformatic/globals@3.62.2':
+    resolution: {integrity: sha512-Dx7okovdY+BjBOHvgjNx6/3KxrYpgapA9/5xyRGQS8IOe9Nf/UtqzNd16rSJcTPpJKNYVvHu4E9Pu0USatYy3Q==}
+    engines: {node: '>=22.19.0'}
+
   '@platformatic/graphql-composer@0.11.0':
     resolution: {integrity: sha512-e3EZH1okfdQPkhTNPrijgGQrlETFVO1V5WOjxN4EJFYRlurZdmqSuJw56JgvD08TMhdRXgwQK9bAbn1ZY2YzHg==}
 
@@ -1081,8 +1085,8 @@ packages:
   '@platformatic/undici-cache-memory@0.9.0':
     resolution: {integrity: sha512-ub1oMcewDpZD5PLFyfXeZYVe3aQBZXVwZ3wUssjvErdavBex+aptvps9UGDDD0k6L1KNlCCJZE74WrxRNGiewg==}
 
-  '@platformatic/wattpm-pprof-capture@3.60.0':
-    resolution: {integrity: sha512-iOWmY4ZF6Y0mH0rKHW5/nZhASdyZKbTzUUbxqQMhD18Hh+eg+cAQov/3HW5h46k/I16VRzbHQqg7rwgBkefH3Q==}
+  '@platformatic/wattpm-pprof-capture@3.62.2':
+    resolution: {integrity: sha512-7VNoflZVv3Mxt82uXns1yqtKnGlD9+EFHL+TXViokjJAvIuBWplC8By1P78Cp708Gx7o99TmRHyheiOA3ame/w==}
     engines: {node: '>=22.19.0'}
 
   '@protobufjs/aspromise@1.1.2':
@@ -4583,6 +4587,12 @@ snapshots:
       '@platformatic/prom-client': 1.0.0
       pino: 9.14.0
 
+  '@platformatic/globals@3.62.2':
+    dependencies:
+      '@opentelemetry/api': 1.9.1
+      '@platformatic/prom-client': 1.0.0
+      pino: 9.14.0
+
   '@platformatic/graphql-composer@0.11.0':
     dependencies:
       abstract-logger: 0.2.5
@@ -4804,11 +4814,11 @@ snapshots:
 
   '@platformatic/undici-cache-memory@0.9.0': {}
 
-  '@platformatic/wattpm-pprof-capture@3.60.0':
+  '@platformatic/wattpm-pprof-capture@3.62.2':
     dependencies:
       '@datadog/pprof': 5.16.0
       '@fastify/error': 4.2.0
-      '@platformatic/globals': 3.60.0
+      '@platformatic/globals': 3.62.2
       undici: 7.28.0
 
   '@protobufjs/aspromise@1.1.2': {}
