@@ -573,10 +573,16 @@ async function _getIccJobsName (url, request) {
     }
   }
   const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  let body
+  try {
+    body = await response[responseType]()
+  } catch {
+    body = null
+  }
   return {
     statusCode: response.status,
     headers: headersToJSON(response.headers),
-    body: await response[responseType]()
+    body
   }
 }
 

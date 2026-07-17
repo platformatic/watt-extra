@@ -41,7 +41,25 @@ async function updatePlugin (app) {
       // each tick to exactly one pod of the application, this one.
       if (command === 'run-scheduled-job') {
         app.log.info({ command, job: message.params?.name }, 'Received run-scheduled-job command from ICC')
-        await app.runScheduledJob(message.params ?? {})
+        try {
+          const result = await app.runScheduledJob(message.params ?? {})
+          if (message.requestId) {
+            socket.send(JSON.stringify({
+              requestId: message.requestId,
+              success: result?.success !== false,
+              result
+            }))
+          }
+        } catch (error) {
+          if (message.requestId) {
+            socket.send(JSON.stringify({
+              requestId: message.requestId,
+              success: false,
+              error: { message: error.message, name: error.name }
+            }))
+          }
+          throw error
+        }
         return
       }
 

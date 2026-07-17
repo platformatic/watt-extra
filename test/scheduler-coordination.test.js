@@ -7,6 +7,7 @@ import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import WebSocket from 'ws'
 import { start } from '../index.js'
+import Watt from '../lib/watt.js'
 import schedulerPlugin from '../plugins/scheduler.js'
 import updatePlugin from '../plugins/update.js'
 
@@ -33,7 +34,7 @@ function controlPlaneResponseWithMode (applicationId, applicationName, mode) {
   })
 }
 
-test('external mode: should disable local jobs, skip legacy registration and report the jobs in the state', async (t) => {
+test('ICC coordination: should disable local jobs and register config jobs directly', async (t) => {
   const applicationName = 'test-app'
   const applicationId = randomUUID()
   const applicationPath = join(__dirname, 'fixtures', 'runtime-scheduler')
@@ -66,25 +67,31 @@ test('external mode: should disable local jobs, skip legacy registration and rep
     await icc.close()
   })
 
-  // The local scheduler triggers are disabled
+  // The local scheduler triggers are disabled on released runtimes and paused
+  // on runtimes exposing scheduler control.
   const config = await app.watt.runtime.getRuntimeConfig()
-  assert.strictEqual(config.scheduler[0].enabled, false)
+  if (typeof app.watt.runtime.pauseSchedulerJob === 'function') {
+    assert.notStrictEqual(config.scheduler[0].enabled, false)
+    assert.strictEqual(app.watt.runtime.getScheduler()[0].paused, true)
+  } else {
+    assert.strictEqual(config.scheduler[0].enabled, false)
+  }
 
-  // The legacy per-job registration is skipped: the control-plane
-  // registers the jobs centrally from the state report
-  assert.strictEqual(savedWattJob, null)
+  assert.deepStrictEqual(savedWattJob, {
+    name: 'test',
+    schedule: '*/5 * * * *',
+    method: 'GET',
+    maxRetries: 3,
+    applicationId,
+    callbackUrl: 'http://localhost:3000'
+  })
 
   // The jobs are reported in the application state
   assert.ok(savedState, 'the state should have been reported')
-  assert.ok(Array.isArray(savedState.scheduler), 'the state should include the scheduler jobs')
-  assert.strictEqual(savedState.scheduler.length, 1)
-  assert.strictEqual(savedState.scheduler[0].name, 'test')
-  assert.strictEqual(savedState.scheduler[0].cron, '*/5 * * * *')
-  assert.strictEqual(savedState.scheduler[0].callbackUrl, 'http://localhost:3000')
-  assert.strictEqual(savedState.scheduler[0].source, 'config')
+  assert.strictEqual(savedState.scheduler, undefined)
 })
 
-test('local mode: should keep the local jobs running and skip any registration', async (t) => {
+test('ICC coordination: should disable local jobs regardless of scheduler mode', async (t) => {
   const applicationName = 'test-app'
   const applicationId = randomUUID()
   const applicationPath = join(__dirname, 'fixtures', 'runtime-scheduler')
@@ -113,12 +120,11 @@ test('local mode: should keep the local jobs running and skip any registration',
     await icc.close()
   })
 
-  // ICC coordination is disabled: the local scheduler stays enabled
+  // ICC coordination always disables local execution.
   const config = await app.watt.runtime.getRuntimeConfig()
-  assert.notStrictEqual(config.scheduler[0].enabled, false)
+  assert.strictEqual(config.scheduler[0].enabled, false)
 
-  // No registration happens: the jobs run locally in each pod
-  assert.strictEqual(savedWattJob, null)
+  assert.ok(savedWattJob)
 })
 
 function createMockApp (port) {
@@ -135,9 +141,45 @@ function createMockApp (port) {
       PLT_ICC_URL: `http://localhost:${port}`,
       PLT_UPDATES_RECONNECT_INTERVAL_SEC: 1
     },
-    watt: { runtime: {} }
+    watt: {
+      runtime: {},
+      applySchedulerMode: async () => {}
+    }
   }
 }
+
+test('runtime scheduler ownership always pauses jobs when ICC is configured', async () => {
+  const instanceConfig = {}
+  const jobs = [
+    { name: 'configured', paused: false },
+    { name: 'frontend:0', paused: false }
+  ]
+  const watt = new Watt({
+    env: {
+      PLT_APP_DIR: join(__dirname, 'fixtures', 'runtime-scheduler'),
+      PLT_ICC_URL: 'http://localhost:3000'
+    },
+    log: { info: () => {} },
+    instanceConfig,
+    instanceId: 'test-pod-123'
+  })
+
+  watt.runtime = {
+    getScheduler: () => jobs,
+    pauseSchedulerJob: async name => {
+      jobs.find(job => job.name === name).paused = true
+    },
+    resumeSchedulerJob: async name => {
+      jobs.find(job => job.name === name).paused = false
+    }
+  }
+
+  await watt.applySchedulerMode()
+  assert.deepStrictEqual(jobs.map(job => job.paused), [true, true])
+
+  await watt.applySchedulerMode()
+  assert.deepStrictEqual(jobs.map(job => job.paused), [true, true])
+})
 
 function setupMockIccServer (wss) {
   let ws = null
@@ -190,6 +232,7 @@ test('run-scheduled-job: should execute the job callback when triggered over the
 
   getWs().send(JSON.stringify({
     command: 'run-scheduled-job',
+    requestId: 'job-request-1',
     params: {
       name: 'cleanup',
       callbackUrl: `http://127.0.0.1:${target.address().port}/cleanup`,
@@ -200,10 +243,17 @@ test('run-scheduled-job: should execute the job callback when triggered over the
 
   await requestReceived
 
+  const response = JSON.parse((await once(getWs(), 'message'))[0].toString())
+  assert.deepStrictEqual(response, {
+    requestId: 'job-request-1',
+    success: true,
+    result: { name: 'cleanup', statusCode: 200 }
+  })
+
   assert.deepStrictEqual(receivedRequests, [{ method: 'POST', url: '/cleanup' }])
 })
 
-test('run-scheduled-job: should route internal mesh callbacks through the runtime', async (t) => {
+test('run-scheduled-job: should route legacy internal callbacks through the runtime', async (t) => {
   const app = createMockApp(0)
 
   const injected = []
@@ -215,22 +265,22 @@ test('run-scheduled-job: should route internal mesh callbacks through the runtim
   await schedulerPlugin(app)
 
   const result = await app.runScheduledJob({
-    name: 'frontend:db:cleanup',
-    callbackUrl: 'http://frontend.plt.local/_platformatic/tasks/db:cleanup',
+    name: 'cleanup',
+    callbackUrl: 'http://frontend.plt.local/cleanup',
     method: 'POST',
-    source: 'nitro',
+    source: 'config',
     body: { scheduledTime: 1 }
   })
 
-  assert.deepStrictEqual(result, { name: 'frontend:db:cleanup', statusCode: 200 })
+  assert.deepStrictEqual(result, { name: 'cleanup', statusCode: 200 })
   assert.strictEqual(injected.length, 1)
   assert.strictEqual(injected[0].applicationId, 'frontend')
   assert.strictEqual(injected[0].method, 'POST')
-  assert.strictEqual(injected[0].url, '/_platformatic/tasks/db:cleanup')
+  assert.strictEqual(injected[0].url, '/cleanup')
   assert.strictEqual(injected[0].body, '{"scheduledTime":1}')
 })
 
-test('run-scheduled-job: should use the native runtime execution for config jobs when available', async (t) => {
+test('run-scheduled-job: should use native runtime execution for application jobs', async (t) => {
   const app = createMockApp(0)
 
   const executed = []
@@ -241,10 +291,10 @@ test('run-scheduled-job: should use the native runtime execution for config jobs
 
   await schedulerPlugin(app)
 
-  const result = await app.runScheduledJob({ name: 'cleanup', source: 'config' })
+  const result = await app.runScheduledJob({ name: 'frontend:0', source: 'application' })
 
-  assert.deepStrictEqual(executed, ['cleanup'])
-  assert.deepStrictEqual(result, { name: 'cleanup', success: true })
+  assert.deepStrictEqual(executed, ['frontend:0'])
+  assert.deepStrictEqual(result, { name: 'frontend:0', success: true })
 })
 
 test('run-scheduled-job: should fail on non-2xx callback responses', async (t) => {
@@ -258,7 +308,7 @@ test('run-scheduled-job: should fail on non-2xx callback responses', async (t) =
     app.runScheduledJob({
       name: 'failing',
       callbackUrl: 'http://frontend.plt.local/failing',
-      source: 'nitro'
+      source: 'config'
     }),
     /Scheduled job "failing" failed with HTTP 500/
   )
@@ -277,13 +327,12 @@ test('collectSchedulerJobs: should use the runtime scheduler status when availab
       paused: false
     },
     {
-      name: 'frontend:db:cleanup',
+      name: 'frontend:0',
       cron: '* * * * *',
-      callbackUrl: 'http://frontend.plt.local/_platformatic/tasks/db:cleanup',
-      method: 'POST',
-      source: 'nitro',
+      source: 'application',
       applicationId: 'frontend',
-      taskName: 'db:cleanup'
+      scheduleId: '0',
+      tasks: ['db:cleanup']
     }
   ])
 
@@ -294,29 +343,78 @@ test('collectSchedulerJobs: should use the runtime scheduler status when availab
   assert.strictEqual(jobs.length, 2)
   assert.strictEqual(jobs[0].name, 'cleanup')
   assert.strictEqual(jobs[0].source, 'config')
-  assert.strictEqual(jobs[1].name, 'frontend:db:cleanup')
-  assert.strictEqual(jobs[1].source, 'nitro')
+  assert.strictEqual(jobs[1].name, 'frontend:0')
+  assert.strictEqual(jobs[1].source, 'application')
   assert.strictEqual(jobs[1].applicationId, 'frontend')
-  assert.strictEqual(jobs[1].taskName, 'db:cleanup')
+  assert.strictEqual(jobs[1].scheduleId, '0')
+  assert.deepStrictEqual(jobs[1].tasks, ['db:cleanup'])
 })
 
-test('external mode: should switch the application-level schedulers to external', async (t) => {
+test('sendSchedulerInfo: should register config jobs before skipping application jobs on old ICC', async () => {
   const app = createMockApp(0)
-
+  app.instanceConfig.iccServices = { cron: { url: 'http://cron.local' } }
   app.watt.runtime.getScheduler = async () => ([
-    { name: 'cleanup', cron: '0 * * * *', callbackUrl: 'http://x.plt.local/y', source: 'config' },
-    { name: 'frontend:log', cron: '* * * * *', source: 'nitro', applicationId: 'frontend', taskName: 'log' },
-    { name: 'frontend:sync', cron: '* * * * *', source: 'nitro', applicationId: 'frontend', taskName: 'sync' }
+    {
+      name: 'config-job',
+      cron: '*/5 * * * *',
+      callbackUrl: 'http://service.plt.local/run',
+      source: 'config'
+    },
+    {
+      name: 'application:0',
+      cron: '* * * * *',
+      source: 'application',
+      applicationId: 'frontend',
+      scheduleId: '0',
+      tasks: ['cleanup']
+    },
+    {
+      name: 'application:1',
+      cron: '0 * * * *',
+      source: 'application',
+      applicationId: 'frontend',
+      scheduleId: '1',
+      tasks: ['sync']
+    }
   ])
 
-  const modeChanges = []
-  app.watt.runtime.setApplicationSchedulerMode = async (applicationId, mode) => {
-    modeChanges.push({ applicationId, mode })
+  const requests = []
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async (_url, options) => {
+    requests.push(JSON.parse(options.body))
+    const status = requests.length === 2 ? 400 : 200
+    return {
+      status,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      text: async () => '',
+      json: async () => ({ error: 'unsupported' })
+    }
+  }
+
+  try {
+    await schedulerPlugin(app)
+    await app.sendSchedulerInfo()
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+
+  assert.strictEqual(requests.length, 2)
+  assert.strictEqual(requests[0].callbackUrl, 'http://service.plt.local/run')
+  assert.strictEqual(requests[1].callbackUrl, undefined)
+  assert.deepStrictEqual(requests[1].tasks, ['cleanup'])
+})
+
+test('without ICC: should not apply runtime scheduler ownership', async (t) => {
+  const app = createMockApp(0)
+  app.env.PLT_ICC_URL = undefined
+
+  let applications = 0
+  app.watt.applySchedulerMode = async () => {
+    applications++
   }
 
   await schedulerPlugin(app)
   await app.sendSchedulerInfo()
 
-  // One switch per application, even with multiple tasks
-  assert.deepStrictEqual(modeChanges, [{ applicationId: 'frontend', mode: 'external' }])
+  assert.strictEqual(applications, 0)
 })
