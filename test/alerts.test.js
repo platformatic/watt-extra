@@ -799,8 +799,8 @@ test('should attach one flamegraph to multiple alerts', async (t) => {
     await icc.close()
   })
 
-  // Wait for the first flamegraph to be generated
-  await sleep(5000)
+  // Wait for the first profiling window (3s grace period + 5s interval) to complete
+  await sleep(8500)
 
   // Manually trigger health event with unhealthy state
   const healthInfo = {
@@ -902,8 +902,8 @@ test('should send flamegraphs if attaching fails', async (t) => {
     await icc.close()
   })
 
-  // Wait for the first flamegraph to be generated
-  await sleep(5000)
+  // Wait for the first profiling window (3s grace period + 5s interval) to complete
+  await sleep(8500)
 
   // Manually trigger health event with unhealthy state
   const healthInfo = {

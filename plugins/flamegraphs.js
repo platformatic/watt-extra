@@ -239,6 +239,12 @@ async function flamegraphs (app, _opts) {
   async function getServiceFlamegraph (workerId, profileType, attempt = 1) {
     const runtime = app.watt.runtime
 
+    // The runtime may have been closed while waiting between attempts
+    if (!runtime) {
+      app.log.warn({ workerId }, 'Runtime not available, cannot get profile')
+      return
+    }
+
     app.log.info({ workerId, attempt, maxAttempts, attemptTimeout }, 'Getting profile from worker')
 
     try {
