@@ -32,7 +32,7 @@
     "next": "^16.2.10",
     "platformatic": "^3.62.2",
     "pprof-format": "^2.1.0",
-    "why-is-node-running": "^2.3.0"
+    "why-is-node-running": "^3.0.0"
   },
   "dependencies": {
     "@datadog/pprof": "^5.9.0",
