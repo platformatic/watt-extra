@@ -97,8 +97,8 @@ importers:
         specifier: ^5.10.0
         version: 5.10.0
       fastify-plugin:
-        specifier: ^5.0.1
-        version: 5.1.0
+        specifier: ^6.0.0
+        version: 6.0.0
       neostandard:
         specifier: ^0.12.0
         version: 0.12.2(@typescript-eslint/utils@8.63.0(eslint@9.39.5(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@9.39.5(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
