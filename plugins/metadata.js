@@ -56,6 +56,13 @@ async function metadata (app, _opts) {
           }
         }
 
+        let scheduler
+        try {
+          scheduler = await app.collectSchedulerJobs()
+        } catch (error) {
+          app.log.warn(error, 'Failed to collect scheduler jobs, not reporting them')
+        }
+
         try {
           // There is a better way? We need to set the default headers for the client
           // every time, because the token might be expired
@@ -64,7 +71,8 @@ async function metadata (app, _opts) {
           await controlPlaneClient.saveApplicationInstanceState({
             id: app.instanceId,
             services,
-            metadata: runtimeMetadata
+            metadata: runtimeMetadata,
+            ...(scheduler ? { scheduler } : {})
           }, {
             headers: await app.getAuthorizationHeaders()
           })

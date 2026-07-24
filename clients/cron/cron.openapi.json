@@ -9304,6 +9304,21 @@
                   "applicationId": {
                     "type": "string",
                     "nullable": true
+                  },
+                  "source": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "scheduleId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "tasks": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "nullable": true
                   }
                 },
                 "required": [

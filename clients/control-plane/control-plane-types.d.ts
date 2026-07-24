@@ -2042,6 +2042,7 @@ export type SaveApplicationInstanceStateRequest = {
   'id': string;
   'metadata': { 'platformaticVersion': string };
   'services': Array<object>;
+  'scheduler'?: Array<object>;
 }
 
 /**
