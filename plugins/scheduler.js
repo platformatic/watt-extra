@@ -9,7 +9,7 @@ async function scheduler (app, _opts) {
       return runtime.getScheduler()
     }
 
-    // Older runtimes: use the original configuration, since the runtime one
+    // Legacy compatibility path: use the original configuration, since the runtime one
     // has been disabled by the config patch (see Watt#configureScheduler)
     const jobs = app.watt.getOriginalSchedulerConfig?.() ?? []
     return jobs
@@ -38,9 +38,14 @@ async function scheduler (app, _opts) {
 
     app.log.info({ name, source }, 'Executing scheduled job triggered by ICC')
 
-    // Newer runtimes own both configured and application-level jobs.
+    // Runtime-managed jobs, including application-level tasks, do not need a
+    // callback URL. Legacy config jobs fall back to their callback below.
     if (typeof runtime.runSchedulerJob === 'function') {
       return runtime.runSchedulerJob(name)
+    }
+
+    if (source === 'application') {
+      throw new Error(`Cannot execute application scheduled job "${name}": runtime scheduler controls are unavailable`)
     }
 
     if (!callbackUrl) {
@@ -82,8 +87,8 @@ async function scheduler (app, _opts) {
       return
     }
 
-    // Register jobs directly on the cron service. Config jobs retain their
-    // callbacks; application jobs are mapped by new ICC versions to Main.
+    // Legacy ICC integration path: the current API exposes one PUT endpoint
+    // per job. Newer ICC versions register application jobs from state.
     try {
       const applicationId = app.instanceConfig?.applicationId
       const { default: build, setDefaultHeaders } = await import('../clients/cron/cron.mjs')

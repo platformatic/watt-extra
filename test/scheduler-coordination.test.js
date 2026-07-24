@@ -88,7 +88,9 @@ test('ICC coordination: should disable local jobs and register config jobs direc
 
   // The jobs are reported in the application state
   assert.ok(savedState, 'the state should have been reported')
-  assert.strictEqual(savedState.scheduler, undefined)
+  assert.ok(Array.isArray(savedState.scheduler))
+  assert.strictEqual(savedState.scheduler[0].name, 'test')
+  assert.strictEqual(savedState.scheduler[0].source, 'config')
 })
 
 test('ICC coordination: should disable local jobs regardless of scheduler mode', async (t) => {
@@ -159,7 +161,7 @@ test('runtime scheduler ownership always pauses jobs when ICC is configured', as
       PLT_APP_DIR: join(__dirname, 'fixtures', 'runtime-scheduler'),
       PLT_ICC_URL: 'http://localhost:3000'
     },
-    log: { info: () => {} },
+    log: { info: () => {}, debug: () => {}, warn: () => {} },
     instanceConfig,
     instanceId: 'test-pod-123'
   })
@@ -179,6 +181,36 @@ test('runtime scheduler ownership always pauses jobs when ICC is configured', as
 
   await watt.applySchedulerMode()
   assert.deepStrictEqual(jobs.map(job => job.paused), [true, true])
+})
+
+test('runtime scheduler ownership continues when pausing one job fails', async () => {
+  const jobs = [
+    { name: 'failed', paused: false },
+    { name: 'paused', paused: false }
+  ]
+  const watt = new Watt({
+    env: {
+      PLT_APP_DIR: join(__dirname, 'fixtures', 'runtime-scheduler'),
+      PLT_ICC_URL: 'http://localhost:3000'
+    },
+    log: { info: () => {}, debug: () => {}, warn: () => {} },
+    instanceConfig: {},
+    instanceId: 'test-pod-123'
+  })
+
+  watt.runtime = {
+    getScheduler: () => jobs,
+    pauseSchedulerJob: async name => {
+      if (name === 'failed') {
+        throw new Error('pause failed')
+      }
+      jobs[1].paused = true
+    },
+    resumeSchedulerJob: async () => {}
+  }
+
+  await watt.applySchedulerMode()
+  assert.deepStrictEqual(jobs.map(job => job.paused), [false, true])
 })
 
 function setupMockIccServer (wss) {
@@ -280,7 +312,7 @@ test('run-scheduled-job: should route legacy internal callbacks through the runt
   assert.strictEqual(injected[0].body, '{"scheduledTime":1}')
 })
 
-test('run-scheduled-job: should use native runtime execution for application jobs', async (t) => {
+test('run-scheduled-job: should use native runtime execution for application tasks without callbacks', async (t) => {
   const app = createMockApp(0)
 
   const executed = []
@@ -295,6 +327,17 @@ test('run-scheduled-job: should use native runtime execution for application job
 
   assert.deepStrictEqual(executed, ['frontend:0'])
   assert.deepStrictEqual(result, { name: 'frontend:0', success: true })
+})
+
+test('run-scheduled-job: should reject application tasks without runtime support', async (t) => {
+  const app = createMockApp(0)
+
+  await schedulerPlugin(app)
+
+  await assert.rejects(
+    app.runScheduledJob({ name: 'frontend:0', source: 'application' }),
+    /runtime scheduler controls are unavailable/
+  )
 })
 
 test('run-scheduled-job: should fail on non-2xx callback responses', async (t) => {
