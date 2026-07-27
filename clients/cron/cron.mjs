@@ -573,10 +573,18 @@ async function _getIccJobsName (url, request) {
     }
   }
   const responseType = response.headers.get('content-type')?.startsWith('application/json') ? 'json' : 'text'
+  let body
+  try {
+    // ICC can return an empty or non-JSON error body. Preserve the response
+    // status instead of masking it with a body parsing error.
+    body = await response[responseType]()
+  } catch {
+    body = null
+  }
   return {
     statusCode: response.status,
     headers: headersToJSON(response.headers),
-    body: await response[responseType]()
+    body
   }
 }
 

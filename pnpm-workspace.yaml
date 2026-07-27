@@ -1,0 +1,5 @@
+allowBuilds:
+  msgpackr-extract: true
+  protobufjs: true
+  sharp: true
+  unrs-resolver: true

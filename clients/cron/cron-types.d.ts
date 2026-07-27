@@ -1302,6 +1302,9 @@ export type PutWattJobsRequest = {
   'body'?: object | null;
   'headers'?: object | null;
   'applicationId'?: string | null;
+  'source'?: string | null;
+  'scheduleId'?: string | null;
+  'tasks'?: Array<string> | null;
 }
 
 export type PutWattJobsResponseOK = unknown

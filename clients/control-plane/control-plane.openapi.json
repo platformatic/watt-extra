@@ -13582,6 +13582,12 @@
                     "items": {
                       "type": "object"
                     }
+                  },
+                  "scheduler": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
                   }
                 },
                 "additionalProperties": false
