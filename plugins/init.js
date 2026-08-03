@@ -16,6 +16,15 @@ async function initPlugin (app) {
     if (applicationName) {
       request.applicationName = applicationName
     }
+
+    // The deployment id this image's client assets were BUILT with, for
+    // query-string skew protection. Only the pod can report it: the build runs
+    // in CI before the image exists, so ICC never sees the build arg. It
+    // survives here if the Dockerfile promotes the build ARG to ENV.
+    if (process.env.PLT_DEPLOYMENT_ID) {
+      request.buildDeploymentId = process.env.PLT_DEPLOYMENT_ID
+    }
+
     return controlPlaneClient.initApplicationInstance(request)
   }
 
