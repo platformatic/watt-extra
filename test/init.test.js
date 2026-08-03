@@ -617,3 +617,93 @@ test('updateInstanceConfig preserves existing applicationLabel when ICC does not
   equal(receivedMetricsConfig.applicationLabel, 'serviceId')
   equal(receivedMetricsConfig.labels.applicationId, applicationId)
 })
+
+test('init plugin reports the baked deployment id when PLT_DEPLOYMENT_ID is set', async (t) => {
+  const applicationName = 'test-app-baked'
+  const applicationId = randomUUID()
+
+  let capturedRequest = null
+
+  const icc = await startICC(t, {
+    applicationId,
+    controlPlaneResponse: (req) => {
+      capturedRequest = { body: req.body }
+      return {
+        applicationId,
+        applicationName,
+        iccServices: {
+          riskEngine: { url: 'http://127.0.0.1:3000/risk-service' },
+          trafficInspector: { url: 'http://127.0.0.1:3000/traffic-inspector' },
+          compliance: { url: 'http://127.0.0.1:3000/compliance' },
+          cron: { url: 'http://127.0.0.1:3000/cron' },
+          scaler: { url: 'http://127.0.0.1:3000/scaler' }
+        },
+        config: {}
+      }
+    }
+  })
+
+  const previous = process.env.PLT_DEPLOYMENT_ID
+  process.env.PLT_DEPLOYMENT_ID = 'a1b2c3d4e5f6'
+
+  t.after(async () => {
+    if (previous === undefined) delete process.env.PLT_DEPLOYMENT_ID
+    else process.env.PLT_DEPLOYMENT_ID = previous
+    await icc.close()
+  })
+
+  const app = createMockApp({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: '/test/dir'
+  })
+
+  await initPlugin(app)
+
+  // The value the image was built with, so ICC can tell whether this version's
+  // assets carry `?dpl=<its own version>` and may be query-pinned.
+  equal(capturedRequest.body.buildDeploymentId, 'a1b2c3d4e5f6')
+})
+
+test('init plugin omits the deployment id when PLT_DEPLOYMENT_ID is unset', async (t) => {
+  const applicationName = 'test-app-unbaked'
+  const applicationId = randomUUID()
+
+  let capturedRequest = null
+
+  const icc = await startICC(t, {
+    applicationId,
+    controlPlaneResponse: (req) => {
+      capturedRequest = { body: req.body }
+      return {
+        applicationId,
+        applicationName,
+        iccServices: {
+          riskEngine: { url: 'http://127.0.0.1:3000/risk-service' },
+          trafficInspector: { url: 'http://127.0.0.1:3000/traffic-inspector' },
+          compliance: { url: 'http://127.0.0.1:3000/compliance' },
+          cron: { url: 'http://127.0.0.1:3000/cron' },
+          scaler: { url: 'http://127.0.0.1:3000/scaler' }
+        },
+        config: {}
+      }
+    }
+  })
+
+  const previous = process.env.PLT_DEPLOYMENT_ID
+  delete process.env.PLT_DEPLOYMENT_ID
+
+  t.after(async () => {
+    if (previous !== undefined) process.env.PLT_DEPLOYMENT_ID = previous
+    await icc.close()
+  })
+
+  const app = createMockApp({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: '/test/dir'
+  })
+
+  await initPlugin(app)
+
+  // A build that was never given an id must not claim one.
+  equal(capturedRequest.body.buildDeploymentId, undefined)
+})
