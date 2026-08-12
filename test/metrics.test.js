@@ -13,11 +13,18 @@ const __dirname = dirname(__filename)
 test('should generate metrics with a correct labels', async (t) => {
   const applicationName = 'test-app'
   const applicationId = randomUUID()
+  const deploymentVersion = 'v-metrics'
   const applicationPath = join(__dirname, 'fixtures', 'service-1')
 
   const icc = await startICC(t, {
     applicationId,
-    applicationName
+    applicationName,
+    controlPlaneResponse: {
+      applicationId,
+      applicationName,
+      deploymentVersion,
+      config: {}
+    }
   })
 
   process.env.PLT_TEST_APP_1_URL = 'http://test-app-1:3042'
@@ -54,6 +61,7 @@ test('should generate metrics with a correct labels', async (t) => {
     const labels = eluMetrics.values[0].labels
     assert.strictEqual(labels.applicationId, applicationId)
     assert.strictEqual(labels.serviceId, 'main')
+    assert.strictEqual(labels.deploymentVersion, deploymentVersion)
   }
 })
 
