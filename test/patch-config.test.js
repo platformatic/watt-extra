@@ -14,11 +14,22 @@ const __dirname = dirname(__filename)
 test('should spawn a service app settings labels for metrics', async (t) => {
   const applicationName = 'test-application'
   const applicationId = randomUUID()
+  const deploymentVersion = 'v-config'
   const applicationPath = join(__dirname, 'fixtures', 'service-1')
 
   const icc = await startICC(t, {
     applicationId,
     applicationName,
+    controlPlaneResponse: {
+      applicationId,
+      applicationName,
+      deploymentVersion,
+      enableOpenTelemetry: true,
+      iccServices: {
+        riskEngine: { url: 'http://127.0.0.1:3001/risk-service' }
+      },
+      config: {}
+    },
     enableOpenTelemetry: true,
     port: 3001
   })
@@ -82,6 +93,7 @@ test('should spawn a service app settings labels for metrics', async (t) => {
       serviceId: 'main',
       instanceId: app.instanceId,
       applicationId,
+      deploymentVersion,
     },
     applicationLabel: 'serviceId',
     httpCustomLabels: [

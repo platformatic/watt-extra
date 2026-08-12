@@ -437,6 +437,7 @@ test('updateInstanceConfig calls runtime.updateMetricsConfig with merged config'
       applicationId,
       applicationName,
       applicationMetricsLabel,
+      deploymentVersion: 'v-metrics',
       iccServices: {
         riskEngine: { url: 'http://127.0.0.1:3000/risk-service' },
         trafficInspector: { url: 'http://127.0.0.1:3000/traffic-inspector' },
@@ -502,6 +503,7 @@ test('updateInstanceConfig calls runtime.updateMetricsConfig with merged config'
   equal(receivedMetricsConfig.labels.serviceId, 'main')
   equal(receivedMetricsConfig.labels.instanceId, hostname())
   equal(receivedMetricsConfig.labels.applicationId, applicationId)
+  equal(receivedMetricsConfig.labels.deploymentVersion, 'v-metrics')
   equal(receivedMetricsConfig.applicationLabel, applicationMetricsLabel)
 })
 
