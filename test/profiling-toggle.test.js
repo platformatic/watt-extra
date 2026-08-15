@@ -276,7 +276,28 @@ test('a re-setup after an ICC recovery does not re-enable a deactivated pod', as
   equal(startCalls.length, 0)
 })
 
-test('PLT_DISABLE_FLAMEGRAPHS wins over the toggle command', async (t) => {
+test('a pod started with PLT_DISABLE_FLAMEGRAPHS boots deactivated but reports its state', async (t) => {
+  setUpEnvironment()
+
+  const { statesReports, url } = await startScalerMock(t)
+  const app = createMockApp({
+    scalerUrl: url,
+    env: { PLT_DISABLE_FLAMEGRAPHS: true }
+  })
+
+  await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+  t.after(() => app.cleanupFlamegraphs())
+  await sleep(200)
+
+  const startCalls = app.commandCalls.filter((c) => c.command === 'startProfiling')
+  equal(startCalls.length, 0)
+
+  equal(statesReports.length, 1)
+  ok(statesReports[0].states.every((s) => s.enabled === false))
+})
+
+test('a pod started with PLT_DISABLE_FLAMEGRAPHS can be activated at runtime', async (t) => {
   setUpEnvironment()
 
   const { url } = await startScalerMock(t)
@@ -286,11 +307,56 @@ test('PLT_DISABLE_FLAMEGRAPHS wins over the toggle command', async (t) => {
   })
 
   await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+  t.after(() => app.cleanupFlamegraphs())
 
   const result = await app.setProfilingEnabled(true)
-  equal(result.success, false)
-  equal(result.reason, 'disabled-by-env')
-  equal(app.commandCalls.length, 0)
+  equal(result.success, true)
+  deepEqual(result.types.sort(), ['cpu', 'heap'])
+
+  let startCalls = app.commandCalls.filter((c) => c.command === 'startProfiling')
+  equal(startCalls.length, 4)
+
+  // A worker started after the activation is armed too
+  app.commandCalls.length = 0
+  app.watt.runtime.emit('application:worker:started', {
+    application: 'service-3',
+    worker: 0
+  })
+  await sleep(100)
+
+  startCalls = app.commandCalls.filter((c) => c.command === 'startProfiling')
+  equal(startCalls.length, 2)
+
+  // And it can be deactivated again
+  app.commandCalls.length = 0
+  await app.setProfilingEnabled(false)
+  const stopCalls = app.commandCalls.filter((c) => c.command === 'stopProfiling')
+  equal(stopCalls.length, 4)
+})
+
+test('sendFlamegraphs works on a runtime-activated pod started with PLT_DISABLE_FLAMEGRAPHS', async (t) => {
+  setUpEnvironment()
+
+  const { url } = await startScalerMock(t)
+  const app = createMockApp({
+    scalerUrl: url,
+    env: { PLT_DISABLE_FLAMEGRAPHS: true }
+  })
+  let profileRequests = 0
+  app.watt.runtime.getApplicationLastProfile = async () => {
+    profileRequests++
+    return { profile: new Uint8Array([1]), timestamp: Date.now(), preserved: false }
+  }
+
+  await flamegraphsPlugin(app)
+
+  await app.sendFlamegraphs({ profileType: 'cpu' })
+  equal(profileRequests, 0)
+
+  await app.setProfilingEnabled(true)
+  await app.sendFlamegraphs({ profileType: 'cpu' })
+  equal(profileRequests, 2)
 })
 
 test('sendFlamegraphs on a deactivated pod returns early without collecting', async (t) => {
