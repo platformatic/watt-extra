@@ -17,33 +17,65 @@ async function flamegraphs (app, _opts) {
   const attemptTimeout = Math.min(parseInt(flamegraphsAttemptTimeout), durationMillis)
   const maxAttempts = Math.ceil(durationMillis / attemptTimeout) + 1
   const cacheCleanupInterval = parseInt(flamegraphsCacheCleanupInterval)
+  const stateReportInterval = parseInt(app.env.PLT_FLAMEGRAPHS_STATE_REPORT_INTERVAL ?? 30000)
+
+  const PROFILE_TYPES = ['cpu', 'heap']
+
+  // Desired profiling state for this pod. It can be changed at runtime by the
+  // start-profiling/stop-profiling ICC commands and it gates the
+  // worker-started listener, so a deactivation survives worker restarts.
+  // It does not survive a pod restart: a new pod boots with the default.
+  const enabledTypes = new Set(isFlamegraphsDisabled ? [] : PROFILE_TYPES)
 
   let workerStartedListener = null
+  let stateReportTimer = null
+  // Set to false when the ICC scaler does not expose the profiling states
+  // API (older ICC): reporting is disabled for the lifetime of the pod.
+  let stateReportingSupported = true
 
-  const startProfilingOnWorker = async (runtime, workerFullId, logContext = {}) => {
-    await sleep(gracePeriod)
+  const startProfilingOnWorker = async (runtime, workerFullId, types, logContext = {}, { grace = true } = {}) => {
+    if (grace) {
+      await sleep(gracePeriod)
+    }
 
     // Get application details to read service-level sourceMaps setting
     const appDetails = await runtime.getApplicationDetails(workerFullId)
     const sourceMaps = appDetails.sourceMaps ?? false
 
-    try {
-      // Start CPU profiling
-      await runtime.sendCommandToApplication(
-        workerFullId,
-        'startProfiling',
-        { durationMillis, eluThreshold, type: 'cpu', sourceMaps }
-      )
+    for (const type of types) {
+      try {
+        await runtime.sendCommandToApplication(
+          workerFullId,
+          'startProfiling',
+          { durationMillis, eluThreshold, type, sourceMaps }
+        )
+      } catch (err) {
+        // A worker which is already being profiled is considered covered
+        if (err.code === 'PLT_PPROF_PROFILING_ALREADY_STARTED') {
+          continue
+        }
+        app.log.error({ err, type, ...logContext }, 'Failed to start profiling')
+        throw err
+      }
+    }
+  }
 
-      // Start HEAP profiling
-      await runtime.sendCommandToApplication(
-        workerFullId,
-        'startProfiling',
-        { durationMillis, eluThreshold, type: 'heap', sourceMaps }
-      )
-    } catch (err) {
-      app.log.error({ err, ...logContext }, 'Failed to start profiling')
-      throw err
+  const stopProfilingOnWorker = async (runtime, workerFullId, types, logContext = {}) => {
+    for (const type of types) {
+      try {
+        await runtime.sendCommandToApplication(
+          workerFullId,
+          'stopProfiling',
+          { type }
+        )
+      } catch (err) {
+        // A worker which is not being profiled is already in the target state
+        if (err.code === 'PLT_PPROF_PROFILING_NOT_STARTED') {
+          continue
+        }
+        app.log.warn({ err, type, ...logContext }, 'Failed to stop profiling')
+        throw err
+      }
     }
   }
 
@@ -56,20 +88,25 @@ async function flamegraphs (app, _opts) {
     app.log.info('Start profiling services')
 
     const runtime = app.watt.runtime
-    const workers = await runtime.getWorkers()
 
-    const promises = []
-    for (const [workerFullId, workerInfo] of Object.entries(workers)) {
-      if (workerInfo.status === 'started') {
-        const promise = startProfilingOnWorker(runtime, workerFullId, { workerFullId })
-        promises.push(promise)
+    // Respect the runtime toggle on an ICC recovery re-setup: an operator
+    // who deactivated profiling on this pod must not get it back silently.
+    if (enabledTypes.size > 0) {
+      const workers = await runtime.getWorkers()
+
+      const promises = []
+      for (const [workerFullId, workerInfo] of Object.entries(workers)) {
+        if (workerInfo.status === 'started') {
+          const promise = startProfilingOnWorker(runtime, workerFullId, [...enabledTypes], { workerFullId })
+          promises.push(promise)
+        }
       }
-    }
 
-    const results = await Promise.allSettled(promises)
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        app.log.error({ result }, 'Failed to start profiling')
+      const results = await Promise.allSettled(promises)
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          app.log.error({ result }, 'Failed to start profiling')
+        }
       }
     }
 
@@ -80,26 +117,44 @@ async function flamegraphs (app, _opts) {
 
     // Listen for new workers starting and start profiling on them
     workerStartedListener = ({ application, worker }) => {
-      if (isFlamegraphsDisabled) {
+      if (isFlamegraphsDisabled || enabledTypes.size === 0) {
         return
       }
 
       const workerFullId = [application, worker].join(':')
       app.log.info({ application, worker }, 'Starting profiling on new worker')
 
-      startProfilingOnWorker(runtime, workerFullId, { application, worker }).catch(() => {
+      startProfilingOnWorker(runtime, workerFullId, [...enabledTypes], { application, worker }).catch(() => {
         // Error already logged in startProfilingOnWorker
       })
     }
     runtime.on('application:worker:started', workerStartedListener)
 
     setInterval(cleanupFlamegraphsCache, cacheCleanupInterval).unref()
+
+    if (stateReportTimer === null) {
+      stateReportTimer = setInterval(() => {
+        reportProfilingStates().catch((err) => {
+          app.log.error({ err }, 'Failed to report profiling states')
+        })
+      }, stateReportInterval)
+      stateReportTimer.unref()
+    }
+
+    reportProfilingStates().catch((err) => {
+      app.log.error({ err }, 'Failed to report profiling states')
+    })
   }
 
   app.cleanupFlamegraphs = async () => {
     if (workerStartedListener && app.watt?.runtime) {
       app.watt.runtime.removeListener('application:worker:started', workerStartedListener)
       workerStartedListener = null
+    }
+
+    if (stateReportTimer) {
+      clearInterval(stateReportTimer)
+      stateReportTimer = null
     }
 
     // Explicitly stop all active profiling sessions to avoid memory corruption
@@ -110,21 +165,9 @@ async function flamegraphs (app, _opts) {
         for (const workerFullId of Object.keys(workers)) {
           // Stop both CPU and heap profiling on each worker
           stopPromises.push(
-            app.watt.runtime.sendCommandToApplication(workerFullId, 'stopProfiling', { type: 'cpu' })
-              .catch(err => {
-                // Ignore errors if profiling wasn't running
-                if (err.code !== 'PLT_PPROF_PROFILING_NOT_STARTED') {
-                  app.log.warn({ err, workerFullId }, 'Failed to stop CPU profiling')
-                }
-              })
-          )
-          stopPromises.push(
-            app.watt.runtime.sendCommandToApplication(workerFullId, 'stopProfiling', { type: 'heap' })
-              .catch(err => {
-                // Ignore errors if profiling wasn't running
-                if (err.code !== 'PLT_PPROF_PROFILING_NOT_STARTED') {
-                  app.log.warn({ err, workerFullId }, 'Failed to stop heap profiling')
-                }
+            stopProfilingOnWorker(app.watt.runtime, workerFullId, PROFILE_TYPES, { workerFullId })
+              .catch(() => {
+                // Error already logged in stopProfilingOnWorker
               })
           )
         }
@@ -137,6 +180,62 @@ async function flamegraphs (app, _opts) {
     }
   }
 
+  // Activates or deactivates continuous profiling on this pod at runtime,
+  // driven by the start-profiling/stop-profiling ICC commands.
+  // PLT_DISABLE_FLAMEGRAPHS wins over the commands: it also skips the pprof
+  // capture preload, so there is nothing to start.
+  app.setProfilingEnabled = async (enabled, types = PROFILE_TYPES) => {
+    if (isFlamegraphsDisabled) {
+      app.log.warn(
+        { enabled },
+        'PLT_DISABLE_FLAMEGRAPHS is set, ignoring the profiling toggle command'
+      )
+      return { success: false, reason: 'disabled-by-env' }
+    }
+
+    const runtime = app.watt?.runtime
+    if (!runtime) {
+      throw new Error('Runtime not available, cannot toggle profiling')
+    }
+
+    const validTypes = types.filter((type) => PROFILE_TYPES.includes(type))
+    for (const type of validTypes) {
+      if (enabled) {
+        enabledTypes.add(type)
+      } else {
+        enabledTypes.delete(type)
+      }
+    }
+
+    const workers = await runtime.getWorkers()
+    const promises = []
+    for (const [workerFullId, workerInfo] of Object.entries(workers)) {
+      if (workerInfo.status !== 'started') {
+        continue
+      }
+      const promise = enabled
+        ? startProfilingOnWorker(runtime, workerFullId, validTypes, { workerFullId }, { grace: false })
+        : stopProfilingOnWorker(runtime, workerFullId, validTypes, { workerFullId })
+      promises.push(promise)
+    }
+
+    const results = await Promise.allSettled(promises)
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        app.log.error({ result, enabled }, 'Failed to toggle profiling on a worker')
+      }
+    }
+
+    app.log.info({ enabled, types: validTypes }, 'Profiling toggled')
+
+    // Report the new state right away so the UI converges quickly
+    reportProfilingStates().catch((err) => {
+      app.log.error({ err }, 'Failed to report profiling states')
+    })
+
+    return { success: true, enabled, types: [...enabledTypes] }
+  }
+
   const profilesByWorkerId = {}
 
   app.sendFlamegraphs = async (options = {}) => {
@@ -146,6 +245,14 @@ async function flamegraphs (app, _opts) {
     }
 
     let { workerIds, alertId, profileType = 'cpu' } = options
+
+    if (!enabledTypes.has(profileType)) {
+      app.log.warn(
+        { profileType },
+        'Profiling is deactivated on this pod, cannot collect the profile'
+      )
+      return
+    }
 
     const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
     if (!scalerUrl) {
@@ -386,6 +493,117 @@ async function flamegraphs (app, _opts) {
 
       throw new Error(`Failed to attach flamegraph to alerts: ${error}`)
     }
+  }
+
+  // Collects the real profiling state of every worker and reports it to the
+  // scaler together with the pod's desired state. The report expires in
+  // Valkey, so a pod which stops reporting naturally disappears from the UI.
+  app.reportProfilingStates = reportProfilingStates
+  async function reportProfilingStates () {
+    if (isFlamegraphsDisabled || !stateReportingSupported) {
+      return
+    }
+
+    const runtime = app.watt?.runtime
+    if (!runtime) {
+      return
+    }
+
+    const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
+    const applicationId = app.instanceConfig?.applicationId
+    if (!scalerUrl || !applicationId) {
+      return
+    }
+
+    const workers = await runtime.getWorkers()
+    const states = []
+    for (const [workerFullId, workerInfo] of Object.entries(workers)) {
+      if (workerInfo.status !== 'started') {
+        continue
+      }
+      const serviceId = workerFullId.split(':')[0]
+
+      for (const type of PROFILE_TYPES) {
+        let state = null
+        try {
+          state = await runtime.sendCommandToApplication(
+            workerFullId,
+            'getProfilingState',
+            { type }
+          )
+        } catch (err) {
+          app.log.warn({ err, workerFullId, type }, 'Failed to get profiling state from worker')
+          continue
+        }
+
+        // A runtime without the pprof capture command answers with an
+        // empty object
+        if (!state || state.isCapturing === undefined) {
+          states.push({
+            serviceId,
+            workerId: workerFullId,
+            type,
+            enabled: enabledTypes.has(type),
+            unsupported: true
+          })
+          continue
+        }
+
+        states.push({
+          serviceId,
+          workerId: workerFullId,
+          type,
+          enabled: enabledTypes.has(type),
+          ...state
+        })
+      }
+    }
+
+    await sendProfilingStates(scalerUrl, applicationId, states)
+  }
+
+  async function sendProfilingStates (scalerUrl, applicationId, states) {
+    const podId = app.instanceId
+    const url = `${scalerUrl}/flamegraphs/states`
+
+    const authHeaders = await app.getAuthorizationHeaders()
+    const { statusCode, body } = await request(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders
+      },
+      body: JSON.stringify({
+        applicationId,
+        podId,
+        // Three report intervals, so one missed report does not blank the UI
+        expiresIn: stateReportInterval * 3,
+        states
+      })
+    })
+
+    if (statusCode === 404) {
+      // An ICC without the profiling states API: disable reporting for the
+      // lifetime of this pod
+      await body.dump()
+      stateReportingSupported = false
+      if (stateReportTimer) {
+        clearInterval(stateReportTimer)
+        stateReportTimer = null
+      }
+      app.log.warn(
+        'The scaler does not support profiling state reports.' +
+          ' Please upgrade to the latest ICC version to use this feature.'
+      )
+      return
+    }
+
+    if (statusCode !== 200) {
+      const error = await body.text()
+      throw new Error(`Failed to send profiling states: ${error}`)
+    }
+
+    await body.dump()
   }
 
   function cleanupFlamegraphsCache () {
