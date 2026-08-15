@@ -25,6 +25,8 @@ async function flamegraphs (app, _opts) {
   // start-profiling/stop-profiling ICC commands and it gates the
   // worker-started listener, so a deactivation survives worker restarts.
   // It does not survive a pod restart: a new pod boots with the default.
+  // PLT_DISABLE_FLAMEGRAPHS only sets the boot default to off: ICC can still
+  // activate profiling on this pod at runtime.
   const enabledTypes = new Set(isFlamegraphsDisabled ? [] : PROFILE_TYPES)
 
   let workerStartedListener = null
@@ -81,11 +83,10 @@ async function flamegraphs (app, _opts) {
 
   app.setupFlamegraphs = async () => {
     if (isFlamegraphsDisabled) {
-      app.log.info('PLT_DISABLE_FLAMEGRAPHS is set, skipping profiling')
-      return
+      app.log.info('PLT_DISABLE_FLAMEGRAPHS is set, profiling starts deactivated on this pod')
+    } else {
+      app.log.info('Start profiling services')
     }
-
-    app.log.info('Start profiling services')
 
     const runtime = app.watt.runtime
 
@@ -117,7 +118,7 @@ async function flamegraphs (app, _opts) {
 
     // Listen for new workers starting and start profiling on them
     workerStartedListener = ({ application, worker }) => {
-      if (isFlamegraphsDisabled || enabledTypes.size === 0) {
+      if (enabledTypes.size === 0) {
         return
       }
 
@@ -157,8 +158,11 @@ async function flamegraphs (app, _opts) {
       stateReportTimer = null
     }
 
-    // Explicitly stop all active profiling sessions to avoid memory corruption
-    if (!isFlamegraphsDisabled && app.watt?.runtime) {
+    // Explicitly stop all active profiling sessions to avoid memory
+    // corruption. Profiling may be active even when PLT_DISABLE_FLAMEGRAPHS
+    // is set (runtime activation), so always attempt the stop: it is
+    // idempotent.
+    if (app.watt?.runtime) {
       try {
         const workers = await app.watt.runtime.getWorkers()
         const stopPromises = []
@@ -181,16 +185,12 @@ async function flamegraphs (app, _opts) {
   }
 
   // Activates or deactivates continuous profiling on this pod at runtime,
-  // driven by the start-profiling/stop-profiling ICC commands.
-  // PLT_DISABLE_FLAMEGRAPHS wins over the commands: it also skips the pprof
-  // capture preload, so there is nothing to start.
+  // driven by the start-profiling/stop-profiling ICC commands. It also works
+  // on a pod started with PLT_DISABLE_FLAMEGRAPHS: the variable only sets
+  // the boot default, the commands override it for this pod's lifetime.
   app.setProfilingEnabled = async (enabled, types = PROFILE_TYPES) => {
-    if (isFlamegraphsDisabled) {
-      app.log.warn(
-        { enabled },
-        'PLT_DISABLE_FLAMEGRAPHS is set, ignoring the profiling toggle command'
-      )
-      return { success: false, reason: 'disabled-by-env' }
+    if (isFlamegraphsDisabled && enabled) {
+      app.log.info('Activating profiling on a pod started with PLT_DISABLE_FLAMEGRAPHS')
     }
 
     const runtime = app.watt?.runtime
@@ -239,13 +239,11 @@ async function flamegraphs (app, _opts) {
   const profilesByWorkerId = {}
 
   app.sendFlamegraphs = async (options = {}) => {
-    if (isFlamegraphsDisabled) {
-      app.log.info('PLT_DISABLE_FLAMEGRAPHS is set, flamegraphs are disabled')
-      return
-    }
-
     let { workerIds, alertId, profileType = 'cpu' } = options
 
+    // The runtime toggle is the single gate: profiling may be deactivated on
+    // a pod booted with it on, or activated on a pod booted with
+    // PLT_DISABLE_FLAMEGRAPHS
     if (!enabledTypes.has(profileType)) {
       app.log.warn(
         { profileType },
@@ -500,7 +498,7 @@ async function flamegraphs (app, _opts) {
   // Valkey, so a pod which stops reporting naturally disappears from the UI.
   app.reportProfilingStates = reportProfilingStates
   async function reportProfilingStates () {
-    if (isFlamegraphsDisabled || !stateReportingSupported) {
+    if (!stateReportingSupported) {
       return
     }
 
