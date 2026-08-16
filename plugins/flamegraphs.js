@@ -2,6 +2,7 @@
 
 import { setTimeout as sleep } from 'node:timers/promises'
 import { request } from 'undici'
+import { ProfilingRuntimeNotAvailableError, ProfilingStatesSendError } from '../lib/errors.js'
 
 async function flamegraphs (app, _opts) {
   const isFlamegraphsDisabled = app.env.PLT_DISABLE_FLAMEGRAPHS
@@ -195,7 +196,7 @@ async function flamegraphs (app, _opts) {
 
     const runtime = app.watt?.runtime
     if (!runtime) {
-      throw new Error('Runtime not available, cannot toggle profiling')
+      throw new ProfilingRuntimeNotAvailableError()
     }
 
     const validTypes = types.filter((type) => PROFILE_TYPES.includes(type))
@@ -598,7 +599,7 @@ async function flamegraphs (app, _opts) {
 
     if (statusCode !== 200) {
       const error = await body.text()
-      throw new Error(`Failed to send profiling states: ${error}`)
+      throw new ProfilingStatesSendError(error)
     }
 
     await body.dump()
