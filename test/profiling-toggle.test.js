@@ -1,7 +1,6 @@
 import { test } from 'node:test'
 import { equal, ok, deepEqual } from 'node:assert'
 import { once } from 'node:events'
-import { setTimeout as sleep } from 'node:timers/promises'
 import { WebSocketServer } from 'ws'
 import fastify from 'fastify'
 import { setUpEnvironment } from './helper.js'
@@ -20,6 +19,17 @@ function createMockApp (opts = {}) {
 
   const eventListeners = new Map()
   const commandCalls = []
+  const commandWaiters = []
+
+  function notifyCommandWaiters () {
+    for (let i = commandWaiters.length - 1; i >= 0; i--) {
+      const { command, count, resolve } = commandWaiters[i]
+      if (commandCalls.filter((c) => c.command === command).length >= count) {
+        commandWaiters.splice(i, 1)
+        resolve()
+      }
+    }
+  }
 
   const mockWatt = {
     runtime: {
@@ -56,6 +66,7 @@ function createMockApp (opts = {}) {
       },
       sendCommandToApplication: async (workerId, command, options) => {
         commandCalls.push({ workerId, command, options })
+        notifyCommandWaiters()
         if (sendCommandToApplication) {
           return sendCommandToApplication(workerId, command, options)
         }
@@ -106,7 +117,16 @@ function createMockApp (opts = {}) {
       ...env
     },
     watt: mockWatt,
-    commandCalls
+    commandCalls,
+    // Resolves when `count` calls of `command` have been recorded
+    waitForCommands: (command, count) => {
+      if (commandCalls.filter((c) => c.command === command).length >= count) {
+        return Promise.resolve()
+      }
+      const { promise, resolve } = Promise.withResolvers()
+      commandWaiters.push({ command, count, resolve })
+      return promise
+    }
   }
 
   return app
@@ -115,10 +135,22 @@ function createMockApp (opts = {}) {
 async function startScalerMock (t, opts = {}) {
   const scaler = fastify({ keepAliveTimeout: 1, forceCloseConnections: true })
   const statesReports = []
+  const reportWaiters = []
+
+  function notifyReportWaiters () {
+    for (let i = reportWaiters.length - 1; i >= 0; i--) {
+      const { count, resolve } = reportWaiters[i]
+      if (statesReports.length >= count) {
+        reportWaiters.splice(i, 1)
+        resolve()
+      }
+    }
+  }
 
   if (!opts.withoutStatesRoute) {
     scaler.post('/scaler/flamegraphs/states', async (req) => {
       statesReports.push(req.body)
+      notifyReportWaiters()
       return {}
     })
   }
@@ -126,14 +158,37 @@ async function startScalerMock (t, opts = {}) {
   await scaler.listen({ port: 0, host: '127.0.0.1' })
   t.after(() => scaler.close())
 
+  // Resolves when `count` state reports have been received
+  function waitForReports (count = 1) {
+    if (statesReports.length >= count) {
+      return Promise.resolve()
+    }
+    const { promise, resolve } = Promise.withResolvers()
+    reportWaiters.push({ count, resolve })
+    return promise
+  }
+
   const url = `http://127.0.0.1:${scaler.server.address().port}/scaler`
-  return { scaler, statesReports, url }
+  return { scaler, statesReports, url, waitForReports }
+}
+
+// The worker-started listener logs this message synchronously before arming a
+// worker, so its absence right after a synchronous emit proves the listener
+// took the deactivated branch, without waiting on wall-clock time.
+const ARMING_LOG = 'Starting profiling on new worker'
+
+function recordInfoLogs (app) {
+  const messages = []
+  app.log.info = (...args) => {
+    messages.push(args[args.length - 1])
+  }
+  return messages
 }
 
 test('setProfilingEnabled(false) stops profiling for both types on every worker', async (t) => {
   setUpEnvironment()
 
-  const { statesReports, url } = await startScalerMock(t)
+  const { statesReports, url, waitForReports } = await startScalerMock(t)
   const app = createMockApp({ scalerUrl: url })
 
   await flamegraphsPlugin(app)
@@ -150,7 +205,7 @@ test('setProfilingEnabled(false) stops profiling for both types on every worker'
     }
   }
 
-  await sleep(200)
+  await waitForReports(1)
   equal(statesReports.length, 1)
 })
 
@@ -220,13 +275,16 @@ test('a worker started while profiling is deactivated is not armed', async (t) =
 
   await app.setProfilingEnabled(false)
   app.commandCalls.length = 0
+  const infoLogs = recordInfoLogs(app)
 
+  // The mock runtime dispatches listeners synchronously and the arming log
+  // happens before any await, so no waiting is needed for the negative check
   app.watt.runtime.emit('application:worker:started', {
     application: 'service-3',
     worker: 0
   })
-  await sleep(100)
 
+  ok(!infoLogs.includes(ARMING_LOG))
   const startCalls = app.commandCalls.filter((c) => c.command === 'startProfiling')
   equal(startCalls.length, 0)
 })
@@ -249,7 +307,7 @@ test('a worker started while profiling is activated is armed', async (t) => {
     application: 'service-3',
     worker: 0
   })
-  await sleep(100)
+  await app.waitForCommands('startProfiling', 2)
 
   const startCalls = app.commandCalls.filter((c) => c.command === 'startProfiling')
   equal(startCalls.length, 2)
@@ -269,8 +327,9 @@ test('a re-setup after an ICC recovery does not re-enable a deactivated pod', as
   await app.setProfilingEnabled(false)
   app.commandCalls.length = 0
 
+  // setupFlamegraphs awaits its start commands internally, so the check
+  // right after it is deterministic
   await app.setupFlamegraphs()
-  await sleep(100)
 
   const startCalls = app.commandCalls.filter((c) => c.command === 'startProfiling')
   equal(startCalls.length, 0)
@@ -279,7 +338,7 @@ test('a re-setup after an ICC recovery does not re-enable a deactivated pod', as
 test('a pod started with PLT_DISABLE_FLAMEGRAPHS boots deactivated but reports its state', async (t) => {
   setUpEnvironment()
 
-  const { statesReports, url } = await startScalerMock(t)
+  const { statesReports, url, waitForReports } = await startScalerMock(t)
   const app = createMockApp({
     scalerUrl: url,
     env: { PLT_DISABLE_FLAMEGRAPHS: true }
@@ -288,7 +347,7 @@ test('a pod started with PLT_DISABLE_FLAMEGRAPHS boots deactivated but reports i
   await flamegraphsPlugin(app)
   await app.setupFlamegraphs()
   t.after(() => app.cleanupFlamegraphs())
-  await sleep(200)
+  await waitForReports(1)
 
   const startCalls = app.commandCalls.filter((c) => c.command === 'startProfiling')
   equal(startCalls.length, 0)
@@ -323,7 +382,7 @@ test('a pod started with PLT_DISABLE_FLAMEGRAPHS can be activated at runtime', a
     application: 'service-3',
     worker: 0
   })
-  await sleep(100)
+  await app.waitForCommands('startProfiling', 2)
 
   startCalls = app.commandCalls.filter((c) => c.command === 'startProfiling')
   equal(startCalls.length, 2)
@@ -482,14 +541,14 @@ test('handles start-profiling and stop-profiling commands from ICC', async (t) =
   await waitForClientSubscription
 
   ws.send(JSON.stringify({ command: 'stop-profiling', params: {} }))
-  await sleep(200)
+  await app.waitForCommands('stopProfiling', 4)
 
-  let stopCalls = app.commandCalls.filter((c) => c.command === 'stopProfiling')
+  const stopCalls = app.commandCalls.filter((c) => c.command === 'stopProfiling')
   equal(stopCalls.length, 4)
 
   app.commandCalls.length = 0
   ws.send(JSON.stringify({ command: 'start-profiling', params: { types: ['cpu'] } }))
-  await sleep(200)
+  await app.waitForCommands('startProfiling', 2)
 
   const startCalls = app.commandCalls.filter((c) => c.command === 'startProfiling')
   equal(startCalls.length, 2)
@@ -497,9 +556,9 @@ test('handles start-profiling and stop-profiling commands from ICC', async (t) =
 
   app.commandCalls.length = 0
   ws.send(JSON.stringify({ command: 'stop-profiling', params: { types: ['cpu'] } }))
-  await sleep(200)
+  await app.waitForCommands('stopProfiling', 2)
 
-  stopCalls = app.commandCalls.filter((c) => c.command === 'stopProfiling')
-  equal(stopCalls.length, 2)
-  ok(stopCalls.every((c) => c.options.type === 'cpu'))
+  const cpuStopCalls = app.commandCalls.filter((c) => c.command === 'stopProfiling')
+  equal(cpuStopCalls.length, 2)
+  ok(cpuStopCalls.every((c) => c.options.type === 'cpu'))
 })
