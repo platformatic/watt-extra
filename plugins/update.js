@@ -37,6 +37,21 @@ async function updatePlugin (app) {
         return
       }
 
+      // Handle profiling activation/deactivation commands from ICC.
+      // Fire and forget: the outcome is reported through the profiling
+      // states channel, not through a command reply.
+      if (command === 'start-profiling' || command === 'stop-profiling') {
+        const enabled = command === 'start-profiling'
+        const types = message.params?.types
+        app.log.info({ command, types }, 'Received profiling toggle command from ICC')
+        try {
+          await app.setProfilingEnabled(enabled, types ?? undefined)
+        } catch (err) {
+          app.log.error({ err, command }, 'Failed to toggle profiling')
+        }
+        return
+      }
+
       // Handle a centrally coordinated cron job execution: ICC dispatches
       // each tick to exactly one pod of the application, this one.
       if (command === 'run-scheduled-job') {
