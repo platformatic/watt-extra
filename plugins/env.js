@@ -24,6 +24,7 @@ const schema = {
     PLT_FLAMEGRAPHS_ATTEMPT_TIMEOUT: { type: 'number', default: 10000 },
     PLT_FLAMEGRAPHS_CACHE_CLEANUP_INTERVAL: { type: 'number', default: 120000 },
     PLT_FLAMEGRAPHS_STATE_REPORT_INTERVAL: { type: 'number', default: 30000 },
+    PLT_FLAMEGRAPHS_STATE_QUERY_TIMEOUT: { type: 'number', default: 5000 },
     PLT_JWT_EXPIRATION_OFFSET_SEC: { type: 'number', default: 60 },
     PLT_UPDATES_RECONNECT_INTERVAL_SEC: { type: 'number', default: 1 },
     PLT_ELU_HEALTH_SIGNAL_THRESHOLD: { type: 'number', default: 0.7 },

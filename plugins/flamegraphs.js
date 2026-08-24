@@ -19,8 +19,19 @@ async function flamegraphs (app, _opts) {
   const maxAttempts = Math.ceil(durationMillis / attemptTimeout) + 1
   const cacheCleanupInterval = parseInt(flamegraphsCacheCleanupInterval)
   const stateReportInterval = parseInt(app.env.PLT_FLAMEGRAPHS_STATE_REPORT_INTERVAL ?? 30000)
+  const stateQueryTimeout = parseInt(app.env.PLT_FLAMEGRAPHS_STATE_QUERY_TIMEOUT ?? 5000)
 
   const PROFILE_TYPES = ['cpu', 'heap']
+  const kStateQueryTimeout = Symbol('kStateQueryTimeout')
+
+  // Workers whose event loop did not answer a state query in time. The
+  // timeout only bounds the report: the underlying ITC request cannot be
+  // cancelled and stays pending in the runtime until the worker answers, so
+  // querying a blocked worker on every interval would leak one pending
+  // request per query. Further queries are suppressed with a bounded
+  // backoff; the suppression is cleared when the worker restarts or answers.
+  const STATE_QUERY_BACKOFF_MAX = 5 * 60 * 1000
+  const unresponsiveWorkers = new Map()
 
   // Desired profiling state for this pod. It can be changed at runtime by the
   // start-profiling/stop-profiling ICC commands and it gates the
@@ -119,11 +130,14 @@ async function flamegraphs (app, _opts) {
 
     // Listen for new workers starting and start profiling on them
     workerStartedListener = ({ application, worker }) => {
+      const workerFullId = [application, worker].join(':')
+
+      // A restarted worker has a fresh event loop: query its state again
+      unresponsiveWorkers.delete(workerFullId)
+
       if (enabledTypes.size === 0) {
         return
       }
-
-      const workerFullId = [application, worker].join(':')
       app.log.info({ application, worker }, 'Starting profiling on new worker')
 
       startProfilingOnWorker(runtime, workerFullId, [...enabledTypes], { application, worker }).catch(() => {
@@ -221,20 +235,25 @@ async function flamegraphs (app, _opts) {
     }
 
     const results = await Promise.allSettled(promises)
+    let failures = 0
     for (const result of results) {
       if (result.status === 'rejected') {
+        failures++
         app.log.error({ result, enabled }, 'Failed to toggle profiling on a worker')
       }
     }
 
-    app.log.info({ enabled, types: validTypes }, 'Profiling toggled')
+    app.log.info({ enabled, types: validTypes, failures }, 'Profiling toggled')
 
-    // Report the new state right away so the UI converges quickly
+    // Report the new state right away so the UI converges quickly. The
+    // report carries the real per-worker profiler state (isCapturing), so a
+    // worker which failed to toggle is reconciled by ICC from that, not from
+    // the enabledTypes intent.
     reportProfilingStates().catch((err) => {
       app.log.error({ err }, 'Failed to report profiling states')
     })
 
-    return { success: true, enabled, types: [...enabledTypes] }
+    return { success: failures === 0, enabled, types: [...enabledTypes], failures }
   }
 
   const profilesByWorkerId = {}
@@ -497,8 +516,33 @@ async function flamegraphs (app, _opts) {
   // Collects the real profiling state of every worker and reports it to the
   // scaler together with the pod's desired state. The report expires in
   // Valkey, so a pod which stops reporting naturally disappears from the UI.
+  //
+  // Concurrent invocations are coalesced: while a report is running, a new
+  // request queues at most one re-run after it, so a slow scaler or a
+  // blocked worker cannot pile up overlapping reports.
+  let reportInFlight = null
+  let reportQueued = false
+
   app.reportProfilingStates = reportProfilingStates
-  async function reportProfilingStates () {
+  function reportProfilingStates () {
+    if (reportInFlight) {
+      reportQueued = true
+      return reportInFlight
+    }
+
+    reportInFlight = collectAndSendProfilingStates().finally(() => {
+      reportInFlight = null
+      if (reportQueued) {
+        reportQueued = false
+        reportProfilingStates().catch((err) => {
+          app.log.error({ err }, 'Failed to report profiling states')
+        })
+      }
+    })
+    return reportInFlight
+  }
+
+  async function collectAndSendProfilingStates () {
     if (!stateReportingSupported) {
       return
     }
@@ -515,50 +559,116 @@ async function flamegraphs (app, _opts) {
     }
 
     const workers = await runtime.getWorkers()
-    const states = []
+
+    // One blocked worker must not prevent the others from being reported:
+    // the queries run in parallel and each is bounded by a timeout
+    const queries = []
     for (const [workerFullId, workerInfo] of Object.entries(workers)) {
       if (workerInfo.status !== 'started') {
         continue
       }
+
       const serviceId = workerFullId.split(':')[0]
 
+      // A suppressed worker is still part of the report: an explicit
+      // unresponsive entry keeps ICC from treating the remaining healthy
+      // workers as the whole pod
+      const suppression = unresponsiveWorkers.get(workerFullId)
+      if (suppression && Date.now() < suppression.skipUntil) {
+        app.log.debug({ workerFullId }, 'Skipping the state query of an unresponsive worker')
+        for (const type of PROFILE_TYPES) {
+          queries.push(Promise.resolve(unresponsiveState(workerFullId, serviceId, type)))
+        }
+        continue
+      }
+
       for (const type of PROFILE_TYPES) {
-        let state = null
-        try {
-          state = await runtime.sendCommandToApplication(
-            workerFullId,
-            'getProfilingState',
-            { type }
-          )
-        } catch (err) {
-          app.log.warn({ err, workerFullId, type }, 'Failed to get profiling state from worker')
-          continue
-        }
-
-        // A runtime without the pprof capture command answers with an
-        // empty object
-        if (!state || state.isCapturing === undefined) {
-          states.push({
-            serviceId,
-            workerId: workerFullId,
-            type,
-            enabled: enabledTypes.has(type),
-            unsupported: true
-          })
-          continue
-        }
-
-        states.push({
-          serviceId,
-          workerId: workerFullId,
-          type,
-          enabled: enabledTypes.has(type),
-          ...state
-        })
+        queries.push(getWorkerProfilingState(runtime, workerFullId, serviceId, type))
       }
     }
 
+    const states = await Promise.all(queries)
+
     await sendProfilingStates(scalerUrl, applicationId, states)
+  }
+
+  // A worker whose profiling state cannot be read still appears in the
+  // report: ICC must know the state is unknown rather than assume the
+  // reported workers are the whole pod
+  function unresponsiveState (workerFullId, serviceId, type) {
+    return {
+      serviceId,
+      workerId: workerFullId,
+      type,
+      enabled: enabledTypes.has(type),
+      unresponsive: true
+    }
+  }
+
+  // Queries one worker for its profiling state of one type. Reports the
+  // worker as unresponsive when it cannot answer: the query has no timeout
+  // of its own and hangs if the worker event loop is blocked, which is
+  // likely exactly when profiling is in use, so it is bounded here.
+  async function getWorkerProfilingState (runtime, workerFullId, serviceId, type) {
+    let state = null
+    try {
+      const query = runtime.sendCommandToApplication(
+        workerFullId,
+        'getProfilingState',
+        { type }
+      )
+      // A settlement after the timeout must not surface as an unhandled
+      // rejection
+      query.catch(() => {})
+
+      state = await Promise.race([
+        query,
+        sleep(stateQueryTimeout, kStateQueryTimeout, { ref: false })
+      ])
+
+      if (state === kStateQueryTimeout) {
+        // Both types of the same worker time out together: escalate the
+        // backoff only once per cycle
+        const existing = unresponsiveWorkers.get(workerFullId)
+        if (!existing || Date.now() >= existing.skipUntil) {
+          const backoff = Math.min(
+            existing ? existing.backoff * 2 : stateReportInterval,
+            STATE_QUERY_BACKOFF_MAX
+          )
+          unresponsiveWorkers.set(workerFullId, { skipUntil: Date.now() + backoff, backoff })
+        }
+        app.log.warn(
+          { workerFullId, type, stateQueryTimeout },
+          'Timed out getting the profiling state from a worker, suppressing its state queries'
+        )
+        return unresponsiveState(workerFullId, serviceId, type)
+      }
+
+      unresponsiveWorkers.delete(workerFullId)
+    } catch (err) {
+      app.log.warn({ err, workerFullId, type }, 'Failed to get profiling state from worker')
+      return unresponsiveState(workerFullId, serviceId, type)
+    }
+
+    // A runtime without the pprof capture command answers with an
+    // empty object
+    if (!state || state.isCapturing === undefined) {
+      return {
+        serviceId,
+        workerId: workerFullId,
+        type,
+        enabled: enabledTypes.has(type),
+        unsupported: true
+      }
+    }
+
+    return {
+      serviceId,
+      workerId: workerFullId,
+      type,
+      enabled: enabledTypes.has(type),
+      ...state
+    }
   }
 
   async function sendProfilingStates (scalerUrl, applicationId, states) {
