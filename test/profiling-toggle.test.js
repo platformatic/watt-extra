@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import { equal, ok, deepEqual } from 'node:assert'
 import { once } from 'node:events'
+import { setTimeout as sleep } from 'node:timers/promises'
 import { WebSocketServer } from 'ws'
 import fastify from 'fastify'
 import { setUpEnvironment } from './helper.js'
@@ -147,8 +148,17 @@ async function startScalerMock (t, opts = {}) {
     }
   }
 
+  let activeStatesRequests = 0
+  let maxConcurrentStatesRequests = 0
+
   if (!opts.withoutStatesRoute) {
     scaler.post('/scaler/flamegraphs/states', async (req) => {
+      activeStatesRequests++
+      maxConcurrentStatesRequests = Math.max(maxConcurrentStatesRequests, activeStatesRequests)
+      if (opts.statesDelay) {
+        await sleep(opts.statesDelay)
+      }
+      activeStatesRequests--
       statesReports.push(req.body)
       notifyReportWaiters()
       return {}
@@ -169,7 +179,13 @@ async function startScalerMock (t, opts = {}) {
   }
 
   const url = `http://127.0.0.1:${scaler.server.address().port}/scaler`
-  return { scaler, statesReports, url, waitForReports }
+  return {
+    scaler,
+    statesReports,
+    url,
+    waitForReports,
+    getMaxConcurrentStatesRequests: () => maxConcurrentStatesRequests
+  }
 }
 
 // The worker-started listener logs this message synchronously before arming a
@@ -561,4 +577,170 @@ test('handles start-profiling and stop-profiling commands from ICC', async (t) =
   const cpuStopCalls = app.commandCalls.filter((c) => c.command === 'stopProfiling')
   equal(cpuStopCalls.length, 2)
   ok(cpuStopCalls.every((c) => c.options.type === 'cpu'))
+})
+
+test('a partial worker failure is not reported as success and the report carries the real state', async (t) => {
+  setUpEnvironment()
+
+  const { statesReports, url, waitForReports } = await startScalerMock(t)
+  const failingWorker = 'service-2:0'
+  const capturing = { 'service-1:0': false, 'service-2:0': false }
+  const app = createMockApp({
+    scalerUrl: url,
+    sendCommandToApplication: async (workerId, command, options) => {
+      if (command === 'startProfiling') {
+        if (workerId === failingWorker) {
+          throw new Error('boom')
+        }
+        capturing[workerId] = true
+        return {}
+      }
+      if (command === 'stopProfiling') {
+        capturing[workerId] = false
+        return {}
+      }
+      if (command === 'getProfilingState') {
+        return {
+          isCapturing: capturing[workerId],
+          isProfilerRunning: capturing[workerId],
+          isPaused: false
+        }
+      }
+      return {}
+    }
+  })
+
+  await flamegraphsPlugin(app)
+
+  await app.setProfilingEnabled(false)
+  const result = await app.setProfilingEnabled(true)
+
+  // The toggle is not a success and the intent is still recorded
+  equal(result.success, false)
+  equal(result.failures, 1)
+  deepEqual(result.types.sort(), ['cpu', 'heap'])
+
+  // The report distinguishes intent (enabled) from reality (isCapturing)
+  await waitForReports(2)
+  const report = statesReports[statesReports.length - 1]
+  const failedState = report.states.find((s) => s.workerId === failingWorker && s.type === 'cpu')
+  equal(failedState.enabled, true)
+  equal(failedState.isCapturing, false)
+  const okState = report.states.find((s) => s.workerId === 'service-1:0' && s.type === 'cpu')
+  equal(okState.enabled, true)
+  equal(okState.isCapturing, true)
+})
+
+test('a blocked worker does not stall the state report', async (t) => {
+  setUpEnvironment()
+
+  const { statesReports, url, waitForReports } = await startScalerMock(t)
+  const app = createMockApp({
+    scalerUrl: url,
+    env: { PLT_FLAMEGRAPHS_STATE_QUERY_TIMEOUT: 100 },
+    sendCommandToApplication: async (workerId, command) => {
+      if (command === 'getProfilingState' && workerId === 'service-1:0') {
+        // A blocked worker event loop: the query never settles
+        return new Promise(() => {})
+      }
+      if (command === 'getProfilingState') {
+        return {
+          isCapturing: true,
+          isProfilerRunning: true,
+          isPaused: false
+        }
+      }
+      return {}
+    }
+  })
+
+  await flamegraphsPlugin(app)
+  await app.reportProfilingStates()
+  await waitForReports(1)
+
+  // The blocked worker is reported as unresponsive, the healthy one normally
+  const report = statesReports[0]
+  equal(report.states.length, 4)
+  const blockedStates = report.states.filter((s) => s.workerId === 'service-1:0')
+  equal(blockedStates.length, 2)
+  ok(blockedStates.every((s) => s.unresponsive === true))
+  const healthyStates = report.states.filter((s) => s.workerId === 'service-2:0')
+  equal(healthyStates.length, 2)
+  ok(healthyStates.every((s) => s.isCapturing === true && s.unresponsive === undefined))
+})
+
+test('overlapping state reports are coalesced', async (t) => {
+  setUpEnvironment()
+
+  const mock = await startScalerMock(t, { statesDelay: 100 })
+  const app = createMockApp({ scalerUrl: mock.url })
+
+  await flamegraphsPlugin(app)
+
+  // The second call while the first is in flight queues a single re-run
+  const first = app.reportProfilingStates()
+  const second = app.reportProfilingStates()
+  equal(first, second)
+
+  await first
+  await mock.waitForReports(2)
+
+  equal(mock.statesReports.length, 2)
+  equal(mock.getMaxConcurrentStatesRequests(), 1)
+})
+
+test('a timed-out worker is not queried again until it restarts', async (t) => {
+  setUpEnvironment()
+
+  const { statesReports, url, waitForReports } = await startScalerMock(t)
+  const app = createMockApp({
+    scalerUrl: url,
+    env: { PLT_FLAMEGRAPHS_STATE_QUERY_TIMEOUT: 100 },
+    sendCommandToApplication: async (workerId, command) => {
+      if (command === 'getProfilingState' && workerId === 'service-1:0') {
+        // A blocked worker event loop: the query never settles
+        return new Promise(() => {})
+      }
+      if (command === 'getProfilingState') {
+        return {
+          isCapturing: true,
+          isProfilerRunning: true,
+          isPaused: false
+        }
+      }
+      return {}
+    }
+  })
+
+  const queriesToBlockedWorker = () => app.commandCalls.filter(
+    (c) => c.command === 'getProfilingState' && c.workerId === 'service-1:0'
+  ).length
+
+  await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+  t.after(() => app.cleanupFlamegraphs())
+
+  // The first report queries the blocked worker, times out, and suppresses it
+  await waitForReports(1)
+  equal(queriesToBlockedWorker(), 2)
+
+  // The next report does not query the suppressed worker but still reports
+  // it as unresponsive
+  await app.reportProfilingStates()
+  await waitForReports(2)
+  equal(queriesToBlockedWorker(), 2)
+  const suppressedReport = statesReports[statesReports.length - 1]
+  equal(suppressedReport.states.length, 4)
+  ok(suppressedReport.states
+    .filter((s) => s.workerId === 'service-1:0')
+    .every((s) => s.unresponsive === true))
+
+  // A worker restart clears the suppression and it is queried again
+  app.watt.runtime.emit('application:worker:started', {
+    application: 'service-1',
+    worker: 0
+  })
+  await app.reportProfilingStates()
+  await waitForReports(3)
+  equal(queriesToBlockedWorker(), 4)
 })
