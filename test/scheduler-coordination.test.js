@@ -122,9 +122,14 @@ test('ICC coordination: should disable local jobs regardless of scheduler mode',
     await icc.close()
   })
 
-  // ICC coordination always disables local execution.
+  // ICC coordination always disables local execution: released runtimes
+  // disable the job in config, runtimes with scheduler control pause it.
   const config = await app.watt.runtime.getRuntimeConfig()
-  assert.strictEqual(config.scheduler[0].enabled, false)
+  if (typeof app.watt.runtime.pauseSchedulerJob === 'function') {
+    assert.strictEqual(app.watt.runtime.getScheduler()[0].paused, true)
+  } else {
+    assert.strictEqual(config.scheduler[0].enabled, false)
+  }
 
   assert.ok(savedWattJob)
 })

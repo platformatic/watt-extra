@@ -46,17 +46,21 @@ test('should spawn a runtime disabling all the scheduler jobs', async (t) => {
 
   const { scheduler } = config
 
-  // The scheduler should be disabled
-  const expectedSchedulerConfig = [{
-    enabled: false,
-    name: 'test',
-    callbackUrl: 'http://localhost:3000',
-    cron: '*/5 * * * *',
-    method: 'GET',
-    maxRetries: 3
-  }]
-
-  assert.deepStrictEqual(scheduler, expectedSchedulerConfig)
+  if (typeof app.watt.runtime.pauseSchedulerJob === 'function') {
+    // Runtimes exposing scheduler control keep the job enabled in config and
+    // pause it at runtime instead of disabling it.
+    assert.notStrictEqual(scheduler[0].enabled, false)
+  } else {
+    // Legacy runtimes disable the job in the config patch.
+    assert.deepStrictEqual(scheduler, [{
+      enabled: false,
+      name: 'test',
+      callbackUrl: 'http://localhost:3000',
+      cron: '*/5 * * * *',
+      method: 'GET',
+      maxRetries: 3
+    }])
+  }
 
   // ICC is called to save the job
   const expectedWattJob = {
