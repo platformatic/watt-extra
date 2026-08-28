@@ -33,8 +33,8 @@ importers:
         specifier: ^3.2.0
         version: 3.2.0
       env-schema:
-        specifier: ^7.0.0
-        version: 7.0.0
+        specifier: ^8.0.0
+        version: 8.0.0
       help-me:
         specifier: ^5.0.0
         version: 5.0.0
@@ -1538,6 +1538,9 @@ packages:
 
   env-schema@7.0.0:
     resolution: {integrity: sha512-b8rdAwdFpekDxNAUNuT6KbV/QEX/pTBs0gjehEPmBUUteh9zBDm9zxFSQt55D29odo3rJt4feoWRqn4U/tzicw==}
+
+  env-schema@8.0.0:
+    resolution: {integrity: sha512-BBF/xWtTC9MeNfJONdC//oL5Gjl+rVN5lvrSVEltWjh5uJ/UXoSLN/ddn5k023yYC68mCqhGIuu5CXNTAF8CPA==}
 
   es-main@1.4.0:
     resolution: {integrity: sha512-/rYhbfGK/1E6L7TcoUqmrWbSnOlMoxahiZInSYKbhIZ4/dbclHtXEcrViu4Az9IzYNBT8LcXpPszfS47zbGpwA==}
@@ -4560,6 +4563,10 @@ snapshots:
       tapable: 2.3.3
 
   env-schema@7.0.0:
+    dependencies:
+      ajv: 8.20.0
+
+  env-schema@8.0.0:
     dependencies:
       ajv: 8.20.0
 
