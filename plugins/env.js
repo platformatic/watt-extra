@@ -17,7 +17,7 @@ const schema = {
     PLT_APP_INTERNAL_SUB_DOMAIN: { type: 'string', default: 'plt.local' },
     PLT_DEFAULT_CACHE_TAGS_HEADER: { type: 'string', default: 'x-plt-cache-tags' },
     PLT_CACHE_CONFIG: { type: 'string' },
-    PLT_DISABLE_FLAMEGRAPHS: { type: 'boolean', default: false },
+    PLT_DISABLE_FLAMEGRAPHS: { type: 'boolean', default: true },
     PLT_FLAMEGRAPHS_INTERVAL_SEC: { type: 'number', default: 60 },
     PLT_FLAMEGRAPHS_ELU_THRESHOLD: { type: 'number', default: 0.4 },
     PLT_FLAMEGRAPHS_GRACE_PERIOD: { type: 'number', default: 3000 },
