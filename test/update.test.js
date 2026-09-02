@@ -564,3 +564,72 @@ test('should reconnect to updates if connection closes', async (t) => {
   deepEqual(processedMessages, [testMessage1, testMessage2])
   wss2.close()
 })
+
+test('terminates a half-open connection via heartbeat and reconnects', async (t) => {
+  setUpEnvironment()
+
+  // autoPong: false simulates a peer that no longer answers: the client's
+  // pings get no pong back, exactly like a half-open TCP connection
+  const wss = new WebSocketServer({ port: port + 20, autoPong: false })
+  t.after(async () => wss.close())
+
+  const ee = new EventEmitter()
+  let connections = 0
+  wss.on('connection', (ws) => {
+    connections++
+    if (connections >= 2) {
+      ee.emit('reconnected')
+    }
+    ws.on('message', (data) => {
+      const message = JSON.parse(data.toString())
+      if (message.command === 'subscribe' && message.topic === '/config') {
+        ws.send(JSON.stringify({ command: 'ack' }))
+      }
+    })
+  })
+
+  const app = createMockApp(port + 20)
+  app.env.PLT_UPDATES_HEARTBEAT_INTERVAL_SEC = 0.1
+  app.env.PLT_UPDATES_RECONNECT_INTERVAL_SEC = 0.05
+  t.after(() => app.closeUpdates())
+
+  await updatePlugin(app)
+  await app.connectToUpdates()
+
+  // First heartbeat miss terminates the connection, the reconnect loop
+  // opens a new one, which times out again, and so on
+  const reconnected = once(ee, 'reconnected')
+  await reconnected
+
+  equal(connections >= 2, true, 'Should reconnect after the heartbeat timeout')
+})
+
+test('retries when the subscription acknowledgment never arrives', async (t) => {
+  setUpEnvironment()
+
+  const wss = new WebSocketServer({ port: port + 21 })
+  t.after(async () => wss.close())
+
+  const ee = new EventEmitter()
+  let connections = 0
+  wss.on('connection', () => {
+    // Accept the connection and the subscribe message, never send the ack
+    connections++
+    if (connections >= 2) {
+      ee.emit('reconnected')
+    }
+  })
+
+  const app = createMockApp(port + 21)
+  app.env.PLT_UPDATES_ACK_TIMEOUT_SEC = 0.2
+  app.env.PLT_UPDATES_RECONNECT_INTERVAL_SEC = 0.05
+  t.after(() => app.closeUpdates())
+
+  await updatePlugin(app)
+  await app.connectToUpdates()
+
+  const reconnected = once(ee, 'reconnected')
+  await reconnected
+
+  equal(connections >= 2, true, 'Should retry after the ack timeout')
+})

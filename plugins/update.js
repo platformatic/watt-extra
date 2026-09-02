@@ -15,8 +15,43 @@ function createWebSocketUrl (httpUrl, path, queryParams = {}) {
 
 async function updatePlugin (app) {
   const reconnectInterval = app.env.PLT_UPDATES_RECONNECT_INTERVAL_SEC * 1000
+  const heartbeatInterval = (app.env.PLT_UPDATES_HEARTBEAT_INTERVAL_SEC ?? 30) * 1000
+  const ackTimeout = (app.env.PLT_UPDATES_ACK_TIMEOUT_SEC ?? 10) * 1000
+  const kAckTimeout = Symbol('kAckTimeout')
 
   let socket = null
+
+  // A half-open connection (e.g. the ICC endpoint died without a TCP reset
+  // reaching the pod) fires no 'close' event: without a heartbeat the pod
+  // believes it is connected forever and becomes unreachable for ICC
+  // commands, while its outgoing HTTP calls keep working. Ping the server
+  // and terminate the socket when the pong does not come back, so the close
+  // handler runs and the reconnect loop takes over. The server side of ws
+  // answers pings automatically, so this works against any ICC version.
+  function startHeartbeat (ws) {
+    let alive = true
+    ws.on('pong', () => {
+      alive = true
+    })
+
+    const timer = setInterval(() => {
+      if (ws.readyState !== WebSocket.OPEN) {
+        return
+      }
+      if (!alive) {
+        app.log.warn('Updates websocket heartbeat timed out, terminating the connection')
+        ws.terminate()
+        return
+      }
+      alive = false
+      ws.ping()
+    }, heartbeatInterval)
+    timer.unref()
+
+    ws.on('close', () => {
+      clearInterval(timer)
+    })
+  }
 
   async function processMessage (data) {
     try {
@@ -115,7 +150,9 @@ async function updatePlugin (app) {
     try {
       const headers = await app.getAuthorizationHeaders()
 
-      socket = new WebSocket(wsUrl, { headers })
+      // handshakeTimeout turns a hung upgrade into an 'error', so the retry
+      // loop is never stuck waiting for an 'open' that cannot arrive
+      socket = new WebSocket(wsUrl, { headers, handshakeTimeout: ackTimeout })
       await once(socket, 'open')
 
       app.log.info('Connected to updates websocket')
@@ -123,13 +160,28 @@ async function updatePlugin (app) {
       const subscribeMsg = JSON.stringify({ command: 'subscribe', topic: '/config' })
       socket.send(subscribeMsg)
 
-      const command = await once(socket, 'message')
+      // A connection which closes cleanly between the subscribe and the ack
+      // emits no 'error', so an unbounded wait here would hang this loop
+      // forever: bound it and retry
+      const ackPromise = once(socket, 'message')
+      ackPromise.catch(() => {})
+      const command = await Promise.race([
+        ackPromise,
+        sleep(ackTimeout, kAckTimeout, { ref: false })
+      ])
+      if (command === kAckTimeout) {
+        socket.terminate()
+        throw new Error('Timed out waiting for the updates subscription acknowledgment')
+      }
+
       const message = JSON.parse(command[0])
       if (message?.command !== 'ack') {
         app.log.error({ message }, 'Subscription updates failed')
         throw new Error('Subscription updates failed')
       }
       app.log.info('Received subscription acknowledgment from updates websocket')
+
+      startHeartbeat(socket)
 
       // listen for subsequent messages
       socket.on('message', processMessage)

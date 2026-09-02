@@ -27,6 +27,8 @@ const schema = {
     PLT_FLAMEGRAPHS_STATE_QUERY_TIMEOUT: { type: 'number', default: 5000 },
     PLT_JWT_EXPIRATION_OFFSET_SEC: { type: 'number', default: 60 },
     PLT_UPDATES_RECONNECT_INTERVAL_SEC: { type: 'number', default: 1 },
+    PLT_UPDATES_HEARTBEAT_INTERVAL_SEC: { type: 'number', default: 30 },
+    PLT_UPDATES_ACK_TIMEOUT_SEC: { type: 'number', default: 10 },
     PLT_ELU_HEALTH_SIGNAL_THRESHOLD: { type: 'number', default: 0.7 },
     PLT_HEAP_HEALTH_SIGNAL_THRESHOLD: { type: ['number', 'string'], default: '400MB' },
     PLT_ALERTS_GRACE_PERIOD_SEC: { type: 'number', default: 30 },
