@@ -744,3 +744,63 @@ test('a timed-out worker is not queried again until it restarts', async (t) => {
   await waitForReports(3)
   equal(queriesToBlockedWorker(), 4)
 })
+
+test('attaches the last observed worker ELU to the state report', async (t) => {
+  setUpEnvironment()
+
+  const { statesReports, url, waitForReports } = await startScalerMock(t)
+  const app = createMockApp({ scalerUrl: url })
+
+  await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+  t.after(() => app.cleanupFlamegraphs())
+  await waitForReports(1)
+
+  // The runtime health events carry the same ELU the profiling gate uses
+  app.watt.runtime.emit('application:worker:health', {
+    id: 'service-1:0',
+    application: 'service-1',
+    currentHealth: { elu: 0.97, heapUsed: 1, heapTotal: 2 }
+  })
+
+  await app.reportProfilingStates()
+  await waitForReports(2)
+
+  const report = statesReports[statesReports.length - 1]
+  const sampled = report.states.filter((s) => s.workerId === 'service-1:0')
+  ok(sampled.length > 0)
+  ok(sampled.every((s) => s.lastELU === 0.97))
+
+  // Workers without a sample simply omit the field (older runtimes, quiet
+  // workers): the consumer must not require it
+  const unsampled = report.states.filter((s) => s.workerId === 'service-2:0')
+  ok(unsampled.every((s) => s.lastELU === undefined))
+})
+
+test('a stale ELU sample is not attached to the state report', async (t) => {
+  setUpEnvironment()
+
+  const { statesReports, url, waitForReports } = await startScalerMock(t)
+  const app = createMockApp({ scalerUrl: url })
+
+  await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+  t.after(() => app.cleanupFlamegraphs())
+  await waitForReports(1)
+
+  app.watt.runtime.emit('application:worker:health', {
+    id: 'service-1:0',
+    application: 'service-1',
+    currentHealth: { elu: 0.97 }
+  })
+
+  // Jump past the sample max age
+  const realNow = Date.now()
+  t.mock.method(Date, 'now', () => realNow + 61 * 1000)
+
+  await app.reportProfilingStates()
+  await waitForReports(2)
+
+  const report = statesReports[statesReports.length - 1]
+  ok(report.states.every((s) => s.lastELU === undefined))
+})
