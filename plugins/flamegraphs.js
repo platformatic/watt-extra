@@ -42,7 +42,38 @@ async function flamegraphs (app, _opts) {
   const enabledTypes = new Set(isFlamegraphsDisabled ? [] : PROFILE_TYPES)
 
   let workerStartedListener = null
+  let healthListener = null
   let stateReportTimer = null
+
+  // Last observed event-loop utilization per worker, from the same health
+  // events that drive the runtime's profiling ELU gate. It is attached to
+  // the profiling state report so ICC can tell an idle pause (ELU below the
+  // profiling threshold) from an overload pause (ELU above the cutoff): the
+  // profiler state itself does not carry the pause reason. The field is
+  // optional on both sides, so any watt-extra/ICC version mix keeps working.
+  const ELU_SAMPLE_MAX_AGE = 60 * 1000
+  const lastWorkerELU = new Map()
+
+  function setupHealthTracking (runtime) {
+    const healthEventName = app.watt.runtimeSupportsNewHealthMetrics?.()
+      ? 'application:worker:health:metrics'
+      : 'application:worker:health'
+
+    // Remove the old listener if it exists (for ICC recovery scenario)
+    if (healthListener) {
+      runtime.removeListener(healthEventName, healthListener)
+    }
+
+    healthListener = (healthInfo) => {
+      const workerId = healthInfo?.id
+      const elu = healthInfo?.currentHealth?.elu
+      if (workerId == null || typeof elu !== 'number') {
+        return
+      }
+      lastWorkerELU.set(workerId, { elu, at: Date.now() })
+    }
+    runtime.on(healthEventName, healthListener)
+  }
   // Set to false when the ICC scaler does not expose the profiling states
   // API (older ICC): reporting is disabled for the lifetime of the pod.
   let stateReportingSupported = true
@@ -123,6 +154,8 @@ async function flamegraphs (app, _opts) {
       }
     }
 
+    setupHealthTracking(runtime)
+
     // Remove old listener if it exists (for ICC recovery scenario)
     if (workerStartedListener) {
       runtime.removeListener('application:worker:started', workerStartedListener)
@@ -172,6 +205,15 @@ async function flamegraphs (app, _opts) {
       clearInterval(stateReportTimer)
       stateReportTimer = null
     }
+
+    if (healthListener && app.watt?.runtime) {
+      const healthEventName = app.watt.runtimeSupportsNewHealthMetrics?.()
+        ? 'application:worker:health:metrics'
+        : 'application:worker:health'
+      app.watt.runtime.removeListener(healthEventName, healthListener)
+      healthListener = null
+    }
+    lastWorkerELU.clear()
 
     // Explicitly stop all active profiling sessions to avoid memory
     // corruption. Profiling may be active even when PLT_DISABLE_FLAMEGRAPHS
@@ -662,13 +704,20 @@ async function flamegraphs (app, _opts) {
       }
     }
 
-    return {
+    const entry = {
       serviceId,
       workerId: workerFullId,
       type,
       enabled: enabledTypes.has(type),
       ...state
     }
+
+    const eluSample = lastWorkerELU.get(workerFullId) ?? lastWorkerELU.get(serviceId)
+    if (eluSample && Date.now() - eluSample.at <= ELU_SAMPLE_MAX_AGE) {
+      entry.lastELU = eluSample.elu
+    }
+
+    return entry
   }
 
   async function sendProfilingStates (scalerUrl, applicationId, states) {
