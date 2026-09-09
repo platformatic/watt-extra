@@ -1,5 +1,7 @@
 import assert from 'node:assert'
+import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
@@ -11,11 +13,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // The runtime reports a Next.js application as '@platformatic/next' (older
 // runtimes said 'next'). The Next patches, cache adapter included, must be
-// applied in both cases: the fixture must be built first (wattpm build).
+// applied in both cases.
 test('should configure the Next.js cache adapter for @platformatic/next applications', async (t) => {
   const applicationName = 'test-next'
   const applicationId = randomUUID()
   const applicationPath = join(__dirname, 'fixtures', 'runtime-next')
+
+  // The application starts in production mode, so the fixture needs a build;
+  // reuse an existing one to keep local reruns fast.
+  if (!existsSync(join(applicationPath, 'web', 'next', '.next', 'BUILD_ID'))) {
+    execFileSync(join(__dirname, '..', 'node_modules', '.bin', 'platformatic'), ['build', applicationPath], {
+      stdio: 'ignore'
+    })
+  }
+
   const clientOpts = {
     host: '127.0.0.1',
     port: 6379,
