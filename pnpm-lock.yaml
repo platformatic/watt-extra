@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@datadog/pprof':
         specifier: ^5.9.0
-        version: 5.18.1
+        version: 5.19.0
       '@fastify/error':
         specifier: ^4.2.0
         version: 4.2.0
@@ -173,8 +173,8 @@ packages:
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
 
-  '@datadog/pprof@5.18.1':
-    resolution: {integrity: sha512-p8RnantBXCrcsT4pHvcdRtQzhqllls/t6yYb2j8hJrnnFcFfWO+u5WSdqLNxGFNjTEhfaFPu6TOoLhNk9iW9Lw==}
+  '@datadog/pprof@5.19.0':
+    resolution: {integrity: sha512-0ACUNjUdZ254ay7ZeAm8A3iO1t+jdPzAV8DuVHzqsuxV72KqygwT6ydq4/tm4LqIq51m1pQXEPT1L+j9myzn6g==}
     engines: {node: '>=16'}
 
   '@emnapi/core@1.11.2':
@@ -3115,7 +3115,7 @@ snapshots:
       hashery: 1.5.1
       keyv: 5.6.0
 
-  '@datadog/pprof@5.18.1':
+  '@datadog/pprof@5.19.0':
     dependencies:
       node-gyp-build: 4.8.4
       pprof-format: 2.3.1
@@ -4488,7 +4488,7 @@ snapshots:
 
   '@platformatic/wattpm-pprof-capture@3.68.0':
     dependencies:
-      '@datadog/pprof': 5.18.1
+      '@datadog/pprof': 5.19.0
       '@fastify/error': 4.2.0
       '@platformatic/globals': 3.68.0
       undici: 7.29.0
