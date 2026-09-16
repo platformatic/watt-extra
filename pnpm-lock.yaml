@@ -77,7 +77,7 @@ importers:
         version: 3.69.0(supports-color@7.2.0)
       '@platformatic/node':
         specifier: ^3.68.0
-        version: 3.68.0(supports-color@7.2.0)
+        version: 3.69.0(supports-color@7.2.0)
       '@platformatic/service':
         specifier: ^3.68.0
         version: 3.68.0(supports-color@7.2.0)
@@ -1216,8 +1216,8 @@ packages:
     resolution: {integrity: sha512-mXJoJ4zLLzSUCKMJKWYFLHF3UHen7alLJM+CRZCCcDADAlcYdJ0nCkhiYe81oEMRvulUG+gN20NKqtDCefp2mw==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/node@3.68.0':
-    resolution: {integrity: sha512-YiUw08xWur07Df5aKdPUOXGS65LL2dlCPdXyw3412GaA7E7AW9hm6vwb0y8wAgun8Lj4k+9Ba26mK+9L9RXaiQ==}
+  '@platformatic/node@3.69.0':
+    resolution: {integrity: sha512-TR2SEVoyuebNjEKLpfEKEjdcXb51NSUkE1gAW84OuBbmZFzyU445179nVfXUmesl9ZfHX31FChpDUyLQrxPGuQ==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/openapi-schema-validator@3.0.0':
@@ -4242,6 +4242,18 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@platformatic/generators@3.69.0(supports-color@7.2.0)':
+    dependencies:
+      '@fastify/error': 4.2.0
+      '@platformatic/foundation': 3.69.0(supports-color@7.2.0)
+      change-case-all: 2.1.0
+      execa: 9.6.1
+      fastify: 5.12.1
+      pino: 9.14.0
+      undici: 7.29.0
+    transitivePeerDependencies:
+      - supports-color
+
   '@platformatic/globals@3.68.0':
     dependencies:
       '@opentelemetry/api': 1.9.1
@@ -4341,12 +4353,12 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@platformatic/node@3.68.0(supports-color@7.2.0)':
+  '@platformatic/node@3.69.0(supports-color@7.2.0)':
     dependencies:
-      '@platformatic/basic': 3.68.0(supports-color@7.2.0)
-      '@platformatic/foundation': 3.68.0(supports-color@7.2.0)
-      '@platformatic/generators': 3.68.0(supports-color@7.2.0)
-      '@platformatic/globals': 3.68.0
+      '@platformatic/basic': 3.69.0(supports-color@7.2.0)
+      '@platformatic/foundation': 3.69.0(supports-color@7.2.0)
+      '@platformatic/generators': 3.69.0(supports-color@7.2.0)
+      '@platformatic/globals': 3.69.0
       '@watchable/unpromise': 1.0.2
       json5: 2.2.3
       light-my-request: 6.6.0
