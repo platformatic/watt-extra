@@ -65,7 +65,7 @@ importers:
     devDependencies:
       '@fastify/websocket':
         specifier: ^11.1.0
-        version: 11.3.0
+        version: 11.3.1
       '@platformatic/composer':
         specifier: ^3.68.0
         version: 3.68.0(supports-color@7.2.0)
@@ -279,8 +279,8 @@ packages:
   '@fastify/view@12.0.0':
     resolution: {integrity: sha512-Prcoim4yTwG6vPnIyGrWViDx6FFnchV0GQWeBgAgywlL1JflGhTLDhIsyd7EkOreYHyqALqxnmhhJhD4NrJTWw==}
 
-  '@fastify/websocket@11.3.0':
-    resolution: {integrity: sha512-g89ag4BCcD9YP5wBZXixzoLnuf5j89p/sXFcfpCiv2pdEkYYukBEoK3heVzqsp0EAtszVDc2BBZG0KZqeAShIA==}
+  '@fastify/websocket@11.3.1':
+    resolution: {integrity: sha512-3117Fteg0MC9zRl0ilNAQelRb+PNDvNuWe0yJ+jnLthaPPZnlml+GraGpesNUEQvLl8+3C+W4aKZz10XmQ10Mg==}
 
   '@graphql-typed-document-node/core@3.2.0':
     resolution: {integrity: sha512-mB9oAsNCm9aM3/SOv4YtBMqZbYj10R7dkq8byBqxGY/ncFwhf2oQzMV+LCRlWoDSEBJ3COiR1yeDvMtsoOsuFQ==}
@@ -3273,7 +3273,7 @@ snapshots:
       fastify-plugin: 5.1.0
       toad-cache: 3.7.4
 
-  '@fastify/websocket@11.3.0':
+  '@fastify/websocket@11.3.1':
     dependencies:
       duplexify: 4.1.3
       fastify-plugin: 6.0.0
@@ -4347,7 +4347,7 @@ snapshots:
       '@fastify/accepts': 5.0.4
       '@fastify/basic-auth': 6.3.0
       '@fastify/error': 4.2.0
-      '@fastify/websocket': 11.3.0
+      '@fastify/websocket': 11.3.1
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/exporter-metrics-otlp-proto': 0.219.0(@opentelemetry/api@1.9.1)
       '@platformatic/basic': 3.68.0(supports-color@7.2.0)
@@ -5553,7 +5553,7 @@ snapshots:
     dependencies:
       '@fastify/error': 4.2.0
       '@fastify/static': 10.1.3
-      '@fastify/websocket': 11.3.0
+      '@fastify/websocket': 11.3.1
       fastify-plugin: 6.0.0
       graphql: 16.14.2
       graphql-jit: 0.8.8(graphql@16.14.2)
@@ -6290,7 +6290,7 @@ snapshots:
 
   wattpm@3.68.0(supports-color@7.2.0):
     dependencies:
-      '@fastify/websocket': 11.3.0
+      '@fastify/websocket': 11.3.1
       '@platformatic/control': 3.68.0(supports-color@7.2.0)
       '@platformatic/foundation': 3.68.0(supports-color@7.2.0)
       '@platformatic/globals': 3.68.0
