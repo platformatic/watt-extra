@@ -11,6 +11,9 @@ import { setUpEnvironment, startICC } from './helper.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+// Matches the host port exposed by docker-compose.yml and the CI service
+const valkeyPort = 6390
+
 // The runtime reports a Next.js application as '@platformatic/next' (older
 // runtimes said 'next'). The Next patches, cache adapter included, must be
 // applied in both cases.
@@ -29,7 +32,7 @@ test('should configure the Next.js cache adapter for @platformatic/next applicat
 
   const clientOpts = {
     host: '127.0.0.1',
-    port: 6379,
+    port: valkeyPort,
     username: 'cache-user',
     password: 'cache-pass',
     keyPrefix: `${applicationId}:`
@@ -72,7 +75,7 @@ test('should configure the Next.js cache adapter for @platformatic/next applicat
   const nextConfig = await app.watt.runtime.getApplicationConfig('next')
   assert.deepStrictEqual(nextConfig.cache, {
     adapter: 'valkey',
-    url: 'valkey://cache-user:cache-pass@127.0.0.1:6379',
+    url: `valkey://cache-user:cache-pass@127.0.0.1:${valkeyPort}`,
     prefix: `${applicationId}:`,
     maxTTL: 604800
   })

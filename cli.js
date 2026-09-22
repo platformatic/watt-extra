@@ -4,6 +4,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import helpMeInit from 'help-me'
 import { readFileSync } from 'node:fs'
+import { once } from 'node:events'
 import { start, logger } from './index.js'
 import { getSimpleBanner } from './lib/banner.js'
 import { applyStartArgs } from './lib/start-args.js'
@@ -18,6 +19,21 @@ const helpMe = helpMeInit({
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 const commistInstance = commist()
+
+async function writeHelpPage (page = 'watt-extra') {
+  try {
+    for await (const chunk of helpMe.createStream(page)) {
+      if (!process.stdout.write(chunk)) {
+        await once(process.stdout, 'drain')
+      }
+    }
+  } catch {
+    process.stdout.write(`no such help file: ${page}.\n\n`)
+    if (page !== 'watt-extra') {
+      await writeHelpPage()
+    }
+  }
+}
 
 function version () {
   if (process.stdout.isTTY) {
@@ -40,7 +56,7 @@ async function startCommand (argv) {
   logger.debug({ args, argv }, 'Start command arguments')
 
   if (help) {
-    helpMe.toStdout('start')
+    await writeHelpPage('start')
     return true
   }
 
@@ -49,10 +65,10 @@ async function startCommand (argv) {
 }
 
 // Handle help command
-function help (args) {
+async function help (args) {
   // Make sure args exists and has the expected structure
   const command = args && args._ ? args._[0] : undefined
-  helpMe.toStdout(command || 'watt-extra')
+  await writeHelpPage(command || 'watt-extra')
 }
 
 // Register commands
@@ -69,13 +85,13 @@ async function run () {
 
     // Show help if no arguments are provided
     if (args.length === 0) {
-      helpMe.toStdout('watt-extra')
+      await writeHelpPage()
       return
     }
 
     // Handle help flag directly
     if (args[0] === '--help' || args[0] === '-h') {
-      helpMe.toStdout('watt-extra')
+      await writeHelpPage()
       return
     }
 
@@ -92,7 +108,7 @@ async function run () {
       if (command === 'help') {
         // Handle the 'help' command with optional subcommand
         const subcommand = args[1]
-        helpMe.toStdout(subcommand || 'watt-extra')
+        await writeHelpPage(subcommand || 'watt-extra')
         return
       }
 
@@ -102,7 +118,7 @@ async function run () {
       }
 
       logger.error(`Command "${command}" does not exist`)
-      helpMe.toStdout('watt-extra')
+      await writeHelpPage()
       process.exit(1)
     }
 
@@ -113,4 +129,4 @@ async function run () {
   }
 }
 
-run()
+await run()
