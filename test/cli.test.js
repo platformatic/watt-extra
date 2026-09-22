@@ -105,7 +105,7 @@ test('applyStartArgs: -l short flag also overrides env', () => {
 })
 
 // Regression test: cli.js used to have `default: { 'log-level': 'info' }` in its
-// minimist config, which populated args['log-level'] with 'info' whenever the flag
+// argument parser config, which populated args['log-level'] with 'info' whenever the flag
 // was not passed. The subsequent unconditional write to process.env.PLT_LOG_LEVEL
 // then silently clobbered the value provided by the deployment environment (e.g.
 // PLT_LOG_LEVEL=warn from k8s), forcing the runtime to log at info regardless.
@@ -138,4 +138,33 @@ test('applyStartArgs: --help short-circuits without mutating env', () => {
   const res = applyStartArgs(['--help'], env)
   assert.strictEqual(res.help, true)
   assert.strictEqual(env.PLT_LOG_LEVEL, undefined)
+})
+
+test('applyStartArgs: supports -h, --opt=value and short aliases', () => {
+  assert.strictEqual(applyStartArgs(['-h'], {}).help, true)
+
+  const env = {}
+  applyStartArgs(['--log-level=debug', '-i', 'http://icc.example', '-a', 'my-app', '-d', 'test'], env)
+  assert.strictEqual(env.PLT_LOG_LEVEL, 'debug')
+  assert.strictEqual(env.PLT_ICC_URL, 'http://icc.example')
+  assert.strictEqual(env.PLT_APP_NAME, 'my-app')
+  assert.strictEqual(env.PLT_APP_DIR, resolve('test'))
+})
+
+test('applyStartArgs: defaults PLT_APP_DIR to the current directory', () => {
+  const env = {}
+  applyStartArgs([], env)
+  assert.strictEqual(env.PLT_APP_DIR, process.cwd())
+})
+
+test('applyStartArgs: rejects unknown options and positionals', () => {
+  assert.throws(() => applyStartArgs(['--unknown'], {}), /Unknown option/)
+  assert.throws(() => applyStartArgs(['positional'], {}), /Unexpected argument/)
+})
+
+test('applyStartArgs: rejects string options without a value', () => {
+  assert.throws(() => applyStartArgs(['--log-level'], {}), /requires a value/)
+  assert.throws(() => applyStartArgs(['--log-level='], {}), /requires a value/)
+  assert.throws(() => applyStartArgs(['--log-level', '--help'], {}), /requires a value/)
+  assert.throws(() => applyStartArgs(['-l', '-h'], {}), /requires a value/)
 })

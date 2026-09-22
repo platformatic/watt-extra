@@ -85,3 +85,14 @@ watt-extra start --app-name=my-application
 # Set application directory. This is useful for development and test
 watt-extra start --app-dir=/path/to/application
 ```
+
+## Running the tests
+
+Some tests need a Valkey instance. Start it with Docker Compose before running the suite:
+
+```bash
+docker compose up -d --wait
+pnpm test
+```
+
+Valkey is exposed on the non-default port `6390`, so it does not clash with a local Redis or Valkey.

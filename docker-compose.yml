@@ -1,0 +1,14 @@
+services:
+  valkey:
+    image: valkey/valkey:9.2
+    ports:
+      # Non-default host port, to avoid clashing with a local Redis/Valkey
+      - "6390:6379"
+    environment:
+      # User expected by test/next-cache.test.js
+      VALKEY_EXTRA_FLAGS: "--user cache-user on >cache-pass allkeys allchannels +@all"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
