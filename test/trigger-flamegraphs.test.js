@@ -177,6 +177,91 @@ test('setupFlamegraphs should pass sourceMaps from application config to startPr
   equal(service2HeapCall.options.sourceMaps, false, 'Should pass sourceMaps=false for service-2 heap')
 })
 
+test('setupFlamegraphs should pass nodeModulesSourceMaps from runtime config to startProfiling', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port)
+  const startProfilingCalls = []
+
+  app.watt.runtime.getWorkers = async () => ({
+    'service-1:0': { application: 'service-1', worker: 0, status: 'started' },
+    'service-2:0': { application: 'service-2', worker: 0, status: 'started' },
+    'service-3:0': { application: 'service-3', worker: 0, status: 'started' }
+  })
+
+  app.watt.runtime.getApplicationDetails = async (workerFullId) => {
+    return { id: workerFullId, sourceMaps: !workerFullId.startsWith('service-3') }
+  }
+
+  app.watt.runtime.getRuntimeConfig = () => {
+    return {
+      nodeModulesSourceMaps: ['next'],
+      applications: [
+        { id: 'service-1', nodeModulesSourceMaps: ['next', '@next/next-server'] },
+        { id: 'service-2' },
+        { id: 'service-3' }
+      ]
+    }
+  }
+
+  app.watt.runtime.sendCommandToApplication = async (workerFullId, command, options) => {
+    if (command === 'startProfiling') {
+      startProfilingCalls.push({ workerFullId, command, options })
+      return { success: true }
+    }
+    return { success: false }
+  }
+
+  await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+
+  equal(startProfilingCalls.length, 6)
+
+  for (const call of startProfilingCalls) {
+    if (call.workerFullId === 'service-1:0') {
+      deepEqual(call.options.nodeModulesSourceMaps, ['next', '@next/next-server'])
+    } else if (call.workerFullId === 'service-2:0') {
+      deepEqual(call.options.nodeModulesSourceMaps, ['next'])
+    } else {
+      equal(call.options.sourceMaps, false)
+      equal('nodeModulesSourceMaps' in call.options, false)
+    }
+  }
+})
+
+test('setupFlamegraphs should start profiling when the runtime config cannot be read', async (t) => {
+  setUpEnvironment()
+
+  const app = createMockApp(port)
+  const startProfilingCalls = []
+
+  app.watt.runtime.getApplicationDetails = async (workerFullId) => {
+    return { id: workerFullId, sourceMaps: true }
+  }
+
+  app.watt.runtime.getRuntimeConfig = () => {
+    throw new Error('Runtime config not available')
+  }
+
+  app.watt.runtime.sendCommandToApplication = async (workerFullId, command, options) => {
+    if (command === 'startProfiling') {
+      startProfilingCalls.push({ workerFullId, command, options })
+      return { success: true }
+    }
+    return { success: false }
+  }
+
+  await flamegraphsPlugin(app)
+  await app.setupFlamegraphs()
+
+  equal(startProfilingCalls.length, 4)
+
+  for (const call of startProfilingCalls) {
+    equal(call.options.sourceMaps, true)
+    equal('nodeModulesSourceMaps' in call.options, false)
+  }
+})
+
 test('setupFlamegraphs should handle missing sourceMaps in application config', async (t) => {
   setUpEnvironment()
 

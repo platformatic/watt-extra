@@ -78,6 +78,29 @@ async function flamegraphs (app, _opts) {
   // API (older ICC): reporting is disabled for the lifetime of the pod.
   let stateReportingSupported = true
 
+  // The modules in node_modules whose source maps must be loaded, like next.
+  // They are not part of the application details, so they are read from the
+  // runtime configuration: the application setting overrides the runtime one.
+  const getNodeModulesSourceMaps = async (runtime, workerFullId) => {
+    const serviceId = workerFullId.split(':')[0]
+
+    let modules
+    try {
+      const config = await runtime.getRuntimeConfig()
+      for (const application of config?.applications ?? []) {
+        if (application.id === serviceId) {
+          modules = application.nodeModulesSourceMaps
+          break
+        }
+      }
+      modules ??= config?.nodeModulesSourceMaps
+    } catch (err) {
+      app.log.warn({ err, workerFullId }, 'Failed to read the node_modules source maps setting')
+    }
+
+    return Array.isArray(modules) ? modules : []
+  }
+
   const startProfilingOnWorker = async (runtime, workerFullId, types, logContext = {}, { grace = true } = {}) => {
     if (grace) {
       await sleep(gracePeriod)
@@ -87,12 +110,20 @@ async function flamegraphs (app, _opts) {
     const appDetails = await runtime.getApplicationDetails(workerFullId)
     const sourceMaps = appDetails.sourceMaps ?? false
 
+    const profilingOptions = { durationMillis, eluThreshold, sourceMaps }
+    if (sourceMaps) {
+      const nodeModulesSourceMaps = await getNodeModulesSourceMaps(runtime, workerFullId)
+      if (nodeModulesSourceMaps.length > 0) {
+        profilingOptions.nodeModulesSourceMaps = nodeModulesSourceMaps
+      }
+    }
+
     for (const type of types) {
       try {
         await runtime.sendCommandToApplication(
           workerFullId,
           'startProfiling',
-          { durationMillis, eluThreshold, type, sourceMaps }
+          { ...profilingOptions, type }
         )
       } catch (err) {
         // A worker which is already being profiled is considered covered
