@@ -7,3 +7,4 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - wattpm
   - '@platformatic/*'
+  - 'platformatic'
