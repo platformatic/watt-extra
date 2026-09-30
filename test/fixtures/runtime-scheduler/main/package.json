@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "@platformatic/service": "^2.70.0"
+    "@platformatic/service": "^3.71.0"
   }
 }
