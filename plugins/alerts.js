@@ -130,28 +130,36 @@ async function alerts (app, _opts) {
         lastServicesAlertTime[serviceId] = currentTime
         delete healthInfo.healthConfig
 
-        const authHeaders = await app.getAuthorizationHeaders()
+        // This runs in a runtime event listener, where an error would be an unhandled rejection
+        // that stops the runtime
+        let alert
+        try {
+          const authHeaders = await app.getAuthorizationHeaders()
 
-        const { statusCode, body } = await request(`${scalerUrl}/alerts`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders
-          },
-          body: JSON.stringify({
-            applicationId: app.instanceConfig?.applicationId,
-            alert: healthInfo,
-            healthHistory: healthCache
+          const { statusCode, body } = await request(`${scalerUrl}/alerts`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...authHeaders
+            },
+            body: JSON.stringify({
+              applicationId: app.instanceConfig?.applicationId,
+              alert: healthInfo,
+              healthHistory: healthCache
+            })
           })
-        })
 
-        if (statusCode !== 200) {
-          const error = await body.text()
-          app.log.error({ error }, 'Failed to send alert to scaler')
+          if (statusCode !== 200) {
+            const error = await body.text()
+            app.log.error({ error }, 'Failed to send alert to scaler')
+            return
+          }
+
+          alert = await body.json()
+        } catch (err) {
+          app.log.error({ err }, 'Failed to send alert to scaler')
           return
         }
-
-        const alert = await body.json()
 
         app.sendFlamegraphs({
           workerIds: [workerId],

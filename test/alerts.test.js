@@ -364,6 +364,54 @@ test('should not fail when health info is missing', async (t) => {
   assert.strictEqual(alertReceived, null, 'No alert should have been received')
 })
 
+test('should not fail when the scaler sends an invalid alert response', async (t) => {
+  const applicationName = 'test-app'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'service-1')
+
+  let alertsReceived = 0
+
+  const icc = await startICC(t, {
+    applicationId,
+    applicationName,
+    // An empty response, which is not valid JSON
+    processAlerts: () => {
+      alertsReceived++
+    }
+  })
+
+  setUpEnvironment({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000'
+  })
+
+  const app = await start()
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  const unhandledRejections = []
+  const onUnhandledRejection = (err) => unhandledRejections.push(err)
+  process.on('unhandledRejection', onUnhandledRejection)
+  t.after(() => process.removeListener('unhandledRejection', onUnhandledRejection))
+
+  emitHealthEvent(app, {
+    id: 'main:0',
+    application: 'main',
+    currentHealth: { elu: 0.95, heapUsed: 76798040, heapTotal: 99721216 },
+    unhealthy: true,
+    healthConfig: { enabled: true, maxELU: 0.85, maxHeapUsed: 0.99 }
+  })
+
+  await sleep(500)
+
+  assert.strictEqual(alertsReceived, 1)
+  assert.deepStrictEqual(unhandledRejections, [])
+})
+
 test('should respect alert retention window', async (t) => {
   const applicationName = 'test-app'
   const applicationId = randomUUID()
