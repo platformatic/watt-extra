@@ -15,14 +15,14 @@ importers:
         specifier: ^4.2.0
         version: 4.2.0
       '@platformatic/foundation':
-        specifier: ^3.73.0-alpha.0
-        version: 3.73.0-alpha.0(supports-color@7.2.0)
+        specifier: ^3.73.0
+        version: 3.73.0(supports-color@7.2.0)
       '@platformatic/runtime':
-        specifier: ^3.73.0-alpha.0
-        version: 3.73.0-alpha.0(supports-color@7.2.0)
+        specifier: ^3.73.0
+        version: 3.73.0(supports-color@7.2.0)
       '@platformatic/wattpm-pprof-capture':
-        specifier: ^3.73.0-alpha.0
-        version: 3.73.0-alpha.0
+        specifier: ^3.73.0
+        version: 3.73.0
       avvio:
         specifier: ^9.1.0
         version: 9.3.0
@@ -64,17 +64,17 @@ importers:
         specifier: ^11.1.0
         version: 11.3.1
       '@platformatic/composer':
-        specifier: ^3.73.0-alpha.0
-        version: 3.73.0-alpha.0(supports-color@7.2.0)
+        specifier: ^3.73.0
+        version: 3.73.0(supports-color@7.2.0)
       '@platformatic/next':
-        specifier: ^3.73.0-alpha.0
-        version: 3.73.0-alpha.0(supports-color@7.2.0)
+        specifier: ^3.73.0
+        version: 3.73.0(supports-color@7.2.0)
       '@platformatic/node':
-        specifier: ^3.73.0-alpha.0
-        version: 3.73.0-alpha.0(supports-color@7.2.0)
+        specifier: ^3.73.0
+        version: 3.73.0(supports-color@7.2.0)
       '@platformatic/service':
-        specifier: ^3.73.0-alpha.0
-        version: 3.73.0-alpha.0(supports-color@7.2.0)
+        specifier: ^3.73.0
+        version: 3.73.0(supports-color@7.2.0)
       atomic-sleep:
         specifier: ^1.0.0
         version: 1.0.0
@@ -100,8 +100,8 @@ importers:
         specifier: ^16.2.10
         version: 16.3.5(@opentelemetry/api@1.9.1)(@types/node@26.1.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       platformatic:
-        specifier: ^3.73.0-alpha.0
-        version: 3.73.0-alpha.0(supports-color@7.2.0)
+        specifier: ^3.73.0
+        version: 3.73.0(supports-color@7.2.0)
       pprof-format:
         specifier: ^2.1.0
         version: 2.3.1
@@ -879,12 +879,6 @@ packages:
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
-  '@opentelemetry/core@2.10.0':
-    resolution: {integrity: sha512-/wNZ8twnEQQA4HoHu22+vcsdru6pWPWxW+7w+FlxT6Id7PE/WIbZmVKkte+PF72e0F2dnImFeHD2syyE1Mw6MQ==}
-    engines: {node: ^18.19.0 || >=20.6.0}
-    peerDependencies:
-      '@opentelemetry/api': '>=1.0.0 <1.10.0'
-
   '@opentelemetry/core@2.12.0':
     resolution: {integrity: sha512-1HsSAuvT4/my0QrXWsyXFdWjKaPeCHsismKZgEEIb8NK13LP6DrMRlsUbvD/0F9mDWK3xDom9AMv3IscxgOnOQ==}
     engines: {node: ^18.19.0 || >=20.6.0}
@@ -1047,12 +1041,6 @@ packages:
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
-  '@opentelemetry/resources@2.10.0':
-    resolution: {integrity: sha512-q6MMm2zhggzsHVNbabYwut+a6nbuQQe3URUoxaojM/8K1IBfwwPzvxIjNi2/lI1TFe+fMHMW9MWhrtDLEXEnkA==}
-    engines: {node: ^18.19.0 || >=20.6.0}
-    peerDependencies:
-      '@opentelemetry/api': '>=1.3.0 <1.10.0'
-
   '@opentelemetry/resources@2.12.0':
     resolution: {integrity: sha512-+rSRoOdln6NhXTVcBdHSlZxJDNzwxadeweK2ltZO3tVtfp6aklABc06xclDk6ovRR+EiGgIcSbh/6NgjFhnb3A==}
     engines: {node: ^18.19.0 || >=20.6.0}
@@ -1130,16 +1118,16 @@ packages:
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
 
-  '@platformatic/basic@3.73.0-alpha.0':
-    resolution: {integrity: sha512-iGX0AO2UOnRNq2vw9lC0lIDj6AsMuuUFfOhVkRPh0KbPxu9VABJVNY2HKHl7IiQArtVJT005YVlkphri0OazHQ==}
+  '@platformatic/basic@3.73.0':
+    resolution: {integrity: sha512-m71MSUrR7XrWKm6D9U/q2X6YLSPjD8Uy4/BpaJ5fHszPQ7Yp6d582pFPTK+LSZj6qcm66MgUtGrz354kWzQcFg==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/composer@3.73.0-alpha.0':
-    resolution: {integrity: sha512-+fuvH42iLYLuNp54Q9dPX4SLYKK1fiAgDw1NhrMw21QL5174WFyZRxzgZi2EjWs2VRfwayllKEoRvOvgCA1crg==}
+  '@platformatic/composer@3.73.0':
+    resolution: {integrity: sha512-G6KH85y65ZPeoiIdwidrnRV1HYvHxGB4QRnHSxgOKq+ldpF2V0kBfTpM663TXOqmhNQ+M9oBduxjxEg6uhC/ZA==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/control@3.73.0-alpha.0':
-    resolution: {integrity: sha512-Qudgm3k3F5FdAsZHIrL0oDgzWlde5OG7/HKsHxpnOdJACf4rLOC9134/1nm24z+QiHj0chlW4TxbQz+3trnDew==}
+  '@platformatic/control@3.73.0':
+    resolution: {integrity: sha512-treN6QMhhtWuQ5jQO8evi3Vwf4xwfQr8y/ajwc83SW2vEzqIW4+SXkpfdJqGNAzGaNVetGo4OHmuWSrcG4kLKA==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/dynamic-buffer@0.4.0':
@@ -1149,20 +1137,20 @@ packages:
   '@platformatic/fastify-openapi-glue@5.2.0':
     resolution: {integrity: sha512-5Syxh9EHCcxwrTvqRm2jv9Lpw7AUni3EWK95/5aFtIFAtz+POxlCbMaHcz3rdAD+D44nd1ZGqWa6wZ6dKNTqlg==}
 
-  '@platformatic/foundation@3.73.0-alpha.0':
-    resolution: {integrity: sha512-8b5R2IKtsyHv4Tzq6lT7zDlPcPQZ40FZjPcSgwdOPfbWx9AC8PYh63Lc6eSRZBP7Trbt4INGGmN1z5SCGZBZBw==}
+  '@platformatic/foundation@3.73.0':
+    resolution: {integrity: sha512-FF6lBEj+ZhtADTftI5GiR+gGayLWeNfxGoGyMQvUh2MGEFrEPycRZie6mWSR91OWbo/bOC2Z28nyTVx9G2RLMg==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/gateway@3.73.0-alpha.0':
-    resolution: {integrity: sha512-k3ktLMg3NOPrpqQLLDAsm1An2zG3OfodLBTwqOgWwCVEFgjC1pa6mK0WvE6c+VupOqx9/xWGqtVlK1dThxWJsw==}
+  '@platformatic/gateway@3.73.0':
+    resolution: {integrity: sha512-9Dg02TTEcFhpluDNsy6MMRgifhfC3wgXjICaydCsrrLBRkh8X4Tq8qrBe+5a80ldQI8Gn845w8hk5Ie7IvbQRQ==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/generators@3.73.0-alpha.0':
-    resolution: {integrity: sha512-vXFdm3iSPira9yjOukOmy5JQrji1jURqPqA5PE77163Ha9yhupIO5oyjjJ8dEYMMW95ItXkuzuweBfBDWJ/EEQ==}
+  '@platformatic/generators@3.73.0':
+    resolution: {integrity: sha512-padMd6QTJBzNqem38VLkr6ehgH7IbWPnD/B3jWoutiVw6osQmv1E4uo7Ej5VijuhFrHqNVKfKu0vAMorqb8OUg==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/globals@3.73.0-alpha.0':
-    resolution: {integrity: sha512-n0KmE6V6tKpl7P+KnOo5/h9wuGB/8SJifEyE/CSYhIT4udWXFBRWUFGiOmTU1Mk2xd+Ol6XRNebsNaZ3i0s7+A==}
+  '@platformatic/globals@3.73.0':
+    resolution: {integrity: sha512-QZbZmJ9oGxT1Osm+WR4g2R6dkQUWoo5DmCUW9s3R7ozf/pIV+Dhrx8gFCI/r+Va1UNZdsCkWGrPmq/6l1Mx+sQ==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/graphql-composer@0.11.0':
@@ -1175,24 +1163,24 @@ packages:
     resolution: {integrity: sha512-jE+dWYDp32CITSOHvHi67h3hVmo34n2fzBBNxpP+74WUo1EyMPcvuVVwNR+4aKsY+vUYuKKVf/yYkvQ4bP/Dlw==}
     engines: {node: '>= 22.19.0'}
 
-  '@platformatic/itc@3.73.0-alpha.0':
-    resolution: {integrity: sha512-07zstpTyuSjqSKSUUHfHjYhj6F8HYTMFHx5d7dgpbzVYkQ8iOYi68k7wdOxEIQj7bGB+pTc9oxfT8345RZojoQ==}
+  '@platformatic/itc@3.73.0':
+    resolution: {integrity: sha512-5f9uwAz2IvLuFn1sWeqvlmst+xLJYvPdYhq1kIFFBOcRAmohFLGTfpYRzMzcF9eDNr/+I3+4zWTxN1DZnw0+IQ==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/job-queue@0.4.1':
     resolution: {integrity: sha512-oFXAi7DDRVGHqPzfkpcs8i3TKx3ppz4YQ1KIkNEkJWYpzglJv6Xkc/aF4tgUZBaUptEGLorwE4SsEFVGspgh0A==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/metrics@3.73.0-alpha.0':
-    resolution: {integrity: sha512-CO2kT98koz08APTWS/hdRFhCYEsASDLuGjJZjRJImhz72rwlBJPmVkmRwLUKM8CGJy0sx3PFWFTpoTZSeEmG3g==}
+  '@platformatic/metrics@3.73.0':
+    resolution: {integrity: sha512-SfoNW7ZCldDtPbHAD8Xz1v3f1euslq+7kD7RFMNQx3fHL7BA2Q9FJoqJSonnL+1wVaGtD2ABw2a+MH4GYpzhRA==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/next@3.73.0-alpha.0':
-    resolution: {integrity: sha512-LFI6gr7tJ0JP9ITFnj1DxKElqxm+6v0+xWUAGPINmyc97I0N5lfYcwgJltZqrpCDoidtd9WBZ+3uwgiAs015MQ==}
+  '@platformatic/next@3.73.0':
+    resolution: {integrity: sha512-HKPioUD8YmF63MenRY4w6p9pBsk43uYPTke3UaDwvJGNEVRLnTeXvIY7dU6EqDyuDJUojbHZwa2lAga+Vw3Mhw==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/node@3.73.0-alpha.0':
-    resolution: {integrity: sha512-vmDI3iibqndivSAN5kINQ77WYkxCZZ6epr439WLh1tUMzeDAvHxgZntjZxOCANXQ6EbKK7OMhpyWfoZZN0lJHw==}
+  '@platformatic/node@3.73.0':
+    resolution: {integrity: sha512-vYLDW1KRNPy7UAzmghR6bRPS/SnAgR5oPrcfQBqtMIoygH80Ugn6FaO1vD3yTWt1HS2vrgx7NDjMGpU+2HRb4g==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/openapi-schema-validator@3.0.0':
@@ -1207,27 +1195,27 @@ packages:
     engines: {node: '>=20.18.1'}
     hasBin: true
 
-  '@platformatic/runtime@3.73.0-alpha.0':
-    resolution: {integrity: sha512-IUVmuCYi7g1LbcSpk9ZJXs0S8WVD1ruargJDSRLdLZZk4RYu60fmpeSYTwudl15CIK446H8z+K3ap6SY8WhGRg==}
+  '@platformatic/runtime@3.73.0':
+    resolution: {integrity: sha512-ePnhB7y5fOxaYVtTq3epCXcNqj4//21CJVwtfuEnGJOYPciTC/ZBFbLeqENyQA/AsFMD2q/vl/famiLU1YU3HA==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/scalar-theme@3.73.0-alpha.0':
-    resolution: {integrity: sha512-iWSRMkUtDp8JV46gstBg0pr0MUxMGOljCLb8lLH46/1+av0XGDkDUwsQDz8nsTqGiVx/wsGVjv8pStTIyO/2LQ==}
+  '@platformatic/scalar-theme@3.73.0':
+    resolution: {integrity: sha512-UJ5GNCC91VysYRLOl1wARtwJKAA5lrr9riX7op+7lPHyPsyFYcVfbc7xpuijQgI7w1iUCGgaX8NRicsLs/7big==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/service@3.73.0-alpha.0':
-    resolution: {integrity: sha512-W1VbxUyyJvbPw6AtNAP+1/TvoQGJ1QExrsZlaqovQIG9gXpLbAqs+mRaiuidS9N6TV9rdsCq9GQcE8263WdvNA==}
+  '@platformatic/service@3.73.0':
+    resolution: {integrity: sha512-FrkTwcz19Wq62dZNAPYUB5icYDkRPOHXRlD+KgTuOTIClZx0I3Wo2L7yh/KCBqcWUhmIXsT3PX/HNnBz81v0gA==}
     engines: {node: '>=22.19.0'}
 
-  '@platformatic/telemetry@3.73.0-alpha.0':
-    resolution: {integrity: sha512-BsaQ6Xg4ETM+dS4uaJVKugjSpm7rV/4epODSUQFkUJi9Ozh3Ab3oQudMhiuYDuGzN5l8NsLVcFYUrQbyJpdOxg==}
+  '@platformatic/telemetry@3.73.0':
+    resolution: {integrity: sha512-wAc7M2DVGpPxjqSpJBDYgvfKnSsX5/+3pYcst00h7U/vqyfSq6Aq7V1fVEA+jxJGWi6jT9caX2WjuBPVigmW8Q==}
     engines: {node: '>=22.19.0'}
 
   '@platformatic/undici-cache-memory@0.9.0':
     resolution: {integrity: sha512-ub1oMcewDpZD5PLFyfXeZYVe3aQBZXVwZ3wUssjvErdavBex+aptvps9UGDDD0k6L1KNlCCJZE74WrxRNGiewg==}
 
-  '@platformatic/wattpm-pprof-capture@3.73.0-alpha.0':
-    resolution: {integrity: sha512-Rlm5hTLwpuFecD9q3ds4sFJ24s5JmRykEjs3ZqmoFm81N/7qz8ScsvrFxz9mcO0UHNaf1grmcZFcrliAV0eObA==}
+  '@platformatic/wattpm-pprof-capture@3.73.0':
+    resolution: {integrity: sha512-GVZvMY0US63ir2Pp+NvR5+G9A855UzNOZx0LkD7FJh3ttDKW43nhvA8MuPT6xxlQy1JzmXoW2I4LhPkbWoMxag==}
     engines: {node: '>=22.19.0'}
 
   '@protobufjs/aspromise@1.1.2':
@@ -2481,8 +2469,8 @@ packages:
     resolution: {integrity: sha512-8OEwKp5juEvb/MjpIc4hjqfgCNysrS94RIOMXYvpYCdm/jglrKEiAYmiumbmGhCvs+IcInsphYDFwqrjr7398w==}
     hasBin: true
 
-  platformatic@3.73.0-alpha.0:
-    resolution: {integrity: sha512-sJSlDgcr2WrrPD8SZHOumbz4BTgj4I7YqR/ri8moPH8PkeUk9B+/65Yd6+iKXZk6hvT2A2oF4YXyFwud9yuVVQ==}
+  platformatic@3.73.0:
+    resolution: {integrity: sha512-RPgJGiX3CDEK2LsVpgjffLYFTddMNLNizPAcTY/amU/qYFPqBkeyZ3KGPf9C3Wfw368uWNbBFDFhbEGfZnF9aQ==}
     engines: {node: '>=22.19.0'}
     hasBin: true
 
@@ -2914,8 +2902,8 @@ packages:
     resolution: {integrity: sha512-kiGUalWN+rgBJ/1OHZsBtU4rXZOfj/7rKQxULKlIzwzQSvMJUUNgPwJEEh7gU6xEVxC0ahoOBvN2YI8GH6FNgA==}
     engines: {node: '>=10.12.0'}
 
-  wattpm@3.73.0-alpha.0:
-    resolution: {integrity: sha512-G7m+ZMWLLqe9Y5ElVpH7/wBJJt9pvsGF6lRlHDMUHDsKslxSfyuLgjaPz6CaxvG5MVStVFWl4GASqIJQxrFzGg==}
+  wattpm@3.73.0:
+    resolution: {integrity: sha512-sviow5lRbvRPqiVH2xoMIceFRZMh5GyzKv9X5EGpjzdTRZFLY7evSX4v29Hflod3eTXZCZlNRz1kmPtBA1qQJQ==}
     engines: {node: '>=22.19.0'}
     hasBin: true
 
@@ -3199,7 +3187,7 @@ snapshots:
       fast-querystring: 1.1.2
       fastify-plugin: 6.0.0
       toad-cache: 3.7.4
-      undici: 7.29.0
+      undici: 7.29.1
 
   '@fastify/send@4.1.1':
     dependencies:
@@ -3658,11 +3646,6 @@ snapshots:
     dependencies:
       '@opentelemetry/api': 1.9.1
 
-  '@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1)':
-    dependencies:
-      '@opentelemetry/api': 1.9.1
-      '@opentelemetry/semantic-conventions': 1.43.0
-
   '@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
@@ -3795,7 +3778,7 @@ snapshots:
   '@opentelemetry/instrumentation-undici@0.33.0(@opentelemetry/api@1.9.1)(supports-color@7.2.0)':
     dependencies:
       '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.10.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/core': 2.12.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/instrumentation': 0.223.0(@opentelemetry/api@1.9.1)(supports-color@7.2.0)
       '@opentelemetry/semantic-conventions': 1.43.0
     transitivePeerDependencies:
@@ -3867,12 +3850,6 @@ snapshots:
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/core': 2.12.0(@opentelemetry/api@1.9.1)
-
-  '@opentelemetry/resources@2.10.0(@opentelemetry/api@1.9.1)':
-    dependencies:
-      '@opentelemetry/api': 1.9.1
-      '@opentelemetry/core': 2.10.0(@opentelemetry/api@1.9.1)
-      '@opentelemetry/semantic-conventions': 1.43.0
 
   '@opentelemetry/resources@2.12.0(@opentelemetry/api@1.9.1)':
     dependencies:
@@ -3983,47 +3960,47 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
-  '@platformatic/basic@3.73.0-alpha.0(supports-color@7.2.0)':
+  '@platformatic/basic@3.73.0(supports-color@7.2.0)':
     dependencies:
       '@fastify/error': 4.2.0
-      '@platformatic/foundation': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/globals': 3.73.0-alpha.0
-      '@platformatic/itc': 3.73.0-alpha.0
-      '@platformatic/metrics': 3.73.0-alpha.0
-      '@platformatic/telemetry': 3.73.0-alpha.0(supports-color@7.2.0)
+      '@platformatic/foundation': 3.73.0(supports-color@7.2.0)
+      '@platformatic/globals': 3.73.0
+      '@platformatic/itc': 3.73.0
+      '@platformatic/metrics': 3.73.0
+      '@platformatic/telemetry': 3.73.0(supports-color@7.2.0)
       execa: 9.6.1
       fast-json-patch: 3.1.1
       pino: 9.14.0
       pino-abstract-transport: 2.0.0
       semver: 7.8.5
       split2: 4.2.0
-      undici: 7.29.0
+      undici: 7.29.1
       ws: 8.21.3
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
 
-  '@platformatic/composer@3.73.0-alpha.0(supports-color@7.2.0)':
+  '@platformatic/composer@3.73.0(supports-color@7.2.0)':
     dependencies:
-      '@platformatic/foundation': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/gateway': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/globals': 3.73.0-alpha.0
+      '@platformatic/foundation': 3.73.0(supports-color@7.2.0)
+      '@platformatic/gateway': 3.73.0(supports-color@7.2.0)
+      '@platformatic/globals': 3.73.0
     transitivePeerDependencies:
       - bufferutil
       - chokidar
       - supports-color
       - utf-8-validate
 
-  '@platformatic/control@3.73.0-alpha.0(supports-color@7.2.0)':
+  '@platformatic/control@3.73.0(supports-color@7.2.0)':
     dependencies:
       '@fastify/error': 4.2.0
-      '@platformatic/foundation': 3.73.0-alpha.0(supports-color@7.2.0)
+      '@platformatic/foundation': 3.73.0(supports-color@7.2.0)
       help-me: 5.0.0
       pino: 9.14.0
       pino-pretty: 13.1.3
       table: 6.9.0
-      undici: 7.29.0
+      undici: 7.29.1
       ws: 8.21.3
     transitivePeerDependencies:
       - bufferutil
@@ -4038,7 +4015,7 @@ snapshots:
       fastify-plugin: 5.1.0
       js-yaml: 4.3.1
 
-  '@platformatic/foundation@3.73.0-alpha.0(supports-color@7.2.0)':
+  '@platformatic/foundation@3.73.0(supports-color@7.2.0)':
     dependencies:
       '@fastify/deepmerge': 3.2.1
       '@fastify/error': 4.2.0
@@ -4054,12 +4031,12 @@ snapshots:
       pino: 9.14.0
       pino-pretty: 13.1.3
       semver: 7.8.5
-      undici: 7.29.0
+      undici: 7.29.1
       yaml: 2.9.0
     transitivePeerDependencies:
       - supports-color
 
-  '@platformatic/gateway@3.73.0-alpha.0(supports-color@7.2.0)':
+  '@platformatic/gateway@3.73.0(supports-color@7.2.0)':
     dependencies:
       '@fastify/error': 4.2.0
       '@fastify/http-proxy': 11.6.4
@@ -4067,16 +4044,16 @@ snapshots:
       '@fastify/static': 10.1.3
       '@fastify/swagger': 9.8.1(supports-color@7.2.0)
       '@fastify/view': 12.0.0
-      '@platformatic/basic': 3.73.0-alpha.0(supports-color@7.2.0)
+      '@platformatic/basic': 3.73.0(supports-color@7.2.0)
       '@platformatic/dynamic-buffer': 0.4.0
       '@platformatic/fastify-openapi-glue': 5.2.0
-      '@platformatic/foundation': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/globals': 3.73.0-alpha.0
+      '@platformatic/foundation': 3.73.0(supports-color@7.2.0)
+      '@platformatic/globals': 3.73.0
       '@platformatic/graphql-composer': 0.11.0
       '@platformatic/openapi-schema-validator': 3.0.0
-      '@platformatic/scalar-theme': 3.73.0-alpha.0
-      '@platformatic/service': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/telemetry': 3.73.0-alpha.0(supports-color@7.2.0)
+      '@platformatic/scalar-theme': 3.73.0
+      '@platformatic/service': 3.73.0(supports-color@7.2.0)
+      '@platformatic/telemetry': 3.73.0(supports-color@7.2.0)
       '@scalar/fastify-api-reference': 1.75.0
       ajv: 8.20.0
       console-table-printer: 2.16.1
@@ -4100,26 +4077,26 @@ snapshots:
       rfdc: 1.4.1
       safe-stable-stringify: 2.5.0
       semgrator: 0.3.0
-      undici: 7.29.0
+      undici: 7.29.1
     transitivePeerDependencies:
       - bufferutil
       - chokidar
       - supports-color
       - utf-8-validate
 
-  '@platformatic/generators@3.73.0-alpha.0(supports-color@7.2.0)':
+  '@platformatic/generators@3.73.0(supports-color@7.2.0)':
     dependencies:
       '@fastify/error': 4.2.0
-      '@platformatic/foundation': 3.73.0-alpha.0(supports-color@7.2.0)
+      '@platformatic/foundation': 3.73.0(supports-color@7.2.0)
       change-case-all: 2.1.0
       execa: 9.6.1
       fastify: 5.12.5
       pino: 9.14.0
-      undici: 7.29.0
+      undici: 7.29.1
     transitivePeerDependencies:
       - supports-color
 
-  '@platformatic/globals@3.73.0-alpha.0':
+  '@platformatic/globals@3.73.0':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@platformatic/prom-client': 1.0.0
@@ -4133,7 +4110,7 @@ snapshots:
       mercurius: 16.10.0(graphql@16.14.2)
       metaline: 1.1.0
       pino: 9.14.0
-      undici: 7.29.0
+      undici: 7.29.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -4147,18 +4124,18 @@ snapshots:
       http-errors-enhanced: 4.0.2
       is-animated: 2.0.2
       sharp: 0.34.5
-      undici: 7.29.0
+      undici: 7.29.1
     optionalDependencies:
       '@platformatic/job-queue': 0.4.1(supports-color@7.2.0)
       iovalkey: 0.3.3(supports-color@7.2.0)
     transitivePeerDependencies:
       - supports-color
 
-  '@platformatic/itc@3.73.0-alpha.0':
+  '@platformatic/itc@3.73.0':
     dependencies:
       '@fastify/error': 4.2.0
       '@opentelemetry/api': 1.9.1
-      '@platformatic/globals': 3.73.0-alpha.0
+      '@platformatic/globals': 3.73.0
       '@watchable/unpromise': 1.0.2
 
   '@platformatic/job-queue@0.4.1(supports-color@7.2.0)':
@@ -4171,22 +4148,22 @@ snapshots:
       - supports-color
     optional: true
 
-  '@platformatic/metrics@3.73.0-alpha.0':
+  '@platformatic/metrics@3.73.0':
     dependencies:
-      '@platformatic/globals': 3.73.0-alpha.0
+      '@platformatic/globals': 3.73.0
       '@platformatic/http-metrics': 0.3.0
       '@platformatic/prom-client': 1.0.0
       '@platformatic/promotel': 0.2.2
 
-  '@platformatic/next@3.73.0-alpha.0(supports-color@7.2.0)':
+  '@platformatic/next@3.73.0(supports-color@7.2.0)':
     dependencies:
       '@babel/generator': 7.29.8
       '@babel/parser': 7.29.8
       '@babel/traverse': 7.29.8(supports-color@7.2.0)
       '@babel/types': 7.29.8
-      '@platformatic/basic': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/foundation': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/globals': 3.73.0-alpha.0
+      '@platformatic/basic': 3.73.0(supports-color@7.2.0)
+      '@platformatic/foundation': 3.73.0(supports-color@7.2.0)
+      '@platformatic/globals': 3.73.0
       '@platformatic/image-optimizer': 0.2.1(supports-color@7.2.0)
       amaro: 1.1.11
       iovalkey: 0.4.0(supports-color@7.2.0)
@@ -4198,12 +4175,12 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@platformatic/node@3.73.0-alpha.0(supports-color@7.2.0)':
+  '@platformatic/node@3.73.0(supports-color@7.2.0)':
     dependencies:
-      '@platformatic/basic': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/foundation': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/generators': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/globals': 3.73.0-alpha.0
+      '@platformatic/basic': 3.73.0(supports-color@7.2.0)
+      '@platformatic/foundation': 3.73.0(supports-color@7.2.0)
+      '@platformatic/generators': 3.73.0(supports-color@7.2.0)
+      '@platformatic/globals': 3.73.0
       '@watchable/unpromise': 1.0.2
       json5: 2.2.3
       light-my-request: 6.6.0
@@ -4228,9 +4205,9 @@ snapshots:
       long: 5.3.2
       prom-client: 15.1.3
       protobufjs: 8.7.2
-      undici: 7.29.0
+      undici: 7.29.1
 
-  '@platformatic/runtime@3.73.0-alpha.0(supports-color@7.2.0)':
+  '@platformatic/runtime@3.73.0(supports-color@7.2.0)':
     dependencies:
       '@fastify/accepts': 5.0.4
       '@fastify/basic-auth': 6.3.0
@@ -4238,14 +4215,14 @@ snapshots:
       '@fastify/websocket': 11.3.1
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/exporter-metrics-otlp-proto': 0.223.0(@opentelemetry/api@1.9.1)
-      '@platformatic/basic': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/foundation': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/generators': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/globals': 3.73.0-alpha.0
-      '@platformatic/itc': 3.73.0-alpha.0
-      '@platformatic/metrics': 3.73.0-alpha.0
+      '@platformatic/basic': 3.73.0(supports-color@7.2.0)
+      '@platformatic/foundation': 3.73.0(supports-color@7.2.0)
+      '@platformatic/generators': 3.73.0(supports-color@7.2.0)
+      '@platformatic/globals': 3.73.0
+      '@platformatic/itc': 3.73.0
+      '@platformatic/metrics': 3.73.0
       '@platformatic/prom-client': 1.0.0
-      '@platformatic/telemetry': 3.73.0-alpha.0(supports-color@7.2.0)
+      '@platformatic/telemetry': 3.73.0(supports-color@7.2.0)
       '@platformatic/undici-cache-memory': 0.9.0
       '@watchable/unpromise': 1.0.2
       change-case-all: 2.1.0
@@ -4264,7 +4241,7 @@ snapshots:
       semgrator: 0.3.0
       sonic-boom: 4.2.1
       systeminformation: 5.33.1
-      undici: 7.29.0
+      undici: 7.29.1
       undici-thread-interceptor: 1.5.0
       ws: 8.21.3
     transitivePeerDependencies:
@@ -4272,9 +4249,9 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@platformatic/scalar-theme@3.73.0-alpha.0': {}
+  '@platformatic/scalar-theme@3.73.0': {}
 
-  '@platformatic/service@3.73.0-alpha.0(supports-color@7.2.0)':
+  '@platformatic/service@3.73.0(supports-color@7.2.0)':
     dependencies:
       '@fastify/accepts': 5.0.4
       '@fastify/autoload': 6.5.0
@@ -4284,13 +4261,13 @@ snapshots:
       '@fastify/static': 10.1.3
       '@fastify/swagger': 9.8.1(supports-color@7.2.0)
       '@fastify/under-pressure': 9.1.0
-      '@platformatic/basic': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/foundation': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/generators': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/globals': 3.73.0-alpha.0
-      '@platformatic/metrics': 3.73.0-alpha.0
-      '@platformatic/scalar-theme': 3.73.0-alpha.0
-      '@platformatic/telemetry': 3.73.0-alpha.0(supports-color@7.2.0)
+      '@platformatic/basic': 3.73.0(supports-color@7.2.0)
+      '@platformatic/foundation': 3.73.0(supports-color@7.2.0)
+      '@platformatic/generators': 3.73.0(supports-color@7.2.0)
+      '@platformatic/globals': 3.73.0
+      '@platformatic/metrics': 3.73.0
+      '@platformatic/scalar-theme': 3.73.0
+      '@platformatic/telemetry': 3.73.0(supports-color@7.2.0)
       '@scalar/fastify-api-reference': 1.75.0
       '@types/node': 22.20.1
       '@types/ws': 8.18.1
@@ -4315,13 +4292,13 @@ snapshots:
       pino-pretty: 13.1.3
       rfdc: 1.4.1
       semgrator: 0.3.0
-      undici: 7.29.0
+      undici: 7.29.1
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
 
-  '@platformatic/telemetry@3.73.0-alpha.0(supports-color@7.2.0)':
+  '@platformatic/telemetry@3.73.0(supports-color@7.2.0)':
     dependencies:
       '@fastify/swagger': 9.8.1(supports-color@7.2.0)
       '@opentelemetry/api': 1.9.1
@@ -4337,8 +4314,8 @@ snapshots:
       '@opentelemetry/sdk-trace': 2.12.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-base': 2.12.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.43.0
-      '@platformatic/foundation': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/globals': 3.73.0-alpha.0
+      '@platformatic/foundation': 3.73.0(supports-color@7.2.0)
+      '@platformatic/globals': 3.73.0
       fast-uri: 4.1.3
       fastify-plugin: 5.1.0
     transitivePeerDependencies:
@@ -4346,13 +4323,13 @@ snapshots:
 
   '@platformatic/undici-cache-memory@0.9.0': {}
 
-  '@platformatic/wattpm-pprof-capture@3.73.0-alpha.0':
+  '@platformatic/wattpm-pprof-capture@3.73.0':
     dependencies:
       '@datadog/pprof': 5.19.0
       '@fastify/error': 4.2.0
-      '@platformatic/globals': 3.73.0-alpha.0
+      '@platformatic/globals': 3.73.0
       source-map: 0.8.0
-      undici: 7.29.0
+      undici: 7.29.1
 
   '@protobufjs/aspromise@1.1.2': {}
 
@@ -5652,7 +5629,7 @@ snapshots:
       '@opentelemetry/exporter-logs-otlp-proto': 0.220.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/otlp-exporter-base': 0.220.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/otlp-grpc-exporter-base': 0.220.0(@opentelemetry/api@1.9.1)
-      '@opentelemetry/resources': 2.10.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources': 2.12.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-logs': 0.220.0(@opentelemetry/api@1.9.1)
       pino: 10.3.1
       pino-abstract-transport: 3.0.0
@@ -5703,10 +5680,10 @@ snapshots:
       sonic-boom: 4.2.1
       thread-stream: 3.2.0
 
-  platformatic@3.73.0-alpha.0(supports-color@7.2.0):
+  platformatic@3.73.0(supports-color@7.2.0):
     dependencies:
-      '@platformatic/foundation': 3.73.0-alpha.0(supports-color@7.2.0)
-      wattpm: 3.73.0-alpha.0(supports-color@7.2.0)
+      '@platformatic/foundation': 3.73.0(supports-color@7.2.0)
+      wattpm: 3.73.0(supports-color@7.2.0)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -6110,7 +6087,7 @@ snapshots:
       fastq: 1.20.1
       hyperid: 4.0.0
       light-my-request: 6.6.0
-      undici: 7.29.0
+      undici: 7.29.1
 
   undici-traffic-interceptor@0.1.5:
     dependencies:
@@ -6151,13 +6128,13 @@ snapshots:
       '@types/istanbul-lib-coverage': 2.0.6
       convert-source-map: 2.0.0
 
-  wattpm@3.73.0-alpha.0(supports-color@7.2.0):
+  wattpm@3.73.0(supports-color@7.2.0):
     dependencies:
       '@fastify/websocket': 11.3.1
-      '@platformatic/control': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/foundation': 3.73.0-alpha.0(supports-color@7.2.0)
-      '@platformatic/globals': 3.73.0-alpha.0
-      '@platformatic/runtime': 3.73.0-alpha.0(supports-color@7.2.0)
+      '@platformatic/control': 3.73.0(supports-color@7.2.0)
+      '@platformatic/foundation': 3.73.0(supports-color@7.2.0)
+      '@platformatic/globals': 3.73.0
+      '@platformatic/runtime': 3.73.0(supports-color@7.2.0)
       colorette: 2.0.20
       pino-pretty: 13.1.3
       split2: 4.2.0
