@@ -1,0 +1,7 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@platformatic/next": "workspace:*",
+    "next": "^16.2.10"
+  }
+}
