@@ -1,5 +1,6 @@
 {
+  "type": "module",
   "dependencies": {
-    "@platformatic/service": "^3.71.0"
+    "@platformatic/node": "4.0.0-alpha.3"
   }
 }

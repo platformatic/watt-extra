@@ -23,7 +23,6 @@ jobs:
       valkey:
         image: "valkey/valkey:9.2"
         env:
-          # User expected by test/next-cache.test.js
           VALKEY_EXTRA_FLAGS: "--user cache-user on >cache-pass allkeys allchannels +@all"
         ports:
           - "6390:6379"

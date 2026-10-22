@@ -37,9 +37,9 @@ async function metadata (app, _opts) {
         ])
 
         const services = await Promise.all(
-          runtimeConfig.applications.map((application) =>
-            runtime.getApplicationDetails(application.id)
-          )
+          runtimeConfig.applications.map(async (application) => ({
+            ...await runtime.getApplicationDetails(application.id)
+          }))
         )
 
         const workersCount = getWorkersCount(runtimeConfig)

@@ -1,10 +1,10 @@
 # Watt-Extra
 
-Watt-Extra is an enterprise-ready runtime manager for Platformatic applications that provides production-grade capabilities including monitoring, compliance checking, caching, authentication, and integration with Infrastructure Control Center (ICC) services.
+Watt-Extra is a Watt 4 runtime extension providing monitoring, compliance checking, caching, authentication, and integration with Infrastructure Control Center (ICC) services.
 
 ## Overview
 
-Watt-Extra wraps existing Platformatic applications (Service, Composer, Node, or Next.js) to enhance them with enterprise features without requiring any code changes. It acts as a transparent layer that:
+Watt-Extra integrates with Platformatic applications (Service, Gateway, Node, or Next.js) through Watt's extension hooks. It:
 
 - **Monitors** application performance and health metrics
 - **Enforces** compliance policies and security rules
@@ -13,7 +13,7 @@ Watt-Extra wraps existing Platformatic applications (Service, Composer, Node, or
 - **Schedules** cron jobs and periodic tasks
 - **Reports** metadata and telemetry to control plane services
 
-The runtime manager dynamically patches Platformatic configurations at startup to inject these capabilities while maintaining full compatibility with your existing applications.
+The extension patches configuration at startup; Watt owns the runtime lifecycle. This version requires Watt 4 with runtime extension configuration hooks.
 
 ## Environment Variables
 
@@ -27,7 +27,7 @@ None.
 - `PLT_APP_NAME` - Unique identifier for your application instance. Optional when `PLT_ICC_URL` is set - if not provided, it will be automatically determined from Kubernetes labels following these rules:
   1. Uses `app.kubernetes.io/instance` label first
   2. Falls back to ReplicaSet naming convention (`{app-name}-{hash}`)
-- `PLT_APP_DIR` - Application directory (defaults to current working directory)
+- `PLT_APP_DIR` - Set by the extension to the Watt project root
 - `PLT_TEST_TOKEN` - JWT token for authentication in non-Kubernetes environments
 - `PLT_LOG_LEVEL` - Logging level for the application
 - `PLT_CACHE_CONFIG` - HTTP caching configuration
@@ -48,51 +48,57 @@ npm install @platformatic/watt-extra
 
 ## Usage
 
-Add a script to your package.json:
+With Watt 4 including
+[platformatic/platformatic#5254](https://github.com/platformatic/platformatic/pull/5254),
+start Watt normally and load the extension:
 
-```json
-"scripts": {
-  "watt-extra": "watt-extra start"
-}
+```js
+import { createWattConfig } from 'wattpm'
+
+export default createWattConfig({
+  autoload: { path: 'web' },
+  extensions: [{ path: 'npm:@platformatic/watt-extra' }]
+})
 ```
 
-Then run:
+The extension uses the existing `PLT_*` settings. Its `options.env` object can
+override them for an individual runtime. `PLT_APP_DIR` is the Watt project root.
+The configure hook obtains the initial ICC configuration; setup attaches to the
+runtime owned by Watt. ICC synchronization and retries start on the `started`
+event, and shutdown releases the extension resources without closing Watt itself.
+Configuration-only loads do not leave authentication timers or connections open.
+
+The entrypoint currently relies on configuration object identity retained by
+PR #5254 (`getRuntimeConfig(true)`) to transfer private state from configure to
+setup. It does not serialize credentials or live clients into extension options.
+
+The extension loads `@platformatic/wattpm-pprof-capture` for worker profiling.
+Listener-specific settings belong to capability
+configuration: the extension applies proxy/HTTPS patches to listening Service,
+Gateway and DB applications. Configure Next.js listener settings in the application.
+
+Scheduler jobs are paused after application startup and on subsequent application
+starts. This is best-effort coordination: PR #5254 does not provide an API to create
+jobs already paused, so a local tick during startup is still possible.
+
+Integration tests use the published Watt and Service `4.0.0-alpha.3` packages,
+including configuration hooks, worker startup, ICC registration and shutdown:
 
 ```bash
-npm run watt-extra
-```
-
-### Command Line Interface
-
-Watt-Extra provides a command-line interface:
-
-```bash
-# Show help
-watt-extra --help
-
-# Start the runtime manager
-watt-extra start
-
-# Set log level
-watt-extra start --log-level=debug
-
-# Set ICC URL
-watt-extra start --icc-url=http://icc-server:3000
-
-# Set application name
-watt-extra start --app-name=my-application
-
-# Set application directory. This is useful for development and test
-watt-extra start --app-dir=/path/to/application
+node --test test/extension.test.js
 ```
 
 ## Running the tests
 
-Some tests need a Valkey instance. Start it with Docker Compose before running the suite:
+The integration suites exercise the published Watt 4 runtime and the extension,
+including caching, compliance, metrics, alerts, profiling, scheduler commands and
+shared context. Start Valkey for the HTTP and Next.js caching tests:
 
 ```bash
 docker compose up -d --wait
 pnpm test
 ```
 
-Valkey is exposed on the non-default port `6390`, so it does not clash with a local Redis or Valkey.
+The test command enables Node's module-mocking flag solely to observe the Avvio
+plugin container in integration tests; the real Watt loader and extension hooks
+run unchanged. Valkey listens on port `6390`.
