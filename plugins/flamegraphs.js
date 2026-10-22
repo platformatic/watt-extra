@@ -44,6 +44,7 @@ async function flamegraphs (app, _opts) {
   let workerStartedListener = null
   let healthListener = null
   let stateReportTimer = null
+  let cacheCleanupTimer = null
 
   // Last observed event-loop utilization per worker, from the same health
   // events that drive the runtime's profiling ELU gate. It is attached to
@@ -55,9 +56,7 @@ async function flamegraphs (app, _opts) {
   const lastWorkerELU = new Map()
 
   function setupHealthTracking (runtime) {
-    const healthEventName = app.watt.runtimeSupportsNewHealthMetrics?.()
-      ? 'application:worker:health:metrics'
-      : 'application:worker:health'
+    const healthEventName = 'application:worker:health:metrics'
 
     // Remove the old listener if it exists (for ICC recovery scenario)
     if (healthListener) {
@@ -210,7 +209,9 @@ async function flamegraphs (app, _opts) {
     }
     runtime.on('application:worker:started', workerStartedListener)
 
-    setInterval(cleanupFlamegraphsCache, cacheCleanupInterval).unref()
+    clearInterval(cacheCleanupTimer)
+    cacheCleanupTimer = setInterval(cleanupFlamegraphsCache, cacheCleanupInterval)
+    cacheCleanupTimer.unref()
 
     if (stateReportTimer === null) {
       stateReportTimer = setInterval(() => {
@@ -227,6 +228,8 @@ async function flamegraphs (app, _opts) {
   }
 
   app.cleanupFlamegraphs = async () => {
+    clearInterval(cacheCleanupTimer)
+    cacheCleanupTimer = null
     if (workerStartedListener && app.watt?.runtime) {
       app.watt.runtime.removeListener('application:worker:started', workerStartedListener)
       workerStartedListener = null
@@ -238,9 +241,7 @@ async function flamegraphs (app, _opts) {
     }
 
     if (healthListener && app.watt?.runtime) {
-      const healthEventName = app.watt.runtimeSupportsNewHealthMetrics?.()
-        ? 'application:worker:health:metrics'
-        : 'application:worker:health'
+      const healthEventName = 'application:worker:health:metrics'
       app.watt.runtime.removeListener(healthEventName, healthListener)
       healthListener = null
     }

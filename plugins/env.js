@@ -53,10 +53,11 @@ const getDefaultEnv = (iccUrl) => {
   return defaults
 }
 
-async function envPlugin (app) {
+async function envPlugin (app, options = {}) {
   const env = envSchema({
     schema,
-    dotenv: true
+    dotenv: true,
+    ...options
   })
 
   const iccURL = env.PLT_ICC_URL
