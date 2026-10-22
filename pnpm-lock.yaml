@@ -90,6 +90,9 @@ importers:
       pprof-format:
         specifier: ^2.1.0
         version: 2.3.2
+      semver:
+        specifier: ^7.8.5
+        version: 7.8.5
       wattpm:
         specifier: 4.0.0-alpha.3
         version: 4.0.0-alpha.3(supports-color@7.2.0)

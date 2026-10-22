@@ -30,6 +30,7 @@
     "fastify": "^5.10.0",
     "fastify-plugin": "^6.0.0",
     "neostandard": "0.14.0-next.1",
+    "semver": "^7.8.5",
     "why-is-node-running": "^2.3.0",
     "wattpm": "4.0.0-alpha.3"
   },
