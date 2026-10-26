@@ -41,9 +41,7 @@ async function alerts (app, _opts) {
       return
     }
 
-    const healthEventName = app.watt.runtimeSupportsNewHealthMetrics()
-      ? 'application:worker:health:metrics'
-      : 'application:worker:health'
+    const healthEventName = 'application:worker:health:metrics'
 
     // Remove old listeners if they exist (for ICC recovery scenario)
     if (workerStartedListener) {
@@ -170,46 +168,52 @@ async function alerts (app, _opts) {
       }
     }
 
-    if (app.watt.runtimeSupportsNewHealthMetrics()) {
-      // Runtime >= 3.18.0: Listen to health:metrics
-      healthListener = async (health) => {
-        if (!health) {
-          app.log.error('No health info received')
-          return
-        }
-
-        const {
-          id,
-          application: serviceId,
-          currentHealth
-        } = health
-
-        const { elu, heapUsed, heapTotal } = currentHealth
-        const healthConfig = app.watt.getHealthConfig()
-
-        const unhealthyELUThreshold = 0.85
-        const maxHeapUsed = healthConfig?.maxHeapUsed ?? 0.99
-
-        const memoryUsage = heapUsed / heapTotal
-        const unhealthy = elu > unhealthyELUThreshold || memoryUsage > maxHeapUsed
-
-        const healthInfo = {
-          id,
-          application: serviceId,
-          currentHealth,
-          unhealthy,
-          healthConfig: healthConfig || {}
-        }
-
-        await processHealthInfo(healthInfo)
+    healthListener = async (health) => {
+      if (!health) {
+        app.log.error('No health info received')
+        return
       }
-    } else {
-      // Runtime < 3.18.0:
-      healthListener = processHealthInfo
+
+      const {
+        id,
+        application: serviceId,
+        currentHealth
+      } = health
+
+      const { elu, heapUsed, heapTotal } = currentHealth
+      const healthConfig = app.watt.getHealthConfig()
+
+      const unhealthyELUThreshold = 0.85
+      const maxHeapUsed = healthConfig?.maxHeapUsed ?? 0.99
+
+      const memoryUsage = heapUsed / heapTotal
+      const unhealthy = elu > unhealthyELUThreshold || memoryUsage > maxHeapUsed
+
+      const healthInfo = {
+        id,
+        application: serviceId,
+        currentHealth,
+        unhealthy,
+        healthConfig: healthConfig || {}
+      }
+
+      await processHealthInfo(healthInfo)
     }
     runtime.on(healthEventName, healthListener)
   }
   app.setupAlerts = setupAlerts
+  app.cleanupAlerts = () => {
+    const runtime = app.watt.runtime
+    if (workerStartedListener) {
+      runtime.removeListener('application:worker:started', workerStartedListener)
+      workerStartedListener = null
+    }
+    if (healthListener) {
+      const event = 'application:worker:health:metrics'
+      runtime.removeListener(event, healthListener)
+      healthListener = null
+    }
+  }
 }
 
 export default alerts

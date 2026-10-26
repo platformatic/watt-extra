@@ -7,7 +7,7 @@ import { setTimeout as sleep } from 'node:timers/promises'
 import { Profile } from 'pprof-format'
 import { request } from 'undici'
 import { setUpEnvironment, startICC } from './helper.js'
-import { start } from '../index.js'
+import { start } from './runtime.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)

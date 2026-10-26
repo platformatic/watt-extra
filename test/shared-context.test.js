@@ -12,7 +12,7 @@ import {
   setUpEnvironment,
   createJwtToken
 } from './helper.js'
-import { start } from '../index.js'
+import { start } from './runtime.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -46,7 +46,7 @@ test('should propagete a jwt token via runtime shared context', async (t) => {
   let newToken = null
   setTimeout(() => {
     newToken = createJwtToken(expiresIn)
-    process.env.PLT_TEST_TOKEN = newToken
+    app.env.PLT_TEST_TOKEN = newToken
   }, expiresIn * 1000)
 
   t.after(async () => {
