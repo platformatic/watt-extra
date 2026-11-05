@@ -77,6 +77,18 @@ Listener-specific settings belong to capability
 configuration: the extension applies proxy/HTTPS patches to listening Service,
 Gateway and DB applications. Configure Next.js listener settings in the application.
 
+Watt-Extra no longer overrides application ports with `PLT_APP_PORT`. Configure
+`server.port` in each application's `watt.config.js`. To keep using the port supplied
+by the deployment, read the variable in the application that should receive it:
+
+```js
+server: { port: Number(process.env.PLT_APP_PORT ?? 3042) }
+```
+
+Set this variable in the container environment or a Watt environment file.
+The extension's `options.env` does not set application environment variables.
+Applications with hardcoded ports retain those ports.
+
 Scheduler jobs are paused after application startup and on subsequent application
 starts. This is best-effort coordination: PR #5254 does not provide an API to create
 jobs already paused, so a local tick during startup is still possible.
