@@ -20,6 +20,7 @@ async function updatePlugin (app) {
   const kAckTimeout = Symbol('kAckTimeout')
 
   let socket = null
+  const reconnectController = new AbortController()
 
   // A half-open connection (e.g. the ICC endpoint died without a TCP reset
   // reaching the pod) fires no 'close' event: without a heartbeat the pod
@@ -131,6 +132,9 @@ async function updatePlugin (app) {
   }
 
   async function connectToUpdates () {
+    if (isClosing || socket?.readyState === WebSocket.OPEN) {
+      return
+    }
     const applicationId = app.instanceConfig?.applicationId
     if (!applicationId) {
       app.log.warn('No application ID found, cannot connect to updates websocket')
@@ -149,6 +153,10 @@ async function updatePlugin (app) {
 
     try {
       const headers = await app.getAuthorizationHeaders()
+
+      if (isClosing) {
+        return
+      }
 
       // handshakeTimeout turns a hung upgrade into an 'error', so the retry
       // loop is never stuck waiting for an 'open' that cannot arrive
@@ -208,7 +216,18 @@ async function updatePlugin (app) {
     if (isReconnecting || isClosing) return
     isReconnecting = true
 
-    await sleep(reconnectInterval)
+    try {
+      await sleep(reconnectInterval, undefined, { signal: reconnectController.signal })
+    } catch (err) {
+      if (!reconnectController.signal.aborted) {
+        throw err
+      }
+      return
+    }
+
+    if (isClosing) {
+      return
+    }
 
     isReconnecting = false
     app.log.info('Reconnecting to updates websocket')
@@ -222,6 +241,7 @@ async function updatePlugin (app) {
   app.connectToUpdates = connectToUpdates
   app.closeUpdates = async () => {
     isClosing = true
+    reconnectController.abort()
     if (socket) {
       socket.close()
       socket = null

@@ -5,17 +5,12 @@ import { fileURLToPath } from 'node:url'
 
 import { randomUUID } from 'node:crypto'
 import { setUpEnvironment, startICC, installDeps } from './helper.js'
-import { start } from '../index.js'
+import { start } from './runtime.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-// watt-extra always starts the runtime with isProduction: true, so the runtime
-// must resolve watch to false. The runtime defaults watch to !isProduction, and
-// reads isProduction from the options passed to its transform, so a transform
-// that does not forward them silently enables file watching in production.
-// This needs a @platformatic/runtime app: a single-application config instead
-// goes through wrapInRuntimeConfig, which never calls the custom transform.
+// The extension disables watching in configure before Watt resolves applications.
 test('should disable file watching in production', async (t) => {
   const appName = 'test-app'
   const applicationId = randomUUID()

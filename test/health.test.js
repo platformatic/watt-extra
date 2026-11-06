@@ -9,7 +9,7 @@ import {
   setUpEnvironment,
   startICC
 } from './helper.js'
-import { start } from '../index.js'
+import { start } from './runtime.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -107,9 +107,7 @@ test('should force health enabled and set defaults when app tries to disable it'
 
   // Wait for health events
   let healthEventReceived = false
-  const eventName = app.watt.runtimeSupportsNewHealthMetrics()
-    ? 'application:worker:health:metrics'
-    : 'application:worker:health'
+  const eventName = 'application:worker:health:metrics'
 
   app.watt.runtime.on(eventName, (healthInfo) => {
     healthEventReceived = true
