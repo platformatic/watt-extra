@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict'
 import { EventEmitter, once } from 'node:events'
+import { createServer } from 'node:net'
 import { join, resolve } from 'node:path'
 import { setTimeout } from 'node:timers/promises'
 import { create } from '@platformatic/runtime'
+import { features } from '@platformatic/foundation'
 import { test } from 'node:test'
 import pino from 'pino'
+import { request } from 'undici'
 import { configure, setup } from '../index.js'
 import { startICC } from './helper.js'
 
@@ -143,6 +146,101 @@ test('published Watt boots through configure, serves requests and shuts down its
   await runtime.close()
   assert.equal(runtime.getRuntimeStatus(), 'closed')
   assert.equal(runtime.listenerCount('application:worker:health:metrics'), 0)
+})
+
+test('v4 preserves a hardcoded Service port when PLT_APP_PORT is set', async t => {
+  const config = { applications: [] }
+  await configure(config, {
+    root,
+    options: { env: { PLT_ICC_URL: '', PLT_APP_PORT: 8080, PLT_LOG_LEVEL: 'silent' } }
+  })
+  config.applications.push({
+    id: 'api',
+    type: '@platformatic/service',
+    resolvedConfig: { server: { port: 3000 } }
+  })
+  const runtime = new ExtensionRuntime(config)
+  const extension = await setup({ runtime, logger })
+  t.after(() => extension.close())
+  assert.deepEqual(runtime.patches.get('api'), [{ op: 'add', path: '/server/trustProxy', value: true }])
+})
+
+for (const listenerCount of [1, 2]) {
+  test(`published Watt preserves configured ports with ${listenerCount} listening applications`, async t => {
+    const applicationPath = join(root, 'test/fixtures/extension-service')
+    const applications = Array.from({ length: listenerCount }, (_, index) => ({
+      id: `api-${index}`,
+      path: join(root, 'test/fixtures/extension-listener')
+    }))
+    const runtime = await create(root, {
+      logger: { level: 'silent' },
+      reuseTcpPorts: true,
+      applications: [...applications, { id: 'internal', path: applicationPath }],
+      extensions: [{
+        path: join(root, 'index.js'),
+        options: {
+          env: {
+            PLT_ICC_URL: '',
+            PLT_APP_PORT: 8080,
+            PLT_METRICS_PORT: 0,
+            PLT_LOG_LEVEL: 'silent'
+          }
+        }
+      }]
+    }, { isProduction: true, setupSignals: false })
+    t.after(() => runtime.close())
+
+    await runtime.start()
+    const urls = []
+    for (const application of applications) {
+      const config = await runtime.getApplicationConfig(application.id)
+      assert.equal(config.server.port, 0)
+      const details = await runtime.getApplicationDetails(application.id)
+      urls.push(details.url)
+
+      const response = await request(details.url)
+      assert.equal(response.statusCode, 200)
+      assert.equal((await response.body.json()).ok, true)
+    }
+    assert.equal(new Set(urls).size, listenerCount)
+    const internal = await runtime.getApplicationDetails('internal')
+    assert.equal(internal.url, null)
+  })
+}
+
+test('published Watt uses PLT_APP_PORT only in the application that reads it', async t => {
+  const portProbe = createServer()
+  portProbe.listen(0, '127.0.0.1')
+  await once(portProbe, 'listening')
+  const applicationPort = portProbe.address().port
+  await new Promise(resolve => portProbe.close(resolve))
+
+  const workers = features.node.reusePort ? 2 : 1
+  const runtime = await create(root, {
+    logger: { level: 'silent' },
+    reuseTcpPorts: true,
+    applications: [
+      { id: 'public', path: join(root, 'test/fixtures/extension-env-listener'), workers },
+      { id: 'other', path: join(root, 'test/fixtures/extension-listener') }
+    ],
+    extensions: [{
+      path: join(root, 'index.js'),
+      options: { env: { PLT_ICC_URL: '', PLT_METRICS_PORT: 0, PLT_LOG_LEVEL: 'silent' } }
+    }]
+  }, { isProduction: true, setupSignals: false, env: { PLT_APP_PORT: String(applicationPort) } })
+  t.after(() => runtime.close())
+
+  await runtime.start()
+  const publicConfig = await runtime.getApplicationConfig('public')
+  const otherConfig = await runtime.getApplicationConfig('other')
+  assert.equal(publicConfig.server.port, applicationPort)
+  assert.equal(otherConfig.server.port, 0)
+  const publicDetails = await runtime.getApplicationDetails('public')
+  assert.equal(publicDetails.workers, workers)
+  assert.equal(new Set(publicDetails.urls).size, 1)
+  const response = await request(`http://127.0.0.1:${applicationPort}`)
+  assert.equal(response.statusCode, 200)
+  assert.equal((await response.body.json()).ok, true)
 })
 
 test('v4 recovers ICC after startup and cancels retry work on close', { timeout: 10000 }, async t => {
