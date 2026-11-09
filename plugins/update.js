@@ -20,6 +20,7 @@ async function updatePlugin (app) {
   const kAckTimeout = Symbol('kAckTimeout')
 
   let socket = null
+  const reconnectController = new AbortController()
 
   // A half-open connection (e.g. the ICC endpoint died without a TCP reset
   // reaching the pod) fires no 'close' event: without a heartbeat the pod
@@ -131,6 +132,9 @@ async function updatePlugin (app) {
   }
 
   async function connectToUpdates () {
+    if (isClosing || socket?.readyState === WebSocket.OPEN) {
+      return
+    }
     const applicationId = app.instanceConfig?.applicationId
     if (!applicationId) {
       app.log.warn('No application ID found, cannot connect to updates websocket')
@@ -147,30 +151,35 @@ async function updatePlugin (app) {
     const wsUrl = createWebSocketUrl(iccUrl, `api/updates/applications/${applicationId}`, { runtimeId })
     app.log.info({ runtimeId }, `Connecting to updates websocket at ${wsUrl}`)
 
+    let connection
     try {
       const headers = await app.getAuthorizationHeaders()
 
+      if (isClosing) {
+        return
+      }
+
       // handshakeTimeout turns a hung upgrade into an 'error', so the retry
       // loop is never stuck waiting for an 'open' that cannot arrive
-      socket = new WebSocket(wsUrl, { headers, handshakeTimeout: ackTimeout })
-      await once(socket, 'open')
+      connection = new WebSocket(wsUrl, { headers, handshakeTimeout: ackTimeout })
+      socket = connection
+      await once(connection, 'open')
 
       app.log.info('Connected to updates websocket')
       // Subscribing, if subscription fails we throw, so the caller can retry
       const subscribeMsg = JSON.stringify({ command: 'subscribe', topic: '/config' })
-      socket.send(subscribeMsg)
+      connection.send(subscribeMsg)
 
       // A connection which closes cleanly between the subscribe and the ack
       // emits no 'error', so an unbounded wait here would hang this loop
       // forever: bound it and retry
-      const ackPromise = once(socket, 'message')
+      const ackPromise = once(connection, 'message')
       ackPromise.catch(() => {})
       const command = await Promise.race([
         ackPromise,
         sleep(ackTimeout, kAckTimeout, { ref: false })
       ])
       if (command === kAckTimeout) {
-        socket.terminate()
         throw new Error('Timed out waiting for the updates subscription acknowledgment')
       }
 
@@ -181,22 +190,27 @@ async function updatePlugin (app) {
       }
       app.log.info('Received subscription acknowledgment from updates websocket')
 
-      startHeartbeat(socket)
+      startHeartbeat(connection)
 
       // listen for subsequent messages
-      socket.on('message', processMessage)
+      connection.on('message', processMessage)
 
-      socket.on('error', (err) => {
+      connection.on('error', (err) => {
         app.log.error(err, 'Error in updates websocket connection')
         reconnectToUpdates()
       })
 
-      socket.on('close', (code, reason) => {
+      connection.on('close', (code, reason) => {
         app.log.info({ code, reason: reason.toString() }, 'Updates websocket connection closed')
         reconnectToUpdates()
       })
     } catch (err) {
       app.log.error(err, 'Failed to connect and subscribe to updates websocket')
+      // An open socket with a failed subscription would suppress the next retry.
+      connection?.terminate()
+      if (socket === connection) {
+        socket = null
+      }
       reconnectToUpdates()
     }
   }
@@ -208,7 +222,18 @@ async function updatePlugin (app) {
     if (isReconnecting || isClosing) return
     isReconnecting = true
 
-    await sleep(reconnectInterval)
+    try {
+      await sleep(reconnectInterval, undefined, { signal: reconnectController.signal })
+    } catch (err) {
+      if (!reconnectController.signal.aborted) {
+        throw err
+      }
+      return
+    }
+
+    if (isClosing) {
+      return
+    }
 
     isReconnecting = false
     app.log.info('Reconnecting to updates websocket')
@@ -222,6 +247,7 @@ async function updatePlugin (app) {
   app.connectToUpdates = connectToUpdates
   app.closeUpdates = async () => {
     isClosing = true
+    reconnectController.abort()
     if (socket) {
       socket.close()
       socket = null

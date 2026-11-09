@@ -374,7 +374,7 @@ test('init plugin calls updateInstanceConfig on watt when ICC becomes available 
   equal(setupFlamegraphsCalled, true)
 })
 
-test('init plugin sets PLT_DEPLOYMENT_VERSION and pushes it to the shared context on ICC recovery', async (t) => {
+test('init plugin pushes deployment version to shared context without changing process.env', async (t) => {
   const applicationName = 'test-app-version-recovery'
   const applicationId = randomUUID()
 
@@ -421,8 +421,8 @@ test('init plugin sets PLT_DEPLOYMENT_VERSION and pushes it to the shared contex
   app.env.PLT_CONTROL_PLANE_URL = `http://127.0.0.1:${icc.server.address().port}/control-plane`
   await app.initApplication()
 
-  // Applied to the env (for future spawns) and pushed live to the running worker.
-  equal(process.env.PLT_DEPLOYMENT_VERSION, 'v9')
+  // Published to running workers without mutating the host process environment.
+  equal(process.env.PLT_DEPLOYMENT_VERSION, undefined)
   equal(pushedContext?.deploymentVersion, 'v9')
 })
 
@@ -467,8 +467,7 @@ test('updateInstanceConfig calls runtime.updateMetricsConfig with merged config'
 
   // Mock the runtime with current metrics config (as set by #configureRuntime)
   const currentMetricsConfig = {
-    server: 'hide',
-    defaultMetrics: { enabled: true },
+    enabled: true,
     hostname: '0.0.0.0',
     port: 9090,
     labels: {
@@ -483,6 +482,7 @@ test('updateInstanceConfig calls runtime.updateMetricsConfig with merged config'
 
   app.watt.runtime = {
     getRuntimeConfig: () => ({ metrics: currentMetricsConfig }),
+    updateSharedContext: async () => {},
     updateMetricsConfig: async (config) => {
       updateMetricsConfigCalled = true
       receivedMetricsConfig = config
@@ -498,7 +498,7 @@ test('updateInstanceConfig calls runtime.updateMetricsConfig with merged config'
 
   // Verify updateMetricsConfig was called with merged config
   equal(updateMetricsConfigCalled, true)
-  equal(receivedMetricsConfig.server, 'hide')
+  equal(receivedMetricsConfig.enabled, true)
   equal(receivedMetricsConfig.port, 9090)
   equal(receivedMetricsConfig.labels.serviceId, 'main')
   equal(receivedMetricsConfig.labels.instanceId, hostname())
@@ -507,7 +507,7 @@ test('updateInstanceConfig calls runtime.updateMetricsConfig with merged config'
   equal(receivedMetricsConfig.applicationLabel, applicationMetricsLabel)
 })
 
-test('updateInstanceConfig does not fail when runtime does not support updateMetricsConfig', async (t) => {
+test('updateInstanceConfig tolerates a failed runtime metrics update', async (t) => {
   const applicationName = 'test-app-no-metrics-support'
   const applicationId = randomUUID()
 
@@ -542,11 +542,11 @@ test('updateInstanceConfig does not fail when runtime does not support updateMet
 
   await initPlugin(app)
 
-  // Mock runtime WITHOUT updateMetricsConfig (old runtime)
+  // A failed metrics update must not prevent ICC recovery.
   app.watt.runtime = {
     getRuntimeConfig: () => ({ metrics: {} }),
-    updateUndiciInterceptors: async () => {}
-    // Note: no updateMetricsConfig method
+    updateUndiciInterceptors: async () => {},
+    updateMetricsConfig: async () => { throw new Error('Metrics update failed') }
   }
 
   app.env.PLT_ICC_URL = `http://127.0.0.1:${icc.server.address().port}`

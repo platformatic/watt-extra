@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 import Valkey from 'iovalkey'
 import { request } from 'undici'
 
-import { start } from '../index.js'
+import { start } from './runtime.js'
 import { setUpEnvironment, startICC } from './helper.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -25,7 +25,7 @@ async function startNextApp (t, fixture, applicationId) {
   // The application starts in production mode, so the fixture needs a build;
   // reuse an existing one to keep local reruns fast.
   if (!existsSync(join(applicationPath, 'web', 'next', '.next', 'BUILD_ID'))) {
-    execFileSync(join(__dirname, '..', 'node_modules', '.bin', 'platformatic'), ['build', applicationPath], {
+    execFileSync(join(__dirname, '..', 'node_modules', '.bin', 'wattpm'), ['build', applicationPath], {
       stdio: 'ignore'
     })
   }
@@ -71,9 +71,7 @@ async function startNextApp (t, fixture, applicationId) {
   return app
 }
 
-// The runtime reports a Next.js application as '@platformatic/next' (older
-// runtimes said 'next'). The Next patches, cache adapter included, must be
-// applied in both cases.
+// The Next capability patches must be applied using its package identifier.
 test('should configure the Next.js cache adapter for @platformatic/next applications', async (t) => {
   const applicationId = randomUUID()
   const app = await startNextApp(t, 'runtime-next', applicationId)

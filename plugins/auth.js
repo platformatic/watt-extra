@@ -23,7 +23,7 @@ function isTokenExpired (token, offset = 0) {
   return payload.exp <= Math.floor(Date.now() / 1000) + offset
 }
 
-async function loadK8sToken (log) {
+async function loadK8sToken (log, env = process.env) {
   let token
   try {
     await stat(K8S_TOKEN_PATH)
@@ -34,7 +34,7 @@ async function loadK8sToken (log) {
   }
   if (!token) {
     log.warn('K8s token not found, falling back to environment variable')
-    token = process.env.PLT_TEST_TOKEN
+    token = env.PLT_TEST_TOKEN
   }
   return token
 }
@@ -66,13 +66,13 @@ async function resolveEcsIdentity (log) {
 // ── Provider strategies ────────────────────────────────────────────────────
 
 // K8s strategy: load the SA JWT once, refresh on expiry, send as Bearer.
-async function createK8sStrategy (app, offset) {
-  app.token = await loadK8sToken(app.log)
+async function createK8sStrategy (app, offset, env) {
+  app.token = await loadK8sToken(app.log, env)
 
   return async function getHeaders () {
     if (app.token && isTokenExpired(app.token, offset)) {
       app.log.info('JWT token expired, reloading')
-      app.token = await loadK8sToken(app.log)
+      app.token = await loadK8sToken(app.log, env)
 
       app.watt?.updateSharedContext({
         iccAuthHeaders: { authorization: `Bearer ${app.token}` }
@@ -101,13 +101,14 @@ async function createEcsStrategy (app) {
 
 // ── Plugin ─────────────────────────────────────────────────────────────────
 
-async function authPlugin (app) {
+async function authPlugin (app, options = {}) {
+  const env = options.env ?? (options.useAppEnv ? app.env : process.env)
   // 1 min offset to refresh the token before it actually expires.
-  const offset = parseInt(process.env.PLT_JWT_EXPIRATION_OFFSET_SEC ?? 0)
+  const offset = parseInt(env.PLT_JWT_EXPIRATION_OFFSET_SEC ?? 0)
 
   const getProviderHeaders = app.provider === 'ecs'
     ? await createEcsStrategy(app)
-    : await createK8sStrategy(app, offset)
+    : await createK8sStrategy(app, offset, env)
 
   async function getAuthorizationHeaders (headers = {}) {
     return { ...headers, ...(await getProviderHeaders()) }
@@ -122,11 +123,16 @@ async function authPlugin (app) {
 
   // Periodically call the strategy so K8s token refresh propagates to the
   // runtime shared context before requests need it. No-op for ECS.
-  setInterval(getAuthorizationHeaders, offset ? offset * 1000 / 2 : 30000).unref()
+  const refreshTimer = setInterval(getAuthorizationHeaders, offset ? offset * 1000 / 2 : 30000)
+  refreshTimer.unref()
 
   // Can't replace the global dispatcher (shared with the runtime main thread).
   app.dispatcher = new Agent().compose(authorizationTokenInterceptor)
   app.getAuthorizationHeaders = getAuthorizationHeaders
+  app.closeAuth = async () => {
+    clearInterval(refreshTimer)
+    await app.dispatcher.close()
+  }
 }
 
 export default authPlugin

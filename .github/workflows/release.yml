@@ -1,0 +1,78 @@
+name: Publish release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number or patch, minor, major'
+        required: true
+        type: string
+      prerelease:
+        description: 'Release as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  release-npm:
+    runs-on: ubuntu-latest
+    environment: main
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 12
+      - name: Use supported Node.js version
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install dependencies
+        run: pnpm install
+      - name: Bump version
+        id: bump
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          GITHUB_ACTIONS: 'true'
+        run: |
+          node scripts/bump-version.ts "$RELEASE_VERSION" "$GITHUB_ACTOR"
+          version=$(node -p "require('./package.json').version")
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+      - name: Push changes
+        env:
+          RELEASE_REF: ${{ github.ref }}
+        run: git push origin "HEAD:$RELEASE_REF"
+      - name: Update npm
+        run: npm install -g npm@11.16.0
+      - name: Publish release on NPM
+        env:
+          RELEASE_TAG: ${{ inputs.prerelease == true && 'next' || 'latest' }}
+          RELEASE_BRANCH: ${{ github.ref_name }}
+        run: pnpm publish --access public --tag "$RELEASE_TAG" --provenance --publish-branch "$RELEASE_BRANCH" --no-git-checks
+      - name: Create draft release notes
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.bump.outputs.version }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          args=()
+          if [ "$PRERELEASE" = 'true' ]; then
+            args+=(-p)
+          fi
+          pnpx @matteo.collina/release-notes -t "v$RELEASE_VERSION" -r watt-extra -o platformatic -d "${args[@]}" -c "$(git rev-parse HEAD)"
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ inputs.prerelease }}
+          RELEASE_VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          if [ "$PRERELEASE" = 'true' ]; then
+            gh release edit "v$RELEASE_VERSION" --draft=false
+          else
+            gh release edit "v$RELEASE_VERSION" --draft=false --latest
+          fi

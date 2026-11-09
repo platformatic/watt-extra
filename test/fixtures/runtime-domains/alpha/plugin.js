@@ -11,6 +11,7 @@ module.exports = async function (fastify) {
   })
 
   fastify.get('/shared-context', async () => {
-    return globalThis.platformatic.sharedContext.get()
+    const { getSharedContext } = await import('@platformatic/globals')
+    return getSharedContext().get()
   })
 }

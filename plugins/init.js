@@ -1,7 +1,7 @@
 import Watt from '../lib/watt.js'
 import os from 'node:os'
 
-async function initPlugin (app) {
+async function initPlugin (app, options = {}) {
   async function initApplicationInstance (podId, applicationName = null) {
     const { default: build, setDefaultHeaders } = await import('../clients/control-plane/control-plane.mjs')
     const controlPlaneClient = build(app.env.PLT_CONTROL_PLANE_URL)
@@ -66,8 +66,8 @@ async function initPlugin (app) {
     const newDeploymentVersion = instanceConfig?.deploymentVersion
     const workerMissingVersion = !!newDeploymentVersion &&
       process.env.PLT_DEPLOYMENT_VERSION !== newDeploymentVersion
-    if (newDeploymentVersion) {
-      process.env.PLT_DEPLOYMENT_VERSION = newDeploymentVersion
+    if (newDeploymentVersion && options.setDeploymentVersion) {
+      options.setDeploymentVersion(newDeploymentVersion)
     }
 
     // If runtime already started (ICC recovery after startup), update its instance config

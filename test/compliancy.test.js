@@ -4,7 +4,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 import { randomUUID } from 'node:crypto'
-import { start } from '../index.js'
+import { start } from './runtime.js'
 import {
   setUpEnvironment,
   startICC,

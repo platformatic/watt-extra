@@ -11,7 +11,7 @@ import {
   installDeps,
   setUpEnvironment
 } from './helper.js'
-import { start } from '../index.js'
+import { start } from './runtime.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)

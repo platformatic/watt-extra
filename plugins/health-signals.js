@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto'
 import { request } from 'undici'
-import semver from 'semver'
 import { parseMemorySize } from '@platformatic/foundation'
 
 class HealthSignalsCache {
@@ -47,6 +46,7 @@ async function healthSignals (app, _opts) {
 
   // Store listener reference for cleanup
   let healthMetricsListener = null
+  let batchTimer = null
 
   // Store thresholds for use in sendHealthSignals
   let eluThreshold = null
@@ -59,15 +59,6 @@ async function healthSignals (app, _opts) {
       return
     }
     app.log.info('Setting up v2 scaler health signals')
-
-    const runtimeVersion = app.watt.getRuntimeVersion()
-    if (semver.lt(runtimeVersion, '1.4.0')) {
-      app.log.warn(
-        `Watt version "${runtimeVersion}" does not support health signals for the Signal Scaler Algorithm.` +
-          'Please update your watt-extra to version 1.4.0 or higher.'
-      )
-      return
-    }
 
     // Skip alerts setup if ICC is not configured
     if (!app.env.PLT_ICC_URL) {
@@ -114,7 +105,8 @@ async function healthSignals (app, _opts) {
     let batchHasHighValue = false
     let batchStartedAt = null
 
-    setInterval(() => {
+    clearInterval(batchTimer)
+    batchTimer = setInterval(() => {
       if (batchStartedAt === null) return
 
       const now = Date.now()
@@ -181,6 +173,14 @@ async function healthSignals (app, _opts) {
     await sendReadyStatus()
   }
   app.setupHealthSignals = setupHealthSignals
+  app.cleanupHealthSignals = () => {
+    clearInterval(batchTimer)
+    batchTimer = null
+    if (healthMetricsListener) {
+      app.watt.runtime.removeListener('application:worker:health:metrics', healthMetricsListener)
+      healthMetricsListener = null
+    }
+  }
 
   async function sendReadyStatus () {
     const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url

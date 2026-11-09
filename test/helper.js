@@ -1,14 +1,10 @@
 import { Agent, setGlobalDispatcher } from 'undici'
-import { mkdir, symlink, writeFile, rm } from 'node:fs/promises'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import fastify from 'fastify'
 import fp from 'fastify-plugin'
 import why from 'why-is-node-running'
 import fastifyWebsocket from '@fastify/websocket'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+import { mkdir, writeFile, rm } from 'node:fs/promises'
+import { join } from 'node:path'
 
 setInterval(why, 120000).unref()
 
@@ -17,7 +13,12 @@ setGlobalDispatcher(new Agent({
   keepAliveMaxTimeout: 10
 }))
 
+const originalEnvironment = { ...process.env }
+
 function setUpEnvironment (env = {}) {
+  for (const key of Object.keys(process.env)) {
+    if (key.startsWith('PLT_') && !(key in originalEnvironment)) delete process.env[key]
+  }
   const defaultEnv = {
     PLT_APP_HOSTNAME: '127.0.0.1',
     PLT_APP_PORT: 3042,
@@ -29,6 +30,17 @@ function setUpEnvironment (env = {}) {
     PLT_TEST_TOKEN: createJwtToken(3600)
   }
   Object.assign(process.env, defaultEnv, env)
+}
+
+// Only compliance fixtures need synthetic dependencies. Watt packages resolve
+// from this repository's node_modules, at the same version as the host runtime.
+export async function installDeps (t, appDir, _packageNames, dependencies = []) {
+  for (const { name, version } of dependencies) {
+    const directory = join(appDir, 'node_modules', name)
+    await mkdir(directory, { recursive: true })
+    await writeFile(join(directory, 'package.json'), JSON.stringify({ name, version }))
+    t.after(() => rm(directory, { recursive: true, force: true }))
+  }
 }
 
 async function startICC (t, opts = {}) {
@@ -52,6 +64,7 @@ async function startICC (t, opts = {}) {
     keepAliveTimeout: 1,
     forceCloseConnections: true
   })
+  t.after(() => icc.close())
 
   await icc.register(fastifyWebsocket)
 
@@ -231,49 +244,6 @@ async function startICC (t, opts = {}) {
   return icc
 }
 
-async function installDeps (t, appDir, packageNames, testDependencies = []) {
-  const appDepsDir = join(appDir, 'node_modules')
-  await rm(appDepsDir, { force: true, recursive: true }).catch(() => {})
-  await mkdir(appDepsDir, { recursive: true })
-  t.after(() => rm(appDepsDir, { force: true, recursive: true }))
-
-  const toInstall = Array.from(new Set([
-    ...packageNames ?? [],
-    '@platformatic/runtime',
-    '@platformatic/config',
-    '@platformatic/service',
-    '@platformatic/node',
-    'undici'
-  ]))
-
-  for (const packageName of toInstall) {
-    let targetDir = null
-    let packageDir = null
-
-    if (packageName.includes('/')) {
-      const [scope, name] = packageName.split('/')
-      await mkdir(join(appDepsDir, scope), { recursive: true })
-
-      targetDir = join(__dirname, '..', 'node_modules', scope, name)
-      packageDir = join(appDepsDir, scope, name)
-    } else {
-      packageDir = join(appDepsDir, packageName)
-      targetDir = join(__dirname, '..', 'node_modules', packageName)
-    }
-    await symlink(targetDir, packageDir)
-  }
-
-  for (const testDependency of testDependencies) {
-    const { name, version } = testDependency
-    const packageDir = join(appDepsDir, name)
-    await mkdir(packageDir, { recursive: true })
-
-    const packageJsonPath = join(packageDir, 'package.json')
-    const packageJsonFile = JSON.stringify({ name, version })
-    await writeFile(packageJsonPath, packageJsonFile)
-  }
-}
-
 function createJwtToken (expiresInSeconds) {
   const header = { alg: 'HS256', typ: 'JWT' }
   const currentTime = Math.floor(Date.now() / 1000)
@@ -291,6 +261,5 @@ function createJwtToken (expiresInSeconds) {
 export {
   setUpEnvironment,
   startICC,
-  installDeps,
   createJwtToken
 }

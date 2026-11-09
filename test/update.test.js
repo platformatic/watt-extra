@@ -633,3 +633,62 @@ test('retries when the subscription acknowledgment never arrives', async (t) => 
 
   equal(connections >= 2, true, 'Should retry after the ack timeout')
 })
+
+for (const [failure, response] of [
+  ['rejected', JSON.stringify({ command: 'error', message: 'Subscription unavailable' })],
+  ['malformed', 'invalid JSON']
+]) {
+  test(`retries after a ${failure} subscription response leaves the socket open`, { timeout: 5000 }, async (t) => {
+    const wss = new WebSocketServer({ port: 0 })
+    await once(wss, 'listening')
+
+    const app = createMockApp(wss.address().port)
+    app.env.PLT_UPDATES_RECONNECT_INTERVAL_SEC = 0.05
+    app.env.PLT_UPDATES_HEARTBEAT_INTERVAL_SEC = 0.05
+    await updatePlugin(app)
+
+    t.after(async () => {
+      await app.closeUpdates()
+      for (const client of wss.clients) {
+        client.terminate()
+      }
+      await new Promise(resolve => wss.close(resolve))
+    })
+
+    const events = new EventEmitter()
+    const configuration = { version: 'recovered' }
+    app.watt = {
+      applyIccConfigUpdates: async (config) => events.emit('config-applied', config)
+    }
+
+    let connectionCount = 0
+    let isFailedConnectionClosed = false
+    wss.on('connection', (ws) => {
+      connectionCount++
+      if (connectionCount === 1) {
+        ws.once('close', () => { isFailedConnectionClosed = true })
+        ws.once('message', () => ws.send(response))
+        return
+      }
+
+      ws.once('message', () => ws.send(JSON.stringify({ command: 'ack' })))
+      // The heartbeat starts after subscribing, so the client can now receive updates.
+      ws.once('ping', () => ws.send(JSON.stringify({
+        topic: '/config',
+        type: 'config-updated',
+        data: configuration
+      })))
+    })
+
+    const configurationApplied = once(events, 'config-applied', { signal: t.signal })
+    await app.connectToUpdates()
+    const [receivedConfiguration] = await configurationApplied
+
+    deepEqual(receivedConfiguration, configuration)
+    equal(isFailedConnectionClosed, true, 'Should close the failed connection')
+    equal(connectionCount, 2, 'Should subscribe using a fresh connection')
+
+    await app.connectToUpdates()
+    equal(connectionCount, 2, 'Should reuse a successfully subscribed connection')
+  })
+}

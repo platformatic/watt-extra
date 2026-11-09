@@ -57,7 +57,8 @@ module.exports = async function (fastify) {
 
   fastify.post('/custom-health-signal', async (req) => {
     const { type, value, description } = req.body
-    await globalThis.platformatic.sendHealthSignal({
+    const { getSendHealthSignal } = await import('@platformatic/globals')
+    await getSendHealthSignal()({
       type,
       value,
       description
