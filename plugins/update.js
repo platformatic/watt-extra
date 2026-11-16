@@ -113,6 +113,33 @@ async function updatePlugin (app) {
         return
       }
 
+      // Handle the Durable Objects commands of ICC: the promotion of a staged version, with the generation of the
+      // approval, and the drain of a retiring one. Both are forwarded to the Lavoratore applications and answered
+      // with their result, so that ICC knows what happened (see lib/durable-objects.js).
+      if (command === 'durable-objects-promote' || command === 'durable-objects-drain') {
+        app.log.info({ command, params: message.params }, 'Received Durable Objects command from ICC')
+        try {
+          const result = await app.sendDurableObjectsCommand(command, message.params ?? {})
+          if (message.requestId) {
+            socket.send(JSON.stringify({
+              requestId: message.requestId,
+              success: command === 'durable-objects-promote' ? result.promoted === true : true,
+              result
+            }))
+          }
+        } catch (error) {
+          if (message.requestId) {
+            socket.send(JSON.stringify({
+              requestId: message.requestId,
+              success: false,
+              error: { message: error.message, name: error.name }
+            }))
+          }
+          throw error
+        }
+        return
+      }
+
       // Handle updates websocket format: { type: '...', topic: '...', data: {...} }
       if (!topic || !type) {
         app.log.warn({ message }, 'Received invalid message from updates websocket')
