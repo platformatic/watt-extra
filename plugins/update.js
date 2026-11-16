@@ -123,7 +123,8 @@ async function updatePlugin (app) {
           if (message.requestId) {
             socket.send(JSON.stringify({
               requestId: message.requestId,
-              success: command === 'durable-objects-promote' ? result.promoted === true : true,
+              // The command ran: whether it promoted the pod is in the result, which ICC reads
+              success: true,
               result
             }))
           }

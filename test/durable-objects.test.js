@@ -3,7 +3,10 @@ import assert from 'node:assert'
 import { once } from 'node:events'
 import { WebSocketServer } from 'ws'
 import { setUpEnvironment } from './helper.js'
-import { aggregateDrain, aggregatePromotion, durableObjectsPatch, isLavoratoreApplication } from '../lib/durable-objects.js'
+import { aggregateDrain, aggregatePromotion, durableObjectsPatch, isLavoratoreApplication, placesDurableObjects } from '../lib/durable-objects.js'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import durableObjectsPlugin from '../plugins/durable-objects.js'
 import updatePlugin from '../plugins/update.js'
 
@@ -55,14 +58,18 @@ test('the patch of a Lavoratore application follows what ICC says about Durable 
 test('the answers of the applications are aggregated', () => {
   assert.deepStrictEqual(aggregatePromotion({ a: { promoted: true }, b: { promoted: true } }), { promoted: true, applications: { a: { promoted: true }, b: { promoted: true } } })
   assert.strictEqual(aggregatePromotion({ a: { promoted: true }, b: { promoted: false, status: 'duplicate' } }).promoted, false)
-  assert.strictEqual(aggregatePromotion({}).promoted, false)
+  // Nothing to promote or drain
+  assert.strictEqual(aggregatePromotion({}).promoted, true)
+  assert.strictEqual(aggregateDrain({}).status, 'drained')
+  assert.strictEqual(aggregateDrain({ a: { status: 'unsupported' }, b: { status: 'drained' } }).status, 'drained')
+  assert.strictEqual(aggregateDrain({ a: { status: 'waiting' }, b: { status: 'drained' } }).status, 'draining')
+  assert.strictEqual(aggregateDrain({ a: { status: 'superseded' }, b: { status: 'drained' } }).status, 'partial')
 
   assert.strictEqual(aggregateDrain({ a: { status: 'drained' }, b: { status: 'drained' } }).status, 'drained')
   assert.strictEqual(aggregateDrain({ a: { status: 'drained' }, b: { status: 'draining' } }).status, 'draining')
   assert.strictEqual(aggregateDrain({ a: { status: 'partial' }, b: { status: 'draining' } }).status, 'draining')
   assert.strictEqual(aggregateDrain({ a: { status: 'drained' }, b: { status: 'blocked' } }).status, 'blocked')
   assert.strictEqual(aggregateDrain({ a: { status: 'blocked' }, b: { status: 'partial' } }).status, 'partial')
-  assert.strictEqual(aggregateDrain({}).status, 'partial')
 })
 
 test('the commands are forwarded to every Lavoratore application of the runtime', async () => {
@@ -95,20 +102,75 @@ test('the commands are forwarded to every Lavoratore application of the runtime'
   assert.deepStrictEqual(draining.commands.map(command => command.name), ['plt:lavoratore:drain', 'plt:lavoratore:drain'])
 })
 
-test('a pod without Durable Objects, an application without the handler and an unknown command are errors', async () => {
-  const none = await createApp(createMockRuntime([{ id: 'front', type: '@platformatic/service' }]))
-  await assert.rejects(none.sendDurableObjectsCommand('durable-objects-drain'), /no Durable Objects application/)
+test('applications without the handler are skipped, failures are reported with the other answers, and repeated commands join', async () => {
+  // The runtime answers {} when the application has no handler: a plain Worker, or an older Lavoratore
+  const mixed = createMockRuntime([{ id: 'front', type: '@platformatic/lavoratore' }, { id: 'objects', type: '@platformatic/lavoratore' }], {
+    objects: { status: 'drained', moved: 1 }
+  })
+  assert.deepStrictEqual(await (await createApp(mixed)).sendDurableObjectsCommand('durable-objects-drain', { wait: false }), {
+    status: 'drained', applications: { objects: { status: 'drained', moved: 1 } }, skipped: ['front']
+  })
 
-  // The runtime answers {} when the application has no handler, i.e. an older version of Lavoratore
-  const older = await createApp(createMockRuntime([{ id: 'objects', type: '@platformatic/lavoratore' }]))
-  await assert.rejects(older.sendDurableObjectsCommand('durable-objects-promote', { generation: 1 }), /does not handle the durable-objects-promote command/)
+  const plain = await createApp(createMockRuntime([{ id: 'front', type: '@platformatic/lavoratore' }]))
+  assert.deepStrictEqual(await plain.sendDurableObjectsCommand('durable-objects-promote', { generation: 1 }), { promoted: true, applications: {}, skipped: ['front'] })
+  assert.deepStrictEqual(await plain.sendDurableObjectsCommand('durable-objects-drain'), { status: 'drained', applications: {}, skipped: ['front'] })
 
-  const app = await createApp(createMockRuntime([{ id: 'objects', type: '@platformatic/lavoratore' }], { objects: { status: 'drained' } }))
+  const none = await createApp(createMockRuntime([{ id: 'api', type: '@platformatic/service' }]))
+  assert.deepStrictEqual(await none.sendDurableObjectsCommand('durable-objects-drain'), { status: 'drained', applications: {} })
+
+  // One application fails: the other is still asked, and the error carries its answer
+  const failing = createMockRuntime([{ id: 'a', type: '@platformatic/lavoratore' }, { id: 'b', type: '@platformatic/lavoratore' }], {
+    a: () => { throw new Error('boom') },
+    b: { promoted: true, status: 'applied' }
+  })
+  await assert.rejects((await createApp(failing)).sendDurableObjectsCommand('durable-objects-promote', { generation: 2 }), err => {
+    assert.match(err.message, /durable-objects-promote command failed in the applications a: boom/)
+    assert.deepStrictEqual(err.results, { b: { promoted: true, status: 'applied' } })
+    return true
+  })
+  assert.strictEqual(failing.commands.length, 2)
+
+  // The same command repeated while it runs joins it; another generation does not
+  let release
+  const slow = createMockRuntime([{ id: 'objects', type: '@platformatic/lavoratore' }], {
+    objects: () => new Promise(resolve => { release = () => resolve({ promoted: true }) })
+  })
+  const app = await createApp(slow)
+  const first = app.sendDurableObjectsCommand('durable-objects-promote', { generation: 3 })
+  const second = app.sendDurableObjectsCommand('durable-objects-promote', { generation: 3 })
+  await new Promise(resolve => setImmediate(resolve))
+  assert.strictEqual(slow.commands.length, 1)
+  release()
+  assert.deepStrictEqual(await first, await second)
+  const third = app.sendDurableObjectsCommand('durable-objects-promote', { generation: 3 })
+  await new Promise(resolve => setImmediate(resolve))
+  assert.strictEqual(slow.commands.length, 2)
+  release()
+  await third
+
   await assert.rejects(app.sendDurableObjectsCommand('durable-objects-restart'), /Unknown Durable Objects command/)
 
   const stopped = { log: logger, watt: { runtime: null } }
   await durableObjectsPlugin(stopped)
   await assert.rejects(stopped.sendDurableObjectsCommand('durable-objects-drain'), /Runtime not started/)
+})
+
+test('the patch applies only to the applications which place Durable Objects', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'watt-extra-do-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  const write = async (name, content) => {
+    const path = join(dir, name)
+    await writeFile(path, typeof content === 'string' ? content : JSON.stringify(content))
+    return { config: path }
+  }
+
+  assert.strictEqual(await placesDurableObjects(await write('placed.json', { lavoratore: { durableObjects: { placement: { type: 'coordinator' } } } })), true)
+  assert.strictEqual(await placesDurableObjects(await write('local.json', { lavoratore: { durableObjects: {} } })), false)
+  assert.strictEqual(await placesDurableObjects(await write('plain.json', { lavoratore: {} })), false)
+  // A configuration which cannot be read gets the patch
+  assert.strictEqual(await placesDurableObjects(await write('broken.json', '{ not json')), true)
+  assert.strictEqual(await placesDurableObjects({ config: join(dir, 'missing.json') }), true)
+  assert.strictEqual(await placesDurableObjects({}), true)
 })
 
 function setupMockIccServer (wss) {
@@ -179,9 +241,10 @@ test('the Durable Objects commands of ICC are answered over the websocket with t
     result: { promoted: true, applications: { objects: { promoted: true, status: 'applied', generation: 2, admission: 1 } } }
   })
 
-  // A promotion which did not promote the pod is not acknowledged as done
+  // A promotion which did not promote the pod says so in its result: the frame stays valid for ICC, which reads it
   const superseded = await reply(getWs(), { command: 'durable-objects-promote', requestId: 'promote-2', params: { generation: 7 } })
-  assert.strictEqual(superseded.success, false)
+  assert.strictEqual(superseded.success, true)
+  assert.strictEqual(superseded.result.promoted, false)
   assert.strictEqual(superseded.result.applications.objects.status, 'superseded')
 
   const failed = await reply(getWs(), { command: 'durable-objects-promote', requestId: 'promote-3', params: { generation: 8 } })
