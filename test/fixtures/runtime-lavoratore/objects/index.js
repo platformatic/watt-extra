@@ -17,6 +17,7 @@ globalThis.platformatic.itc.handle('plt:lavoratore:drain', message => {
 export function create () {
   return createServer((_req, res) => {
     res.setHeader('content-type', 'application/json')
-    res.end(JSON.stringify(commands))
+    // With the configuration the application started with, i.e. patched by watt-extra
+    res.end(JSON.stringify({ commands, placement: globalThis.lavoratoreStandIn.placement() }))
   })
 }

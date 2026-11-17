@@ -1,7 +1,14 @@
 {
   "$schema": "https://schemas.platformatic.dev/@platformatic/lavoratore/0.6.0.json",
-  "module": "@platformatic/node",
+  "module": "./capability.js",
   "node": {
     "main": "index.js"
+  },
+  "lavoratore": {
+    "durableObjects": {
+      "placement": {
+        "type": "coordinator"
+      }
+    }
   }
 }

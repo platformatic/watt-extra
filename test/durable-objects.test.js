@@ -3,7 +3,7 @@ import assert from 'node:assert'
 import { once } from 'node:events'
 import { WebSocketServer } from 'ws'
 import { setUpEnvironment } from './helper.js'
-import { aggregateDrain, aggregatePromotion, durableObjectsPatch, isLavoratoreApplication, placesDurableObjects } from '../lib/durable-objects.js'
+import { aggregateDrain, aggregatePromotion, durableObjectsPatch, isLavoratoreApplication, placesDurableObjects, refusedDurableObjects } from '../lib/durable-objects.js'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -83,6 +83,23 @@ test('Lavoratore applications are recognized by their type or by their configura
   const placed = await application('placed', 'watt.json', { module: '@platformatic/lavoratore', lavoratore: { durableObjects: { placement: { type: 'coordinator' } } } })
   assert.strictEqual(await placesDurableObjects({ path: placed }), true)
   assert.strictEqual(await placesDurableObjects({ path: byModule }), false)
+})
+
+test('only a refusal of ICC which names Durable Objects stages the pod', () => {
+  const body = { statusCode: 409, code: 'PLT_CONTROL_PLANE_VERSION_DEPLOYMENT_MISMATCH', error: 'Conflict', message: 'refused' }
+
+  assert.deepStrictEqual(refusedDurableObjects(new Error(JSON.stringify({ ...body, durableObjects: { staged: true } }))), { durableObjects: { staged: true } })
+  assert.deepStrictEqual(durableObjectsPatch(refusedDurableObjects(new Error(JSON.stringify({ ...body, durableObjects: { staged: true } })))), [
+    { op: 'merge', path: '/lavoratore/durableObjects/placement', value: { promoted: false } }
+  ])
+
+  // An ICC which knows nothing of Durable Objects, one which fails, and one which cannot be reached
+  assert.strictEqual(refusedDurableObjects(new Error(JSON.stringify(body))), null)
+  assert.strictEqual(refusedDurableObjects(new Error(JSON.stringify({ ...body, statusCode: 503, durableObjects: { staged: true } }))), null)
+  assert.strictEqual(refusedDurableObjects(new Error(JSON.stringify({ ...body, durableObjects: 'yes' }))), null)
+  assert.strictEqual(refusedDurableObjects(new Error('connect ECONNREFUSED 127.0.0.1:3000')), null)
+  assert.strictEqual(refusedDurableObjects(new Error('null')), null)
+  assert.strictEqual(refusedDurableObjects(undefined), null)
 })
 
 test('the answers of the applications are aggregated', () => {
