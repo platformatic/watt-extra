@@ -1,0 +1,7 @@
+{
+  "$schema": "https://schemas.platformatic.dev/@platformatic/lavoratore/0.6.0.json",
+  "module": "@platformatic/node",
+  "node": {
+    "main": "index.js"
+  }
+}
