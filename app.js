@@ -10,6 +10,7 @@ import update from './plugins/update.js'
 import alert from './plugins/alerts.js'
 import healthSignals from './plugins/health-signals.js'
 import flamegraphs from './plugins/flamegraphs.js'
+import durableObjects from './plugins/durable-objects.js'
 
 async function buildApp (logger) {
   const app = {
@@ -27,6 +28,7 @@ async function buildApp (logger) {
     .use(metadata)
     .use(compliancy)
     .use(scheduler)
+    .use(durableObjects)
     .use(update)
     .use(flamegraphs)
 

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schemas.platformatic.dev/@platformatic/runtime/3.0.0.json",
+  "entrypoint": "plain",
+  "applications": [
+    { "id": "objects", "path": "./objects" },
+    { "id": "plain", "path": "./plain" }
+  ],
+  "logger": {
+    "level": "error"
+  }
+}

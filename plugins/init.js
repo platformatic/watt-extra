@@ -1,4 +1,5 @@
 import Watt from '../lib/watt.js'
+import { refusedDurableObjects } from '../lib/durable-objects.js'
 import os from 'node:os'
 
 async function initPlugin (app) {
@@ -94,6 +95,13 @@ async function initPlugin (app) {
     // We don't re-throw here because we can continue without application info
     // and nothing here should block the app from start
     app.log.error(err, 'Failed to get application information')
+
+    // ICC answered, and refused the pod: under an ICC which orchestrates Durable Objects, its Lavoratore applications
+    // start staged, see lib/durable-objects.js. The registration is retried, and ICC promotes the pod if it accepts it.
+    app.registrationRefusal = refusedDurableObjects(err)
+    if (app.registrationRefusal?.durableObjects?.staged === true) {
+      app.log.warn('ICC refused the registration of this pod: its Lavoratore applications start staged, and receive no Durable Objects until ICC accepts the pod and promotes it')
+    }
 
     // Set fallback values when ICC connection fails
     if (!app.applicationName) {
