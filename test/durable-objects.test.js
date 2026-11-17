@@ -88,6 +88,9 @@ test('Lavoratore applications are recognized by their type or by their configura
 test('the answers of the applications are aggregated', () => {
   assert.deepStrictEqual(aggregatePromotion({ a: { promoted: true }, b: { promoted: true } }), { promoted: true, applications: { a: { promoted: true }, b: { promoted: true } } })
   assert.strictEqual(aggregatePromotion({ a: { promoted: true }, b: { promoted: false, status: 'duplicate' } }).promoted, false)
+  // An application which places nothing across pods has nothing to promote
+  assert.strictEqual(aggregatePromotion({ a: { promoted: true }, b: { promoted: false, status: 'unsupported' } }).promoted, true)
+  assert.strictEqual(aggregatePromotion({ b: { promoted: false, status: 'unsupported' } }).promoted, true)
   // Nothing to promote or drain
   assert.strictEqual(aggregatePromotion({}).promoted, true)
   assert.strictEqual(aggregateDrain({}).status, 'drained')
