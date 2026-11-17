@@ -120,6 +120,8 @@ async function updatePlugin (app) {
         app.log.info({ command, params: message.params }, 'Received Durable Objects command from ICC')
         try {
           const result = await app.sendDurableObjectsCommand(command, message.params ?? {})
+          // What the applications answered: a promotion or a drain which did nothing is found here
+          app.log.info({ command, params: message.params, result }, 'Answered the Durable Objects command of ICC')
           if (message.requestId) {
             socket.send(JSON.stringify({
               requestId: message.requestId,
