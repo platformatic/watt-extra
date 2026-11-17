@@ -2,14 +2,35 @@ import { aggregateDrain, aggregatePromotion, COMMANDS, isLavoratoreApplication }
 
 // Forwards the Durable Objects commands of ICC to the Lavoratore applications of the runtime, see lib/durable-objects.js
 async function durableObjects (app, _opts) {
-  function lavoratoreApplications () {
+  // The Lavoratore applications of the runtime: the configuration does not change while it runs
+  let applications
+
+  async function lavoratoreApplications () {
     const runtime = app.watt?.runtime
 
     if (!runtime) {
       throw new Error('Runtime not started, cannot reach the Durable Objects applications')
     }
 
-    return (runtime.getRuntimeConfig(true).applications ?? []).filter(isLavoratoreApplication).map(application => application.id)
+    if (!applications) {
+      const found = []
+
+      for (const application of runtime.getRuntimeConfig(true).applications ?? []) {
+        if (await isLavoratoreApplication(application)) {
+          found.push(application.id)
+        }
+      }
+
+      applications = found
+    }
+
+    // ICC sends these commands only to the pods it knows to run Lavoratore: finding none is a failure to recognize the
+    // applications, not a pod with nothing to promote or drain, and ICC must not take it for done
+    if (applications.length === 0) {
+      throw new Error('No Lavoratore application found in the runtime')
+    }
+
+    return applications
   }
 
   // The commands in flight, by command and parameters: ICC repeats a command which did not answer in time, and the
@@ -44,7 +65,7 @@ async function durableObjects (app, _opts) {
     const skipped = []
     const errors = []
 
-    for (const id of lavoratoreApplications()) {
+    for (const id of await lavoratoreApplications()) {
       try {
         const result = await app.watt.runtime.sendCommandToApplication(id, name, params)
 

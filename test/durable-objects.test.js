@@ -4,7 +4,7 @@ import { once } from 'node:events'
 import { WebSocketServer } from 'ws'
 import { setUpEnvironment } from './helper.js'
 import { aggregateDrain, aggregatePromotion, durableObjectsPatch, isLavoratoreApplication, placesDurableObjects } from '../lib/durable-objects.js'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import durableObjectsPlugin from '../plugins/durable-objects.js'
@@ -48,11 +48,41 @@ test('the patch of a Lavoratore application follows what ICC says about Durable 
     { op: 'merge', path: '/lavoratore/durableObjects/placement', value: { promoted: true } }
   ])
   assert.deepStrictEqual(durableObjectsPatch({ durableObjects: {} })[0].value, { promoted: true })
+})
 
-  assert.strictEqual(isLavoratoreApplication({ type: '@platformatic/lavoratore' }), true)
-  assert.strictEqual(isLavoratoreApplication({ type: 'lavoratore' }), true)
-  assert.strictEqual(isLavoratoreApplication({ type: '@platformatic/service' }), false)
-  assert.strictEqual(isLavoratoreApplication(undefined), false)
+test('Lavoratore applications are recognized by their type or by their configuration file', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'watt-extra-lavoratore-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+
+  async function application (name, file, content) {
+    const path = join(dir, name)
+    await mkdir(path, { recursive: true })
+    await writeFile(join(path, file), typeof content === 'string' ? content : JSON.stringify(content))
+    return path
+  }
+
+  assert.strictEqual(await isLavoratoreApplication({ type: '@platformatic/lavoratore' }), true)
+  assert.strictEqual(await isLavoratoreApplication({ type: 'lavoratore' }), true)
+  assert.strictEqual(await isLavoratoreApplication({ type: '@platformatic/service' }), false)
+  assert.strictEqual(await isLavoratoreApplication(undefined), false)
+
+  // The runtime configuration says "unknown" for an application whose capability is resolved when it starts
+  const byModule = await application('module', 'watt.json', { module: '@platformatic/lavoratore' })
+  const bySchema = await application('schema', 'platformatic.json', { $schema: 'https://schemas.platformatic.dev/@platformatic/lavoratore/0.6.0.json' })
+  const sibling = await application('sibling', 'watt.json', { $schema: 'https://schemas.platformatic.dev/@platformatic/lavoratore-caposquadra/0.6.0.json', module: '@platformatic/lavoratore-caposquadra' })
+  const broken = await application('broken', 'watt.json', '{ not json')
+
+  assert.strictEqual(await isLavoratoreApplication({ type: 'unknown', path: byModule }), true)
+  assert.strictEqual(await isLavoratoreApplication({ type: 'unknown', path: bySchema }), true)
+  assert.strictEqual(await isLavoratoreApplication({ type: 'unknown', config: join(byModule, 'watt.json') }), true)
+  assert.strictEqual(await isLavoratoreApplication({ type: 'unknown', path: sibling }), false)
+  assert.strictEqual(await isLavoratoreApplication({ type: 'unknown', path: broken }), false)
+  assert.strictEqual(await isLavoratoreApplication({ type: 'unknown', path: join(dir, 'missing') }), false)
+
+  // The placement is read from the same file
+  const placed = await application('placed', 'watt.json', { module: '@platformatic/lavoratore', lavoratore: { durableObjects: { placement: { type: 'coordinator' } } } })
+  assert.strictEqual(await placesDurableObjects({ path: placed }), true)
+  assert.strictEqual(await placesDurableObjects({ path: byModule }), false)
 })
 
 test('the answers of the applications are aggregated', () => {
@@ -115,8 +145,10 @@ test('applications without the handler are skipped, failures are reported with t
   assert.deepStrictEqual(await plain.sendDurableObjectsCommand('durable-objects-promote', { generation: 1 }), { promoted: true, applications: {}, skipped: ['front'] })
   assert.deepStrictEqual(await plain.sendDurableObjectsCommand('durable-objects-drain'), { status: 'drained', applications: {}, skipped: ['front'] })
 
+  // ICC asks only the pods it knows to run Lavoratore: finding none is a failure, never an answer it takes for done
   const none = await createApp(createMockRuntime([{ id: 'api', type: '@platformatic/service' }]))
-  assert.deepStrictEqual(await none.sendDurableObjectsCommand('durable-objects-drain'), { status: 'drained', applications: {} })
+  await assert.rejects(none.sendDurableObjectsCommand('durable-objects-drain'), /No Lavoratore application found/)
+  await assert.rejects(none.sendDurableObjectsCommand('durable-objects-promote', { generation: 1 }), /No Lavoratore application found/)
 
   // One application fails: the other is still asked, and the error carries its answer
   const failing = createMockRuntime([{ id: 'a', type: '@platformatic/lavoratore' }, { id: 'b', type: '@platformatic/lavoratore' }], {
