@@ -315,3 +315,39 @@ test('the Durable Objects commands of ICC are answered over the websocket with t
     { command: 'durable-objects-drain', params: {} }
   ])
 })
+
+test('the objects of the pod are listed over its Lavoratore applications', async () => {
+  const counter = { className: 'Counter', id: 'a1', name: 'a', state: 'active', storageBytes: 4096 }
+  const room = { className: 'Room', id: 'b2', name: null, state: 'hibernated', storageBytes: null }
+  const runtime = createMockRuntime([
+    { id: 'objects', type: '@platformatic/lavoratore' },
+    { id: 'rooms', type: '@platformatic/lavoratore' },
+    { id: 'front', type: '@platformatic/lavoratore' },
+    { id: 'legacy', type: '@platformatic/lavoratore' }
+  ], {
+    objects: { status: 'ok', memberId: 'pod-1', total: 5, truncated: true, objects: [counter] },
+    rooms: { status: 'ok', memberId: 'pod-1', total: 1, truncated: false, objects: [room] },
+    // Without Durable Objects
+    front: { status: 'unsupported' }
+    // legacy has no handler: a Lavoratore which predates the list
+  })
+  const app = await createApp(runtime)
+
+  assert.deepStrictEqual(await app.sendDurableObjectsCommand('durable-objects-list', { limit: 1 }), {
+    total: 6,
+    truncated: true,
+    applications: ['objects', 'rooms'],
+    objects: [{ application: 'objects', ...counter }, { application: 'rooms', ...room }],
+    skipped: ['legacy']
+  })
+  assert.deepStrictEqual(runtime.commands[0], { id: 'objects', name: 'plt:lavoratore:objects', params: { limit: 1 } })
+
+  // An application which lists no object listed: the pod holds none, which is not a pod which cannot list
+  const empty = await createApp(createMockRuntime([{ id: 'objects', type: '@platformatic/lavoratore' }, { id: 'legacy', type: '@platformatic/lavoratore' }], {
+    objects: { status: 'ok', memberId: 'pod-1', total: 0, truncated: false, objects: [] }
+  }))
+  assert.deepStrictEqual(await empty.sendDurableObjectsCommand('durable-objects-list'), { total: 0, truncated: false, applications: ['objects'], objects: [], skipped: ['legacy'] })
+
+  const legacy = await createApp(createMockRuntime([{ id: 'legacy', type: '@platformatic/lavoratore' }]))
+  assert.deepStrictEqual(await legacy.sendDurableObjectsCommand('durable-objects-list'), { total: 0, truncated: false, applications: [], objects: [], skipped: ['legacy'] })
+})
