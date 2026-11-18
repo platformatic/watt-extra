@@ -114,14 +114,25 @@ async function updatePlugin (app) {
       }
 
       // Handle the Durable Objects commands of ICC: the promotion of a staged version, with the generation of the
-      // approval, and the drain of a retiring one. Both are forwarded to the Lavoratore applications and answered
-      // with their result, so that ICC knows what happened (see lib/durable-objects.js).
-      if (command === 'durable-objects-promote' || command === 'durable-objects-drain') {
-        app.log.info({ command, params: message.params }, 'Received Durable Objects command from ICC')
+      // approval, the drain of a retiring one, and the list of the objects the pod holds. They are forwarded to the
+      // Lavoratore applications and answered with their result, so that ICC knows what happened (see
+      // lib/durable-objects.js).
+      if (command === 'durable-objects-promote' || command === 'durable-objects-drain' || command === 'durable-objects-list') {
+        // The list is read again and again while somebody looks at it, and changes nothing: it is not logged
+        const logged = command !== 'durable-objects-list'
+
+        if (logged) {
+          app.log.info({ command, params: message.params }, 'Received Durable Objects command from ICC')
+        }
+
         try {
           const result = await app.sendDurableObjectsCommand(command, message.params ?? {})
-          // What the applications answered: a promotion or a drain which did nothing is found here
-          app.log.info({ command, params: message.params, result }, 'Answered the Durable Objects command of ICC')
+
+          if (logged) {
+            // What the applications answered: a promotion or a drain which did nothing is found here
+            app.log.info({ command, params: message.params, result }, 'Answered the Durable Objects command of ICC')
+          }
+
           if (message.requestId) {
             socket.send(JSON.stringify({
               requestId: message.requestId,

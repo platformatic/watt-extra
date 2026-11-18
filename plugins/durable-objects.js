@@ -1,4 +1,4 @@
-import { aggregateDrain, aggregatePromotion, COMMANDS, isLavoratoreApplication } from '../lib/durable-objects.js'
+import { aggregateDrain, aggregateObjects, aggregatePromotion, COMMANDS, isLavoratoreApplication } from '../lib/durable-objects.js'
 
 // Forwards the Durable Objects commands of ICC to the Lavoratore applications of the runtime, see lib/durable-objects.js
 async function durableObjects (app, _opts) {
@@ -37,7 +37,8 @@ async function durableObjects (app, _opts) {
   // repetition joins the one still running instead of starting another
   const inflight = new Map()
 
-  // Runs a command on every Lavoratore application: a promotion with { generation } or a drain. Returns the aggregate
+  // Runs a command on every Lavoratore application: a promotion with { generation }, a drain, or the list of the
+  // objects the pod holds. Returns the aggregate
   // of their answers, see lib/durable-objects.js. An application which has no handler for the command, i.e. without
   // Durable Objects placed across pods, or with a version of Lavoratore which predates the commands, is skipped: it has
   // nothing to promote or drain, and ICC must not wait for it. The applications are all asked even when one fails, and
@@ -86,7 +87,16 @@ async function durableObjects (app, _opts) {
       throw error
     }
 
-    const aggregate = command === 'durable-objects-promote' ? aggregatePromotion(results) : aggregateDrain(results)
+    let aggregate
+
+    if (command === 'durable-objects-promote') {
+      aggregate = aggregatePromotion(results)
+    } else if (command === 'durable-objects-list') {
+      aggregate = aggregateObjects(results)
+    } else {
+      aggregate = aggregateDrain(results)
+    }
+
     return skipped.length > 0 ? { ...aggregate, skipped } : aggregate
   }
 
