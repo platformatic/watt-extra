@@ -1,6 +1,7 @@
 import WebSocket from 'ws'
 import { once } from 'node:events'
 import { setTimeout as sleep } from 'node:timers/promises'
+import { COMMANDS as DURABLE_OBJECTS_COMMANDS } from '../lib/durable-objects.js'
 
 function createWebSocketUrl (httpUrl, path, queryParams = {}) {
   const url = new URL(httpUrl)
@@ -114,10 +115,10 @@ async function updatePlugin (app) {
       }
 
       // Handle the Durable Objects commands of ICC: the promotion of a staged version, with the generation of the
-      // approval, the drain of a retiring one, and the list of the objects the pod holds. They are forwarded to the
-      // Lavoratore applications and answered with their result, so that ICC knows what happened (see
-      // lib/durable-objects.js).
-      if (command === 'durable-objects-promote' || command === 'durable-objects-drain' || command === 'durable-objects-list') {
+      // approval, the drain of a retiring one or of a pod about to be removed, the resume of a drained pod which
+      // stays, and the list of the objects the pod holds. They are forwarded to the Lavoratore applications and
+      // answered with their result, so that ICC knows what happened (see lib/durable-objects.js).
+      if (Object.hasOwn(DURABLE_OBJECTS_COMMANDS, command)) {
         // The list is read again and again while somebody looks at it, and changes nothing: it is not logged
         const logged = command !== 'durable-objects-list'
 
