@@ -33,6 +33,9 @@ async function durableObjects (app, _opts) {
     return applications
   }
 
+  // The commands which change whether the pod drains
+  const ORDERED = new Set(['durable-objects-drain', 'durable-objects-resume'])
+
   // The commands in flight, by command and parameters: ICC repeats a command which did not answer in time, and the
   // repetition joins the one still running instead of starting another
   const inflight = new Map()
@@ -51,6 +54,11 @@ async function durableObjects (app, _opts) {
     }
 
     const key = `${command}:${JSON.stringify(params)}`
+
+    if (ORDERED.has(command)) {
+      return sendInOrder(command, name, params, key)
+    }
+
     let running = inflight.get(key)
 
     if (!running) {
@@ -59,6 +67,30 @@ async function durableObjects (app, _opts) {
     }
 
     return running
+  }
+
+  // A drain and a resume undo each other, and each one asks the applications one after the other: run at once, a
+  // resume could reach every application while an earlier drain waits for the first one, and that drain would then
+  // leave the others draining behind a pod reported as resumed. So they run one at a time, in the order they arrived,
+  // and the state of the pod is the one of the last command. A repetition joins the command it repeats only while
+  // that one is the last which arrived: after an opposing command it is a new request, and runs after it.
+  let tail = Promise.resolve()
+  let last = null
+
+  function sendInOrder (command, name, params, key) {
+    if (last?.key === key && !last.settled) {
+      return last.running
+    }
+
+    const entry = { key, settled: false, running: null }
+    const settle = () => { entry.settled = true }
+
+    entry.running = tail.then(() => runCommand(command, name, params))
+    entry.running.then(settle, settle)
+    tail = entry.running.catch(() => {})
+    last = entry
+
+    return entry.running
   }
 
   async function runCommand (command, name, params) {
