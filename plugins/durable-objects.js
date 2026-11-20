@@ -1,4 +1,4 @@
-import { aggregateDrain, aggregateObjects, aggregatePromotion, COMMANDS, isLavoratoreApplication } from '../lib/durable-objects.js'
+import { aggregateDrain, aggregateObjects, aggregatePromotion, aggregateResume, COMMANDS, isLavoratoreApplication } from '../lib/durable-objects.js'
 
 // Forwards the Durable Objects commands of ICC to the Lavoratore applications of the runtime, see lib/durable-objects.js
 async function durableObjects (app, _opts) {
@@ -33,12 +33,15 @@ async function durableObjects (app, _opts) {
     return applications
   }
 
+  // The commands which change whether the pod drains
+  const ORDERED = new Set(['durable-objects-drain', 'durable-objects-resume'])
+
   // The commands in flight, by command and parameters: ICC repeats a command which did not answer in time, and the
   // repetition joins the one still running instead of starting another
   const inflight = new Map()
 
-  // Runs a command on every Lavoratore application: a promotion with { generation }, a drain, or the list of the
-  // objects the pod holds. Returns the aggregate
+  // Runs a command on every Lavoratore application: a promotion with { generation }, a drain, the resume of a drained
+  // pod, or the list of the objects the pod holds. Returns the aggregate
   // of their answers, see lib/durable-objects.js. An application which has no handler for the command, i.e. without
   // Durable Objects placed across pods, or with a version of Lavoratore which predates the commands, is skipped: it has
   // nothing to promote or drain, and ICC must not wait for it. The applications are all asked even when one fails, and
@@ -51,6 +54,11 @@ async function durableObjects (app, _opts) {
     }
 
     const key = `${command}:${JSON.stringify(params)}`
+
+    if (ORDERED.has(command)) {
+      return sendInOrder(command, name, params, key)
+    }
+
     let running = inflight.get(key)
 
     if (!running) {
@@ -59,6 +67,30 @@ async function durableObjects (app, _opts) {
     }
 
     return running
+  }
+
+  // A drain and a resume undo each other, and each one asks the applications one after the other: run at once, a
+  // resume could reach every application while an earlier drain waits for the first one, and that drain would then
+  // leave the others draining behind a pod reported as resumed. So they run one at a time, in the order they arrived,
+  // and the state of the pod is the one of the last command. A repetition joins the command it repeats only while
+  // that one is the last which arrived: after an opposing command it is a new request, and runs after it.
+  let tail = Promise.resolve()
+  let last = null
+
+  function sendInOrder (command, name, params, key) {
+    if (last?.key === key && !last.settled) {
+      return last.running
+    }
+
+    const entry = { key, settled: false, running: null }
+    const settle = () => { entry.settled = true }
+
+    entry.running = tail.then(() => runCommand(command, name, params))
+    entry.running.then(settle, settle)
+    tail = entry.running.catch(() => {})
+    last = entry
+
+    return entry.running
   }
 
   async function runCommand (command, name, params) {
@@ -93,6 +125,8 @@ async function durableObjects (app, _opts) {
       aggregate = aggregatePromotion(results)
     } else if (command === 'durable-objects-list') {
       aggregate = aggregateObjects(results)
+    } else if (command === 'durable-objects-resume') {
+      aggregate = aggregateResume(results, skipped)
     } else {
       aggregate = aggregateDrain(results)
     }

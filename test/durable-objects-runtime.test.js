@@ -81,6 +81,11 @@ test('the Durable Objects commands reach a Lavoratore application of a real runt
     status: 'drained',
     applications: { objects: { status: 'drained', moved: 2 } }
   })
+
+  assert.deepStrictEqual(await app.sendDurableObjectsCommand('durable-objects-resume'), {
+    resumed: true,
+    applications: { objects: { resumed: true } }
+  })
 })
 
 test('a pod refused by an ICC which orchestrates Durable Objects starts its Lavoratore applications staged', async (t) => {

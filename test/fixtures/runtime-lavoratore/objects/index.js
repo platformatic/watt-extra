@@ -14,6 +14,11 @@ globalThis.platformatic.itc.handle('plt:lavoratore:drain', message => {
   return { status: 'drained', moved: commands.length }
 })
 
+globalThis.platformatic.itc.handle('plt:lavoratore:resume', () => {
+  commands.push({ name: 'resume' })
+  return { resumed: true }
+})
+
 export function create () {
   return createServer((_req, res) => {
     res.setHeader('content-type', 'application/json')

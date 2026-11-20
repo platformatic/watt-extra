@@ -3,7 +3,7 @@ import assert from 'node:assert'
 import { once } from 'node:events'
 import { WebSocketServer } from 'ws'
 import { setUpEnvironment } from './helper.js'
-import { aggregateDrain, aggregatePromotion, durableObjectsPatch, isLavoratoreApplication, placesDurableObjects, refusedDurableObjects } from '../lib/durable-objects.js'
+import { aggregateDrain, aggregatePromotion, aggregateResume, durableObjectsPatch, isLavoratoreApplication, placesDurableObjects, refusedDurableObjects } from '../lib/durable-objects.js'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -207,6 +207,68 @@ test('applications without the handler are skipped, failures are reported with t
   await assert.rejects(stopped.sendDurableObjectsCommand('durable-objects-drain'), /Runtime not started/)
 })
 
+test('a drain and a resume run in the order they arrived, and the pod ends in the state of the last one', async () => {
+  const applications = [{ id: 'a', type: '@platformatic/lavoratore' }, { id: 'b', type: '@platformatic/lavoratore' }]
+  const draining = { a: false, b: false }
+  let release
+
+  const runtime = {
+    commands: [],
+    getRuntimeConfig () {
+      return { applications }
+    },
+    async sendCommandToApplication (id, name, params) {
+      runtime.commands.push(`${id}:${name.split(':').pop()}`)
+
+      if (name === 'plt:lavoratore:resume') {
+        draining[id] = false
+        return { resumed: true }
+      }
+
+      draining[id] = true
+
+      // The first drain of the first application does not answer until released
+      if (id === 'a' && !release) {
+        await new Promise(resolve => { release = resolve })
+      }
+
+      return { status: 'drained' }
+    }
+  }
+  const app = await createApp(runtime)
+  const tick = () => new Promise(resolve => setImmediate(resolve))
+
+  const drain = app.sendDurableObjectsCommand('durable-objects-drain', { wait: false })
+  await tick()
+  const resume = app.sendDurableObjectsCommand('durable-objects-resume')
+  // The drain repeated after the resume is a new request, not the one still running
+  const again = app.sendDurableObjectsCommand('durable-objects-drain', { wait: false })
+  // And repeated once more, it joins that one
+  const joined = app.sendDurableObjectsCommand('durable-objects-drain', { wait: false })
+  await tick()
+
+  // The resume waits for the drain which arrived before it
+  assert.deepStrictEqual(runtime.commands, ['a:drain'])
+  release()
+
+  assert.strictEqual((await drain).status, 'drained')
+  assert.deepStrictEqual(await resume, { resumed: true, applications: { a: { resumed: true }, b: { resumed: true } } })
+  assert.deepStrictEqual(runtime.commands.slice(0, 4), ['a:drain', 'b:drain', 'a:resume', 'b:resume'])
+
+  assert.strictEqual(await again, await joined)
+  assert.deepStrictEqual(runtime.commands, ['a:drain', 'b:drain', 'a:resume', 'b:resume', 'a:drain', 'b:drain'])
+  assert.deepStrictEqual(draining, { a: true, b: true })
+
+  // The last command decides: a resume after a failed command still runs
+  const failing = createMockRuntime(applications, { a: () => { throw new Error('boom') }, b: { resumed: true } })
+  const broken = await createApp(failing)
+  const failed = broken.sendDurableObjectsCommand('durable-objects-drain')
+  const resumed = broken.sendDurableObjectsCommand('durable-objects-resume')
+  await assert.rejects(failed, /boom/)
+  await assert.rejects(resumed, /boom/)
+  assert.deepStrictEqual(failing.commands.map(command => command.name.split(':').pop()), ['drain', 'drain', 'resume', 'resume'])
+})
+
 test('the patch applies only to the applications which place Durable Objects', async (t) => {
   const dir = await mkdtemp(join(tmpdir(), 'watt-extra-do-'))
   t.after(() => rm(dir, { recursive: true, force: true }))
@@ -276,6 +338,10 @@ test('the Durable Objects commands of ICC are answered over the websocket with t
         throw new Error('The application "objects" does not handle the durable-objects-promote command')
       }
 
+      if (command === 'durable-objects-resume') {
+        return { resumed: true, applications: { objects: { resumed: true } } }
+      }
+
       return command === 'durable-objects-promote'
         ? { promoted: true, applications: { objects: { promoted: true, status: 'applied', generation: params.generation, admission: 1 } } }
         : { status: 'drained', applications: { objects: { status: 'drained', moved: 3 } } }
@@ -308,12 +374,49 @@ test('the Durable Objects commands of ICC are answered over the websocket with t
     result: { status: 'drained', applications: { objects: { status: 'drained', moved: 3 } } }
   })
 
+  assert.deepStrictEqual(await reply(getWs(), { command: 'durable-objects-resume', requestId: 'resume-1' }), {
+    requestId: 'resume-1',
+    success: true,
+    result: { resumed: true, applications: { objects: { resumed: true } } }
+  })
+
   assert.deepStrictEqual(received, [
     { command: 'durable-objects-promote', params: { generation: 2 } },
     { command: 'durable-objects-promote', params: { generation: 7 } },
     { command: 'durable-objects-promote', params: { generation: 8 } },
-    { command: 'durable-objects-drain', params: {} }
+    { command: 'durable-objects-drain', params: {} },
+    { command: 'durable-objects-resume', params: {} }
   ])
+})
+
+test('a drained pod is resumed in every Lavoratore application, and not when one cannot resume', async () => {
+  const applications = [{ id: 'objects', type: '@platformatic/lavoratore' }, { id: 'other', type: '@platformatic/lavoratore' }]
+
+  assert.deepStrictEqual(aggregateResume({ a: { resumed: true }, b: { resumed: false, status: 'unsupported' } }), {
+    resumed: true,
+    applications: { a: { resumed: true }, b: { resumed: false, status: 'unsupported' } }
+  })
+  assert.strictEqual(aggregateResume({ a: { resumed: true }, b: { resumed: false } }).resumed, false)
+  assert.strictEqual(aggregateResume({ a: { resumed: true } }, ['b']).resumed, false)
+
+  // An application which places nothing across pods has nothing to resume
+  const runtime = createMockRuntime(applications, { objects: { resumed: true }, other: { resumed: false, status: 'unsupported' } })
+  assert.deepStrictEqual(await (await createApp(runtime)).sendDurableObjectsCommand('durable-objects-resume'), {
+    resumed: true,
+    applications: { objects: { resumed: true }, other: { resumed: false, status: 'unsupported' } }
+  })
+  assert.deepStrictEqual(runtime.commands, [
+    { id: 'objects', name: 'plt:lavoratore:resume', params: {} },
+    { id: 'other', name: 'plt:lavoratore:resume', params: {} }
+  ])
+
+  // A version of Lavoratore which predates the resume has no handler: the pod may still be draining
+  const older = createMockRuntime(applications, { objects: { resumed: true } })
+  assert.deepStrictEqual(await (await createApp(older)).sendDurableObjectsCommand('durable-objects-resume'), {
+    resumed: false,
+    applications: { objects: { resumed: true } },
+    skipped: ['other']
+  })
 })
 
 test('the objects of the pod are listed over its Lavoratore applications', async () => {
