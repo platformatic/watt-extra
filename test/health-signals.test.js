@@ -240,6 +240,19 @@ test('should send the saturation signal of an application, and nothing more for 
     assert.deepStrictEqual(Object.keys(signals.main).sort(), ['elu', 'heap'])
   }
 
+  // A threshold which is not a positive number is not sent: ICC uses its own
+  const first = receivedSignalReqs.length
+  await send({ type: 'saturation', value: 0.4, threshold: 0 })
+  await send({ type: 'saturation', value: 0.4, threshold: -1 })
+  await sleep(6000)
+
+  const withoutThreshold = receivedSignalReqs.slice(first).filter(({ signals }) => signals.main.saturation)
+  assert.ok(withoutThreshold.length >= 1, 'A batch should carry the saturation signal')
+
+  for (const { signals } of withoutThreshold) {
+    assert.deepStrictEqual(signals.main.saturation.options, {})
+  }
+
   // The signals which are not known, or are not numbers, are not sent
   const before = receivedSignalReqs.length
   await send({ type: 'custom', value: 42 })

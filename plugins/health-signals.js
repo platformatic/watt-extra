@@ -190,7 +190,8 @@ async function healthSignals (app, _opts) {
         })
 
         if (kApplicationSignals.includes(signal.type) && Number.isFinite(signal.value)) {
-          if (Number.isFinite(signal.threshold)) {
+          // ICC divides by the threshold: one which is not a positive number is not sent, and ICC uses its own
+          if (Number.isFinite(signal.threshold) && signal.threshold > 0) {
             applicationThresholds[serviceId] ??= {}
             applicationThresholds[serviceId][signal.type] = signal.threshold
           }
