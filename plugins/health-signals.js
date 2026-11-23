@@ -4,9 +4,11 @@ import semver from 'semver'
 import { parseMemorySize } from '@platformatic/foundation'
 
 // The signals of the applications which the scaler of ICC decides on, besides the ELU and the heap every worker
-// reports: an application sends them with the health signals of Watt, as numbers, optionally with the threshold
-// above which it needs more instances. They are sent to ICC only for the applications which have them.
-const kApplicationSignals = ['memory']
+// reports. "saturation" is how much of its capacity an application uses, when that is not something Watt can
+// measure, such as memory outside the heap of JavaScript: 1 is at capacity, and more is how many times over. An
+// application sends it with the health signals of Watt, as a number, optionally with the threshold above which it
+// needs more instances. It is sent to ICC only for the applications which have it.
+const kApplicationSignals = ['saturation']
 
 class HealthSignalsCache {
   #signalsByService = {}

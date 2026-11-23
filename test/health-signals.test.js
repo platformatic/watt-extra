@@ -189,7 +189,7 @@ test('should send health signals when service becomes unhealthy', async (t) => {
   assert.ok(profile, 'Profile should be decoded')
 })
 
-test('should send the memory signal of an application, and nothing more for the other signals', async (t) => {
+test('should send the saturation signal of an application, and nothing more for the other signals', async (t) => {
   const applicationName = 'test-app'
   const applicationId = randomUUID()
   const applicationPath = join(__dirname, 'fixtures', 'service-1')
@@ -243,20 +243,21 @@ test('should send the memory signal of an application, and nothing more for the 
   // The signals which are not known, or are not numbers, are not sent
   const before = receivedSignalReqs.length
   await send({ type: 'custom', value: 42 })
-  await send({ type: 'memory', value: 'high' })
+  await send({ type: 'saturation', value: 'high' })
   await send({ type: 'memory', value: 0.95, threshold: 0.9 })
+  await send({ type: 'saturation', value: 1.5, threshold: 0.9 })
   await sleep(6000)
 
-  const withMemory = receivedSignalReqs.slice(before).filter(({ signals }) => signals.main.memory)
-  assert.strictEqual(withMemory.length, 1, 'One batch should carry the memory signal')
+  const withSaturation = receivedSignalReqs.slice(before).filter(({ signals }) => signals.main.saturation)
+  assert.strictEqual(withSaturation.length, 1, 'One batch should carry the saturation signal')
 
-  const { memory, ...others } = withMemory[0].signals.main
+  const { saturation, ...others } = withSaturation[0].signals.main
   assert.deepStrictEqual(Object.keys(others).sort(), ['elu', 'heap'])
-  assert.deepStrictEqual(memory.options, { threshold: 0.9 })
-  assert.deepStrictEqual(Object.keys(memory.workers), Object.keys(others.elu.workers))
+  assert.deepStrictEqual(saturation.options, { threshold: 0.9 })
+  assert.deepStrictEqual(Object.keys(saturation.workers), Object.keys(others.elu.workers))
 
-  const [values] = Object.values(memory.workers).map(worker => worker.values)
+  const [values] = Object.values(saturation.workers).map(worker => worker.values)
   assert.strictEqual(values.length, 1)
-  assert.strictEqual(values[0][1], 0.95)
+  assert.strictEqual(values[0][1], 1.5)
   assert.ok(typeof values[0][0] === 'number')
 })
