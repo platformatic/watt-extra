@@ -3,6 +3,11 @@ import { request } from 'undici'
 import semver from 'semver'
 import { parseMemorySize } from '@platformatic/foundation'
 
+// The signals of the applications which the scaler of ICC decides on, besides the ELU and the heap every worker
+// reports: an application sends them with the health signals of Watt, as numbers, optionally with the threshold
+// above which it needs more instances. They are sent to ICC only for the applications which have them.
+const kApplicationSignals = ['memory']
+
 class HealthSignalsCache {
   #signalsByService = {}
   #maxSize = 500
@@ -44,6 +49,8 @@ async function healthSignals (app, _opts) {
 
   const signalsCache = new HealthSignalsCache()
   const heapTotalByService = {}
+  // The thresholds the applications gave with their own signals, by service and signal
+  const applicationThresholds = {}
 
   // Store listener reference for cleanup
   let healthMetricsListener = null
@@ -171,7 +178,26 @@ async function healthSignals (app, _opts) {
         timestamp: now
       })
       heapTotalByService[serviceId] = heapTotal
-      signalsCache.addServiceSignals(serviceId, healthSignals)
+
+      // The signals of the application do not say which worker sent them: the event does
+      for (const signal of healthSignals ?? []) {
+        signalsCache.addServiceSignal(serviceId, signal.type, {
+          workerId: signal.workerId ?? workerId,
+          value: signal.value,
+          timestamp: signal.timestamp ?? now
+        })
+
+        if (kApplicationSignals.includes(signal.type) && Number.isFinite(signal.value)) {
+          if (Number.isFinite(signal.threshold)) {
+            applicationThresholds[serviceId] ??= {}
+            applicationThresholds[serviceId][signal.type] = signal.threshold
+          }
+
+          if (signal.value >= (applicationThresholds[serviceId]?.[signal.type] ?? Infinity)) {
+            batchHasHighValue = true
+          }
+        }
+      }
 
       if (elu > eluBatchThreshold || heapUsedMb > heapBatchThresholdMb) {
         batchHasHighValue = true
@@ -234,6 +260,24 @@ async function healthSignals (app, _opts) {
             heapTotal: heapTotalByService[serviceId] || 0
           },
           workers: heapWorkerMetrics
+        }
+      }
+
+      // Nothing is added for the applications without these signals: the payload is the one ICC always received
+      for (const type of kApplicationSignals) {
+        const workers = {}
+
+        for (const [workerId, entries] of Object.entries(serviceSignals[type] || {})) {
+          const values = entries.filter(([, value]) => Number.isFinite(value))
+
+          if (values.length > 0) {
+            workers[workerId] = { values }
+          }
+        }
+
+        if (Object.keys(workers).length > 0) {
+          const threshold = applicationThresholds[serviceId]?.[type]
+          signals[serviceId][type] = { options: threshold === undefined ? {} : { threshold }, workers }
         }
       }
     }

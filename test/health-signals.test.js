@@ -188,3 +188,75 @@ test('should send health signals when service becomes unhealthy', async (t) => {
   const profile = Profile.decode(receivedFlamegraph)
   assert.ok(profile, 'Profile should be decoded')
 })
+
+test('should send the memory signal of an application, and nothing more for the other signals', async (t) => {
+  const applicationName = 'test-app'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'service-1')
+  const receivedSignalReqs = []
+
+  const icc = await startICC(t, {
+    applicationId,
+    applicationName,
+    scaler: { version: 'v2' },
+    processReady: () => ({ success: true }),
+    processSignals: (req) => {
+      receivedSignalReqs.push(req.body)
+      return { alerts: [] }
+    }
+  })
+
+  setUpEnvironment({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_DISABLE_FLAMEGRAPHS: true,
+    PLT_HEALTH_SIGNALS_SHORT_BATCH_TIMEOUT: 2000,
+    PLT_HEALTH_SIGNALS_LONG_BATCH_TIMEOUT: 4000
+  })
+
+  const app = await start()
+  app.getAuthorizationHeaders = async (headers) => ({ ...headers, authorization: 'Bearer test-token' })
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  const send = async body => {
+    const { statusCode } = await request('http://127.0.0.1:3042/custom-health-signal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    assert.strictEqual(statusCode, 200)
+  }
+
+  // A batch without the signal is the one ICC always received
+  await sleep(6000)
+  assert.ok(receivedSignalReqs.length >= 1, 'A batch should have been received')
+
+  for (const { signals } of receivedSignalReqs) {
+    assert.deepStrictEqual(Object.keys(signals.main).sort(), ['elu', 'heap'])
+  }
+
+  // The signals which are not known, or are not numbers, are not sent
+  const before = receivedSignalReqs.length
+  await send({ type: 'custom', value: 42 })
+  await send({ type: 'memory', value: 'high' })
+  await send({ type: 'memory', value: 0.95, threshold: 0.9 })
+  await sleep(6000)
+
+  const withMemory = receivedSignalReqs.slice(before).filter(({ signals }) => signals.main.memory)
+  assert.strictEqual(withMemory.length, 1, 'One batch should carry the memory signal')
+
+  const { memory, ...others } = withMemory[0].signals.main
+  assert.deepStrictEqual(Object.keys(others).sort(), ['elu', 'heap'])
+  assert.deepStrictEqual(memory.options, { threshold: 0.9 })
+  assert.deepStrictEqual(Object.keys(memory.workers), Object.keys(others.elu.workers))
+
+  const [values] = Object.values(memory.workers).map(worker => worker.values)
+  assert.strictEqual(values.length, 1)
+  assert.strictEqual(values[0][1], 0.95)
+  assert.ok(typeof values[0][0] === 'number')
+})
