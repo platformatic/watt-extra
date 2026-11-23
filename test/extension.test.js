@@ -25,6 +25,7 @@ class ExtensionRuntime extends EventEmitter {
 
   getRuntimeConfig () { return this.config }
   getRuntimeMetadata () { return { platformaticVersion: '4.0.0-alpha.3' } }
+  async getApplications () { return { applications: [] } }
   getWorkers () { return {} }
   getSchedulerJobs () { return [] }
   async updateSharedContext ({ context }) { Object.assign(this.context, context) }

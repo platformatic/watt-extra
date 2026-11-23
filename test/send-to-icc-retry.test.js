@@ -39,6 +39,7 @@ for (const failures of [2, 5, 0]) {
       logger,
       getRuntimeConfig: () => config,
       getRuntimeMetadata: () => ({}),
+      getApplications: async () => ({ applications: [] }),
       getWorkers: () => ({}),
       getSchedulerJobs: () => [],
       updateSharedContext: async () => {},
