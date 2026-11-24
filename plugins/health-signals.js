@@ -51,9 +51,8 @@ async function healthSignals (app, _opts) {
   let requestCountsListener = null
 
   let requestsCollector = null
-  let pendingRequestCounts = {}
-  let requestCountsFrom = Date.now()
-  let isSendingRequestCounts = false
+  let requestCountsFrom = null
+  let isRequestCountsUnsupported = false
 
   // Store thresholds for use in sendHealthSignals
   let eluThreshold = null
@@ -202,15 +201,12 @@ async function healthSignals (app, _opts) {
       // ICC can change the label at runtime (updateMetricsConfig)
       const serviceLabel = runtime.getRuntimeConfig(true).metrics?.applicationLabel ?? 'serviceId'
       const requestCounts = requestsCollector.collect(metrics, workers, serviceLabel)
-      addPendingRequestCounts(requestCounts)
 
-      // A slow send must not be overtaken: the requests read meanwhile go with the next one
-      if (isSendingRequestCounts) return
-      isSendingRequestCounts = true
-      try {
-        await sendRequestCounts(timestamp)
-      } finally {
-        isSendingRequestCounts = false
+      // The first read is only where the next one starts from: its requests are of an unknown time
+      const from = requestCountsFrom
+      requestCountsFrom = timestamp
+      if (from !== null) {
+        await sendRequestCounts(from, timestamp, requestCounts)
       }
     }
     app.metrics.on('metrics', requestCountsListener)
@@ -241,59 +237,45 @@ async function healthSignals (app, _opts) {
     }
   }
 
-  function addPendingRequestCounts (requestCounts) {
-    for (const [serviceId, requests] of Object.entries(requestCounts)) {
-      const pendingRequests = pendingRequestCounts[serviceId] ?? 0
-      pendingRequestCounts[serviceId] = pendingRequests + requests
-    }
-  }
-
-  // Sends the requests per service received in [from, to]. `from` moves forward only when the scaler
-  // acknowledges them: requests it did not acknowledge go with the next interval, from the same `from`.
-  async function sendRequestCounts (requestCountsTo) {
+  // Sends the requests per service received in [from, to]. They are not sent again on a failure: the scaler
+  // shows the latest ones.
+  async function sendRequestCounts (from, to, requests) {
     const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
     const applicationId = app.instanceConfig?.applicationId
     const runtimeId = app.getRuntimeId()
-    const entrypoint = app.watt.runtime.getRuntimeConfig(true).entrypoint ?? null
+    const { entrypoint } = app.watt.runtime.getRuntimeConfig(true)
+    const entrypoints = []
+    if (entrypoint) {
+      entrypoints.push(entrypoint)
+    }
     const authHeaders = await app.getAuthorizationHeaders()
 
-    const requestCounts = pendingRequestCounts
-    pendingRequestCounts = {}
+    const { statusCode, body } = await request(`${scalerUrl}/request-counts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders
+      },
+      body: JSON.stringify({ applicationId, runtimeId, entrypoints, from, to, requests })
+    })
 
-    let isFailed = true
-    try {
-      const { statusCode, body } = await request(`${scalerUrl}/request-counts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        },
-        body: JSON.stringify({
-          applicationId,
-          runtimeId,
-          entrypoint,
-          from: requestCountsFrom,
-          to: requestCountsTo,
-          requests: requestCounts
-        })
-      })
-
-      if (statusCode === 200) {
-        await body.dump()
-        isFailed = false
-      } else {
-        const error = await body.text()
-        app.log.error({ error }, 'Failed to send request counts to scaler')
+    // An older ICC does not have the route: warn once, it can be updated at any time
+    if (statusCode === 404) {
+      await body.dump()
+      if (!isRequestCountsUnsupported) {
+        isRequestCountsUnsupported = true
+        app.log.warn('The scaler does not support request counts, update ICC to get the requests per second')
       }
-    } finally {
-      if (isFailed) {
-        addPendingRequestCounts(requestCounts)
-      }
+      return
     }
+    isRequestCountsUnsupported = false
 
-    if (!isFailed) {
-      requestCountsFrom = requestCountsTo
+    if (statusCode !== 200) {
+      const error = await body.text()
+      app.log.error({ error }, 'Failed to send request counts to scaler')
+      return
     }
+    await body.dump()
   }
 
   async function sendHealthSignals (rawSignals, batchStartedAt) {

@@ -49,13 +49,15 @@ test('should send the requests of each service in back-to-back intervals', async
     requestCounts.push(req.body)
     return { success: true }
   })
+  // The first read is not sent
+  await sleep(COLLECTION_INTERVAL * 1.5)
 
   await sendRequests(5)
   await sleep(COLLECTION_INTERVAL * 4)
 
   assert.ok(requestCounts.length >= 2)
-  for (const { entrypoint, from, to } of requestCounts) {
-    assert.strictEqual(entrypoint, 'main')
+  for (const { entrypoints, from, to } of requestCounts) {
+    assert.deepStrictEqual(entrypoints, ['main'])
     assert.ok(from < to)
   }
   for (let i = 1; i < requestCounts.length; i++) {
@@ -69,30 +71,51 @@ test('should send the requests of each service in back-to-back intervals', async
   assert.strictEqual(mainRequests, 5)
 })
 
-test('should send the requests the scaler did not acknowledge with the next interval', async (t) => {
+test('should not send again the requests of a failed send', async (t) => {
   const requestCounts = []
-  let isFirstRequest = true
+  let isFailing = true
   await startApp(t, (req) => {
     requestCounts.push(req.body)
-    if (isFirstRequest) {
-      isFirstRequest = false
-      throw new Error('Scaler unavailable')
-    }
+    if (isFailing) throw new Error('Scaler unavailable')
     return { success: true }
   })
+  await sleep(COLLECTION_INTERVAL * 1.5)
 
   await sendRequests(5)
-  await sleep(COLLECTION_INTERVAL * 4)
+  await sleep(COLLECTION_INTERVAL * 2)
+  const failedCount = requestCounts.length
+  isFailing = false
 
-  assert.ok(requestCounts.length >= 2)
-  // The failed interval is sent again from the same `from`
-  assert.strictEqual(requestCounts[1].from, requestCounts[0].from)
+  await sendRequests(3)
+  await sleep(COLLECTION_INTERVAL * 2)
 
+  for (let i = 1; i < requestCounts.length; i++) {
+    assert.strictEqual(requestCounts[i].from, requestCounts[i - 1].to)
+  }
   let mainRequests = 0
-  for (const { requests } of requestCounts.slice(1)) {
+  for (const { requests } of requestCounts.slice(failedCount)) {
     mainRequests += requests.main ?? 0
   }
-  assert.strictEqual(mainRequests, 5)
+  assert.strictEqual(mainRequests, 3)
+})
+
+test('should warn once when the scaler does not support request counts, and keep sending', async (t) => {
+  let sentCount = 0
+  const app = await startApp(t, () => {
+    sentCount++
+    throw Object.assign(new Error('Route POST:/request-counts not found'), { statusCode: 404 })
+  })
+
+  const warnings = []
+  const errors = []
+  t.mock.method(app.log, 'warn', (message) => warnings.push(message))
+  t.mock.method(app.log, 'error', (...args) => errors.push(args))
+  await sleep(COLLECTION_INTERVAL * 5)
+
+  assert.ok(sentCount >= 2)
+  assert.strictEqual(warnings.length, 1)
+  assert.match(warnings[0], /does not support request counts/)
+  assert.deepStrictEqual(errors, [])
 })
 
 test('should count the requests of workers that come, go, do not answer and reuse ids', () => {
@@ -136,6 +159,7 @@ test('should count every request while a real application scales and restarts', 
     return { success: true }
   })
   const { runtime } = app.watt
+  await sleep(COLLECTION_INTERVAL * 1.5)
 
   const changes = [
     () => runtime.updateApplicationsResources([{ application: 'main', workers: 3 }]),
