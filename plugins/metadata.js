@@ -36,11 +36,11 @@ async function metadata (app, _opts) {
           runtime.getRuntimeMetadata()
         ])
 
-        const entrypoint = await app.getEntrypoint()
+        const entrypoints = await app.getEntrypoints()
         const services = await Promise.all(
           runtimeConfig.applications.map(async (application) => ({
             ...await runtime.getApplicationDetails(application.id),
-            entrypoint: application.id === entrypoint
+            entrypoint: entrypoints.includes(application.id)
           }))
         )
 
