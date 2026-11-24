@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { request } from 'undici'
 import semver from 'semver'
 import { parseMemorySize } from '@platformatic/foundation'
+import { RequestsCollector } from '../lib/requests-collector.js'
 
 class HealthSignalsCache {
   #signalsByService = {}
@@ -47,6 +48,12 @@ async function healthSignals (app, _opts) {
 
   // Store listener reference for cleanup
   let healthMetricsListener = null
+  let requestCountsListener = null
+
+  let requestsCollector = null
+  let pendingRequestCounts = {}
+  let requestCountsFrom = Date.now()
+  let isSendingRequestCounts = false
 
   // Store thresholds for use in sendHealthSignals
   let eluThreshold = null
@@ -178,6 +185,36 @@ async function healthSignals (app, _opts) {
       }
     }
     runtime.on('application:worker:health:metrics', healthMetricsListener)
+
+    // Before v4 the HTTP metrics reset on every read by default: each read is then the requests since
+    // the previous one. Other readers (e.g. Prometheus) take requests away from both.
+    if (requestsCollector === null) {
+      const resetHttpMetrics = runtime.getRuntimeConfig(true).metrics?.resetHttpMetrics
+      const isResetDisabled = resetHttpMetrics === false || resetHttpMetrics === 'false'
+      const isHttpMetricsReset = semver.major(runtimeVersion) < 4 && !isResetDisabled
+      requestsCollector = new RequestsCollector(isHttpMetricsReset)
+    }
+
+    if (requestCountsListener) {
+      app.metrics.off('metrics', requestCountsListener)
+    }
+    requestCountsListener = async ({ metrics, workers, timestamp }) => {
+      // ICC can change the label at runtime (updateMetricsConfig)
+      const serviceLabel = runtime.getRuntimeConfig(true).metrics?.applicationLabel ?? 'serviceId'
+      const requestCounts = requestsCollector.collect(metrics, workers, serviceLabel)
+      addPendingRequestCounts(requestCounts)
+
+      // A slow send must not be overtaken: the requests read meanwhile go with the next one
+      if (isSendingRequestCounts) return
+      isSendingRequestCounts = true
+      try {
+        await sendRequestCounts(timestamp)
+      } finally {
+        isSendingRequestCounts = false
+      }
+    }
+    app.metrics.on('metrics', requestCountsListener)
+
     await sendReadyStatus()
   }
   app.setupHealthSignals = setupHealthSignals
@@ -201,6 +238,61 @@ async function healthSignals (app, _opts) {
     if (statusCode !== 200) {
       const error = await body.text()
       app.log.error({ error }, 'Failed to send the instance ready status to scaler')
+    }
+  }
+
+  function addPendingRequestCounts (requestCounts) {
+    for (const [serviceId, requests] of Object.entries(requestCounts)) {
+      const pendingRequests = pendingRequestCounts[serviceId] ?? 0
+      pendingRequestCounts[serviceId] = pendingRequests + requests
+    }
+  }
+
+  // Sends the requests per service received in [from, to]. `from` moves forward only when the scaler
+  // acknowledges them: requests it did not acknowledge go with the next interval, from the same `from`.
+  async function sendRequestCounts (requestCountsTo) {
+    const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
+    const applicationId = app.instanceConfig?.applicationId
+    const runtimeId = app.getRuntimeId()
+    const entrypoint = app.watt.runtime.getRuntimeConfig(true).entrypoint ?? null
+    const authHeaders = await app.getAuthorizationHeaders()
+
+    const requestCounts = pendingRequestCounts
+    pendingRequestCounts = {}
+
+    let isFailed = true
+    try {
+      const { statusCode, body } = await request(`${scalerUrl}/request-counts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        },
+        body: JSON.stringify({
+          applicationId,
+          runtimeId,
+          entrypoint,
+          from: requestCountsFrom,
+          to: requestCountsTo,
+          requests: requestCounts
+        })
+      })
+
+      if (statusCode === 200) {
+        await body.dump()
+        isFailed = false
+      } else {
+        const error = await body.text()
+        app.log.error({ error }, 'Failed to send request counts to scaler')
+      }
+    } finally {
+      if (isFailed) {
+        addPendingRequestCounts(requestCounts)
+      }
+    }
+
+    if (!isFailed) {
+      requestCountsFrom = requestCountsTo
     }
   }
 

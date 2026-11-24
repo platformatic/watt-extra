@@ -182,6 +182,9 @@ async function startICC (t, opts = {}) {
     icc.post('/signals', async (req) => {
       return opts.processSignals?.(req)
     })
+    icc.post('/request-counts', async (req) => {
+      return opts.processRequestCounts?.(req) ?? { success: true }
+    })
     icc.post('/ready', async (req) => {
       return opts.processReady?.(req) ?? { success: true }
     })

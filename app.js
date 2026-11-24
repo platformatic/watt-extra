@@ -11,6 +11,7 @@ import alert from './plugins/alerts.js'
 import healthSignals from './plugins/health-signals.js'
 import flamegraphs from './plugins/flamegraphs.js'
 import durableObjects from './plugins/durable-objects.js'
+import metrics from './plugins/metrics.js'
 
 async function buildApp (logger) {
   const app = {
@@ -31,6 +32,7 @@ async function buildApp (logger) {
     .use(durableObjects)
     .use(update)
     .use(flamegraphs)
+    .use(metrics)
 
   await app.ready()
 
@@ -119,6 +121,7 @@ async function buildApp (logger) {
     if (app.cleanupFlamegraphs) {
       await app.cleanupFlamegraphs()
     }
+    await app.cleanupMetrics()
     if (app.watt.runtime) {
       await app.watt.close()
     }
