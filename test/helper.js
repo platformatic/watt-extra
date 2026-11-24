@@ -102,9 +102,9 @@ async function startICC (t, opts = {}) {
 
   // Control Plane
   await icc.register(async (icc) => {
-    icc.post('/pods/:podId/instance', async (req) => {
+    icc.post('/pods/:podId/instance', async (req, reply) => {
       if (typeof controlPlaneResponse === 'function') {
-        return controlPlaneResponse(req)
+        return controlPlaneResponse(req, reply)
       }
       return controlPlaneResponse || {
         applicationId,

@@ -12,7 +12,7 @@ mock.module('avvio', {
   }
 })
 
-export async function start () {
+export async function start ({ waitForICC = true } = {}) {
   const root = process.env.PLT_APP_DIR
   const runtime = await create(root, undefined, { isProduction: true, setupSignals: false })
   after(() => runtime.close())
@@ -33,7 +33,9 @@ export async function start () {
   app.close = () => runtime.close()
   try {
     await runtime.start()
-    await synchronized.promise
+    if (waitForICC) {
+      await synchronized.promise
+    }
     return app
   } catch (err) {
     await runtime.close()

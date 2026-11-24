@@ -8,6 +8,7 @@ import metadata from './plugins/metadata.js'
 import entrypoint from './plugins/entrypoint.js'
 import compliancy from './plugins/compliancy.js'
 import scheduler from './plugins/scheduler.js'
+import durableObjects from './plugins/durable-objects.js'
 import update from './plugins/update.js'
 import alert from './plugins/alerts.js'
 import healthSignals from './plugins/health-signals.js'
@@ -40,6 +41,7 @@ export async function configure (config, { root, options = {} }) {
     .use(metadata)
     .use(compliancy)
     .use(scheduler)
+    .use(durableObjects)
     .use(update)
     .use(flamegraphs)
 
