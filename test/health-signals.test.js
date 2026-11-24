@@ -189,7 +189,7 @@ test('should send health signals when service becomes unhealthy', async (t) => {
   assert.ok(profile, 'Profile should be decoded')
 })
 
-test('should send the saturation signal of an application, and nothing more for the other signals', async (t) => {
+test('should send the signals of an application to ICC, under their type', async (t) => {
   const applicationName = 'test-app'
   const applicationId = randomUUID()
   const applicationPath = join(__dirname, 'fixtures', 'service-1')
@@ -253,24 +253,32 @@ test('should send the saturation signal of an application, and nothing more for 
     assert.deepStrictEqual(signals.main.saturation.options, {})
   }
 
-  // The signals which are not known, or are not numbers, are not sent
+  // Every signal of the application is sent under its type, with its threshold when it has one: ICC says which ones
+  // it scales on. Those which are not numbers are not sent, and the signals of Watt cannot be replaced.
   const before = receivedSignalReqs.length
   await send({ type: 'custom', value: 42 })
   await send({ type: 'saturation', value: 'high' })
+  await send({ type: 'elu', value: 77 })
   await send({ type: 'memory', value: 0.95, threshold: 0.9 })
   await send({ type: 'saturation', value: 1.5, threshold: 0.9 })
   await sleep(6000)
 
-  const withSaturation = receivedSignalReqs.slice(before).filter(({ signals }) => signals.main.saturation)
-  assert.strictEqual(withSaturation.length, 1, 'One batch should carry the saturation signal')
+  const sent = {}
 
-  const { saturation, ...others } = withSaturation[0].signals.main
-  assert.deepStrictEqual(Object.keys(others).sort(), ['elu', 'heap'])
-  assert.deepStrictEqual(saturation.options, { threshold: 0.9 })
-  assert.deepStrictEqual(Object.keys(saturation.workers), Object.keys(others.elu.workers))
+  for (const { signals } of receivedSignalReqs.slice(before)) {
+    for (const [type, { options, workers }] of Object.entries(signals.main)) {
+      const values = Object.values(workers).flatMap(worker => worker.values)
+      sent[type] ??= { options, values: [] }
+      sent[type].values.push(...values.map(([timestamp, value]) => {
+        assert.ok(typeof timestamp === 'number')
+        return value
+      }))
+    }
+  }
 
-  const [values] = Object.values(saturation.workers).map(worker => worker.values)
-  assert.strictEqual(values.length, 1)
-  assert.strictEqual(values[0][1], 1.5)
-  assert.ok(typeof values[0][0] === 'number')
+  assert.deepStrictEqual(Object.keys(sent).sort(), ['custom', 'elu', 'heap', 'memory', 'saturation'])
+  assert.deepStrictEqual(sent.custom, { options: {}, values: [42] })
+  assert.deepStrictEqual(sent.memory, { options: { threshold: 0.9 }, values: [0.95] })
+  assert.deepStrictEqual(sent.saturation, { options: { threshold: 0.9 }, values: [1.5] })
+  assert.ok(sent.elu.values.every(value => value <= 1), 'The ELU is the one of Watt')
 })
