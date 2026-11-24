@@ -5,6 +5,7 @@ import avvio from 'avvio'
 import init from './plugins/init.js'
 import env from './plugins/env.js'
 import metadata from './plugins/metadata.js'
+import entrypoint from './plugins/entrypoint.js'
 import compliancy from './plugins/compliancy.js'
 import scheduler from './plugins/scheduler.js'
 import update from './plugins/update.js'
@@ -35,6 +36,7 @@ export async function configure (config, { root, options = {} }) {
     })
     .use(alert)
     .use(healthSignals)
+    .use(entrypoint)
     .use(metadata)
     .use(compliancy)
     .use(scheduler)
