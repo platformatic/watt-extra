@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { request } from 'undici'
 import semver from 'semver'
 import { parseMemorySize } from '@platformatic/foundation'
+import { RequestsCollector } from '../lib/requests-collector.js'
 
 class HealthSignalsCache {
   #signalsByService = {}
@@ -47,6 +48,11 @@ async function healthSignals (app, _opts) {
 
   // Store listener reference for cleanup
   let healthMetricsListener = null
+  let requestCountsListener = null
+
+  let requestsCollector = null
+  let requestCountsFrom = null
+  let isRequestCountsUnsupported = false
 
   // Store thresholds for use in sendHealthSignals
   let eluThreshold = null
@@ -178,6 +184,33 @@ async function healthSignals (app, _opts) {
       }
     }
     runtime.on('application:worker:health:metrics', healthMetricsListener)
+
+    // Before v4 the HTTP metrics reset on every read by default: each read is then the requests since
+    // the previous one. Other readers (e.g. Prometheus) take requests away from both.
+    if (requestsCollector === null) {
+      const resetHttpMetrics = runtime.getRuntimeConfig(true).metrics?.resetHttpMetrics
+      const isResetDisabled = resetHttpMetrics === false || resetHttpMetrics === 'false'
+      const isHttpMetricsReset = semver.major(runtimeVersion) < 4 && !isResetDisabled
+      requestsCollector = new RequestsCollector(isHttpMetricsReset)
+    }
+
+    if (requestCountsListener) {
+      app.metrics.off('metrics', requestCountsListener)
+    }
+    requestCountsListener = async ({ metrics, workers, timestamp }) => {
+      // ICC can change the label at runtime (updateMetricsConfig)
+      const serviceLabel = runtime.getRuntimeConfig(true).metrics?.applicationLabel ?? 'serviceId'
+      const requestCounts = requestsCollector.collect(metrics, workers, serviceLabel)
+
+      // The first read is only where the next one starts from: its requests are of an unknown time
+      const from = requestCountsFrom
+      requestCountsFrom = timestamp
+      if (from !== null) {
+        await sendRequestCounts(from, timestamp, requestCounts)
+      }
+    }
+    app.metrics.on('metrics', requestCountsListener)
+
     await sendReadyStatus()
   }
   app.setupHealthSignals = setupHealthSignals
@@ -202,6 +235,47 @@ async function healthSignals (app, _opts) {
       const error = await body.text()
       app.log.error({ error }, 'Failed to send the instance ready status to scaler')
     }
+  }
+
+  // Sends the requests per service received in [from, to]. They are not sent again on a failure: the scaler
+  // shows the latest ones.
+  async function sendRequestCounts (from, to, requests) {
+    const scalerUrl = app.instanceConfig?.iccServices?.scaler?.url
+    const applicationId = app.instanceConfig?.applicationId
+    const runtimeId = app.getRuntimeId()
+    const { entrypoint } = app.watt.runtime.getRuntimeConfig(true)
+    const entrypoints = []
+    if (entrypoint) {
+      entrypoints.push(entrypoint)
+    }
+    const authHeaders = await app.getAuthorizationHeaders()
+
+    const { statusCode, body } = await request(`${scalerUrl}/request-counts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders
+      },
+      body: JSON.stringify({ applicationId, runtimeId, entrypoints, from, to, requests })
+    })
+
+    // An older ICC does not have the route: warn once, it can be updated at any time
+    if (statusCode === 404) {
+      await body.dump()
+      if (!isRequestCountsUnsupported) {
+        isRequestCountsUnsupported = true
+        app.log.warn('The scaler does not support request counts, update ICC to get the requests per second')
+      }
+      return
+    }
+    isRequestCountsUnsupported = false
+
+    if (statusCode !== 200) {
+      const error = await body.text()
+      app.log.error({ error }, 'Failed to send request counts to scaler')
+      return
+    }
+    await body.dump()
   }
 
   async function sendHealthSignals (rawSignals, batchStartedAt) {

@@ -36,6 +36,7 @@ const schema = {
     PLT_HEALTH_SIGNALS_LONG_BATCH_TIMEOUT: { type: 'number', default: 30000 },
     PLT_HEALTH_SIGNALS_ELU_BATCH_THRESHOLD: { type: 'number', default: 0.5 },
     PLT_HEALTH_SIGNALS_HEAP_BATCH_THRESHOLD: { type: ['number', 'string'], default: '300MB' },
+    PLT_METRICS_COLLECTION_INTERVAL: { type: 'number', default: 30000 },
   }
 }
 

@@ -26,6 +26,7 @@ async function start () {
   await app.setupAlerts()
   await app.setupHealthSignals()
   await app.setupFlamegraphs()
+  await app.setupMetrics()
 
   app.log.info('Sending info to ICC')
   await app.sendToICCWithRetry()
