@@ -23,7 +23,6 @@ jobs:
       valkey:
         image: "valkey/valkey:9.2"
         env:
-          # User expected by test/next-cache.test.js
           VALKEY_EXTRA_FLAGS: "--user cache-user on >cache-pass allkeys allchannels +@all"
         ports:
           - "6390:6379"
@@ -35,7 +34,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [22.x, 24.x]
+        node-version: [24.x, 26.x]
 
     steps:
       - uses: actions/checkout@v7

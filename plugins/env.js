@@ -9,7 +9,6 @@ const schema = {
     PLT_APP_DIR: { type: 'string' },
     PLT_TEST_TOKEN: { type: 'string' }, // JWT token for authentication when not in K8s
     PLT_APP_HOSTNAME: { type: 'string', default: '' },
-    PLT_APP_PORT: { type: 'number' },
     PLT_METRICS_PORT: { type: 'number', default: 9090 },
     PLT_LOG_LEVEL: { type: 'string', default: 'info' },
     PLT_ICC_RETRY_TIME: { type: 'number', default: 5000 },
@@ -53,10 +52,11 @@ const getDefaultEnv = (iccUrl) => {
   return defaults
 }
 
-async function envPlugin (app) {
+async function envPlugin (app, options = {}) {
   const env = envSchema({
     schema,
-    dotenv: true
+    dotenv: true,
+    ...options
   })
 
   const iccURL = env.PLT_ICC_URL

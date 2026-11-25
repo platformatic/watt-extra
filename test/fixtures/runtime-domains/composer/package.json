@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "@platformatic/composer": "workspace:*"
+    "@platformatic/gateway": "4.0.0-alpha.3"
   }
 }

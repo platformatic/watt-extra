@@ -1,20 +1,21 @@
 // Stands for a Lavoratore application: the runtime reports no type for it, as for the real one, and it answers the
 // commands of ICC through the ITC of the runtime
 import { createServer } from 'node:http'
+import { getITC } from '@platformatic/globals'
 
 const commands = []
 
-globalThis.platformatic.itc.handle('plt:lavoratore:promote', message => {
+getITC().handle('plt:lavoratore:promote', message => {
   commands.push({ name: 'promote', message })
   return { promoted: true, status: 'applied', generation: message.generation, admission: 1 }
 })
 
-globalThis.platformatic.itc.handle('plt:lavoratore:drain', message => {
+getITC().handle('plt:lavoratore:drain', message => {
   commands.push({ name: 'drain', message })
   return { status: 'drained', moved: commands.length }
 })
 
-globalThis.platformatic.itc.handle('plt:lavoratore:resume', () => {
+getITC().handle('plt:lavoratore:resume', () => {
   commands.push({ name: 'resume' })
   return { resumed: true }
 })

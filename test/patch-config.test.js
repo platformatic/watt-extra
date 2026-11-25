@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { randomUUID } from 'node:crypto'
 import { request } from 'undici'
 import { setUpEnvironment, startICC, installDeps } from './helper.js'
-import { start } from '../index.js'
+import { start } from './runtime.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -51,7 +51,7 @@ test('should spawn a service app settings labels for metrics', async (t) => {
 
   const mainConfig = app.watt.runtime.getRuntimeConfig(true)
 
-  const { metrics, telemetry } = mainConfig
+  const { metrics, tracing: telemetry } = mainConfig
 
   const expectedTelemetry = {
     enabled: true,
@@ -83,10 +83,7 @@ test('should spawn a service app settings labels for metrics', async (t) => {
   assert.deepStrictEqual(telemetry, expectedTelemetry)
 
   const expectedMetrics = {
-    server: 'hide',
-    defaultMetrics: {
-      enabled: true,
-    },
+    enabled: true,
     hostname: '127.0.0.1',
     port: 9092,
     labels: {
@@ -132,13 +129,13 @@ test('should remove server https configs', async (t) => {
   })
 
   {
-    const mainConfig = app.watt.runtime.getRuntimeConfig(true)
+    const mainConfig = await app.watt.runtime.getApplicationConfig('main')
     const { server } = mainConfig
     assert.strictEqual(server.https, undefined)
   }
 
   {
-    const runtimeConfig = await app.watt.runtime.getRuntimeConfig(true)
+    const runtimeConfig = await app.watt.runtime.getApplicationConfig('main')
 
     const { server } = runtimeConfig
     assert.strictEqual(server.https, undefined)
@@ -243,9 +240,9 @@ test('should not set opentelemetry if it is disabled', async (t) => {
     },
   }
   const mainConfig = await body.json()
-  assert.deepStrictEqual(mainConfig.telemetry, expectedTelemetry)
+  assert.deepStrictEqual(mainConfig.tracing, expectedTelemetry)
 })
-test('should expose runtimeSupportsNewHealthMetrics method', async (t) => {
+test('should subscribe to Watt 4 worker health metrics', async (t) => {
   const applicationName = 'test-application'
   const applicationId = randomUUID()
   const applicationPath = join(__dirname, 'fixtures', 'service-1')
@@ -271,13 +268,7 @@ test('should expose runtimeSupportsNewHealthMetrics method', async (t) => {
     await icc.close()
   })
 
-  assert.strictEqual(typeof app.watt.runtimeSupportsNewHealthMetrics, 'function', 'runtimeSupportsNewHealthMetrics should be a function')
-
-  const supportsNewMetrics = app.watt.runtimeSupportsNewHealthMetrics()
-  assert.strictEqual(typeof supportsNewMetrics, 'boolean', 'runtimeSupportsNewHealthMetrics should return a boolean')
-
-  const runtimeVersion = app.watt.getRuntimeVersion()
-  assert.ok(runtimeVersion, 'Runtime version should be available')
+  assert.ok(app.watt.runtime.listenerCount('application:worker:health:metrics') > 0)
 })
 
 test('should expose getHealthConfig method', async (t) => {
@@ -319,7 +310,7 @@ test('should expose getHealthConfig method', async (t) => {
   assert.strictEqual(healthConfig.gracePeriod, 30000, 'Health config should have gracePeriod default')
 })
 
-test('should configure health based on runtime version', async (t) => {
+test('should inherit Watt health defaults', async (t) => {
   const appName = 'test-app'
   const applicationId = randomUUID()
   const applicationPath = join(__dirname, 'fixtures', 'runtime-service')
@@ -352,18 +343,8 @@ test('should configure health based on runtime version', async (t) => {
   // Health should always be enabled regardless of runtime version
   assert.strictEqual(health.enabled, true, 'Health should be enabled')
 
-  const supportsNewMetrics = app.watt.runtimeSupportsNewHealthMetrics()
-
-  if (supportsNewMetrics) {
-    // For new runtime (>= 3.18.0), we only force enabled: true
-    // Other values come from app config or runtime defaults
-    assert.ok(health.interval, 'Health interval should be set')
-    assert.ok(health.maxUnhealthyChecks, 'Health maxUnhealthyChecks should be set')
-  } else {
-    // For old runtime (< 3.18.0), we set specific defaults
-    assert.ok(health.interval, 'Health interval should be set')
-    assert.ok(health.maxUnhealthyChecks, 'Health maxUnhealthyChecks should be set')
-  }
+  assert.ok(health.interval, 'Health interval should be set')
+  assert.ok(health.maxUnhealthyChecks, 'Health maxUnhealthyChecks should be set')
 })
 
 test('should merge user telemetry config with ICC exporter', async (t) => {
@@ -396,7 +377,7 @@ test('should merge user telemetry config with ICC exporter', async (t) => {
   })
 
   const runtimeConfig = app.watt.runtime.getRuntimeConfig(true)
-  const { telemetry } = runtimeConfig
+  const { tracing: telemetry } = runtimeConfig
 
   // applicationName should be set to watt-extra app name (not user's custom name)
   assert.strictEqual(telemetry.applicationName, appName)

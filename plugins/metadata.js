@@ -36,10 +36,12 @@ async function metadata (app, _opts) {
           runtime.getRuntimeMetadata()
         ])
 
+        const entrypoints = await app.getEntrypoints()
         const services = await Promise.all(
-          runtimeConfig.applications.map((application) =>
-            runtime.getApplicationDetails(application.id)
-          )
+          runtimeConfig.applications.map(async (application) => ({
+            ...await runtime.getApplicationDetails(application.id),
+            entrypoint: entrypoints.includes(application.id)
+          }))
         )
 
         const workersCount = getWorkersCount(runtimeConfig)

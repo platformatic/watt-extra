@@ -3,9 +3,7 @@ import { test } from 'node:test'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { setUpEnvironment, startICC } from './helper.js'
-import pino from 'pino'
-import buildApp from '../app.js'
-import { start } from '../index.js'
+import { start } from './runtime.js'
 import { LAVORATORE_TYPES } from '../lib/durable-objects.js'
 
 // With a real runtime between watt-extra and the application: the mocks of durable-objects.test.js give the
@@ -25,16 +23,7 @@ async function startWith (t, controlPlaneResponse, accepted = true) {
     PLT_METRICS_PORT: 9097
   })
 
-  // start() retries the registration until ICC accepts it: a refused pod stops at the runtime, as a pod does while
-  // it retries
-  let app
-
-  if (accepted) {
-    app = await start()
-  } else {
-    app = await buildApp(pino({ level: 'silent' }))
-    await app.startRuntime()
-  }
+  const app = await start({ waitForICC: accepted })
 
   t.after(async () => {
     await app.close()

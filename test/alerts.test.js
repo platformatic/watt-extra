@@ -6,42 +6,37 @@ import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { Profile } from 'pprof-format'
 import { setUpEnvironment, startICC } from './helper.js'
-import { start } from '../index.js'
+import { start } from './runtime.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 function emitHealthEvent (app, healthInfo) {
-  if (app.watt.runtimeSupportsNewHealthMetrics()) {
-    if (!healthInfo) {
-      // Emit null for testing error handling
-      app.watt.runtime.emit('application:worker:health:metrics', null)
-      return
-    }
-    // Runtime >= 3.18.0: emit health:metrics event with real event shape
-    const { id, application, currentHealth } = healthInfo
-
-    // Add currentELU to match real event shape
-    const enrichedCurrentHealth = {
-      ...currentHealth,
-      currentELU: {
-        idle: 1000,
-        active: currentHealth.elu * 1000,
-        utilization: currentHealth.elu
-      }
-    }
-
-    app.watt.runtime.emit('application:worker:health:metrics', {
-      id,
-      application,
-      worker: 0,
-      currentHealth: enrichedCurrentHealth,
-      healthSignals: []
-    })
-  } else {
-    // Runtime < 3.18.0: emit health event with full healthInfo
-    app.watt.runtime.emit('application:worker:health', healthInfo)
+  if (!healthInfo) {
+    // Emit null for testing error handling
+    app.watt.runtime.emit('application:worker:health:metrics', null)
+    return
   }
+  // Emit Watt 4 health metrics with the real event shape.
+  const { id, application, currentHealth } = healthInfo
+
+  // Add currentELU to match real event shape
+  const enrichedCurrentHealth = {
+    ...currentHealth,
+    currentELU: {
+      idle: 1000,
+      active: currentHealth.elu * 1000,
+      utilization: currentHealth.elu
+    }
+  }
+
+  app.watt.runtime.emit('application:worker:health:metrics', {
+    id,
+    application,
+    worker: 0,
+    currentHealth: enrichedCurrentHealth,
+    healthSignals: []
+  })
 }
 
 test('should send alert when service becomes unhealthy', async (t) => {
@@ -703,7 +698,7 @@ test('should send alert when failed to send a flamegraph', async (t) => {
   assert.equal(alertReceived.flamegraph, null, 'Flamegraph should be null')
 })
 
-test('should handle old runtime (< 3.18.0) health events', async (t) => {
+test('should handle Watt 4 health metrics after reconfiguring alerts', async (t) => {
   const applicationName = 'test-app'
   const applicationId = randomUUID()
   const applicationPath = join(__dirname, 'fixtures', 'service-1')
@@ -734,19 +729,13 @@ test('should handle old runtime (< 3.18.0) health events', async (t) => {
   const app = await start()
   app.getAuthorizationHeaders = getAuthorizationHeaders
 
-  // Mock the runtime version check to simulate old runtime
-  const originalFn = app.watt.runtimeSupportsNewHealthMetrics
-  app.watt.runtimeSupportsNewHealthMetrics = () => false
-
   // Remove all existing event listeners
   app.watt.runtime.removeAllListeners('application:worker:health:metrics')
-  app.watt.runtime.removeAllListeners('application:worker:health')
 
-  // Re-setup alerts with the mocked function (will use old path)
+  // Re-setup after recovery must restore the metrics listener.
   await app.setupAlerts()
 
   t.after(async () => {
-    app.watt.runtimeSupportsNewHealthMetrics = originalFn
     await app.close()
     await icc.close()
   })
@@ -772,8 +761,7 @@ test('should handle old runtime (< 3.18.0) health events', async (t) => {
     }
   }
 
-  // Emit using old event format (application:worker:health)
-  app.watt.runtime.emit('application:worker:health', healthInfo)
+  app.watt.runtime.emit('application:worker:health:metrics', healthInfo)
 
   await sleep(200)
 

@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { setUpEnvironment, startICC } from './helper.js'
-import { start } from '../index.js'
+import { start } from './runtime.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -72,6 +72,7 @@ test('should spawn a service app sending the state', async (t) => {
   assert.strictEqual(service.workers, 1)
   assert.strictEqual(service.maxWorkers, 1)
   assert.strictEqual(service.minWorkers, 1)
+  assert.strictEqual(service.entrypoint, true)
 })
 
 test('should not fail on worker error', async (t) => {

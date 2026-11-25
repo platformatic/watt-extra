@@ -42,12 +42,12 @@ test('the patch of a Lavoratore application follows what ICC says about Durable 
 
   // A staged version receives no objects until ICC promotes it
   assert.deepStrictEqual(durableObjectsPatch({ durableObjects: { staged: true } }), [
-    { op: 'merge', path: '/lavoratore/durableObjects/placement', value: { promoted: false } }
+    { op: 'add', path: '/lavoratore/durableObjects/placement/promoted', value: false }
   ])
   assert.deepStrictEqual(durableObjectsPatch({ durableObjects: { staged: false } }), [
-    { op: 'merge', path: '/lavoratore/durableObjects/placement', value: { promoted: true } }
+    { op: 'add', path: '/lavoratore/durableObjects/placement/promoted', value: true }
   ])
-  assert.deepStrictEqual(durableObjectsPatch({ durableObjects: {} })[0].value, { promoted: true })
+  assert.strictEqual(durableObjectsPatch({ durableObjects: {} })[0].value, true)
 })
 
 test('Lavoratore applications are recognized by their type or by their configuration file', async (t) => {
@@ -90,7 +90,7 @@ test('only a refusal of ICC which names Durable Objects stages the pod', () => {
 
   assert.deepStrictEqual(refusedDurableObjects(new Error(JSON.stringify({ ...body, durableObjects: { staged: true } }))), { durableObjects: { staged: true } })
   assert.deepStrictEqual(durableObjectsPatch(refusedDurableObjects(new Error(JSON.stringify({ ...body, durableObjects: { staged: true } })))), [
-    { op: 'merge', path: '/lavoratore/durableObjects/placement', value: { promoted: false } }
+    { op: 'add', path: '/lavoratore/durableObjects/placement/promoted', value: false }
   ])
 
   // An ICC which knows nothing of Durable Objects, one which fails, and one which cannot be reached

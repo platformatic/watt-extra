@@ -757,7 +757,7 @@ test('attaches the last observed worker ELU to the state report', async (t) => {
   await waitForReports(1)
 
   // The runtime health events carry the same ELU the profiling gate uses
-  app.watt.runtime.emit('application:worker:health', {
+  app.watt.runtime.emit('application:worker:health:metrics', {
     id: 'service-1:0',
     application: 'service-1',
     currentHealth: { elu: 0.97, heapUsed: 1, heapTotal: 2 }
@@ -788,7 +788,7 @@ test('a stale ELU sample is not attached to the state report', async (t) => {
   t.after(() => app.cleanupFlamegraphs())
   await waitForReports(1)
 
-  app.watt.runtime.emit('application:worker:health', {
+  app.watt.runtime.emit('application:worker:health:metrics', {
     id: 'service-1:0',
     application: 'service-1',
     currentHealth: { elu: 0.97 }
