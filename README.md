@@ -78,13 +78,6 @@ Service, Gateway, or DB application. For example, enable proxy trust only on
 the listener behind your deployment's proxy. Next.js owns its `trailingSlash`
 setting independently of whether it listens on a port.
 
-For Regina, set `regina.memberAddress` to the URL other members can reach.
-If omitted, Watt-Extra can derive an HTTP or HTTPS URL from a fixed port and
-a configured local interface IP. A wildcard bind must resolve to a single
-non-loopback interface address in its address family. For dynamic ports,
-ambiguous interfaces, or a DNS name required by a TLS certificate, configure
-the advertised URL explicitly.
-
 Watt-Extra no longer overrides application ports with `PLT_APP_PORT`. Configure
 `server.port` in each application's `watt.config.js`. To keep using the port supplied
 by the deployment, read the variable in the application that should receive it:
