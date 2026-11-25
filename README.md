@@ -73,9 +73,10 @@ PR #5254 (`getRuntimeConfig(true)`) to transfer private state from configure to
 setup. It does not serialize credentials or live clients into extension options.
 
 The extension loads `@platformatic/wattpm-pprof-capture` for worker profiling.
-Listener-specific settings belong to capability
-configuration: the extension applies proxy/HTTPS patches to listening Service,
-Gateway and DB applications. Configure Next.js listener settings in the application.
+Configure `server.hostname`, `server.trustProxy`, and `server.https` in each
+Service, Gateway, or DB application. For example, enable proxy trust only on
+the listener behind your deployment's proxy. Next.js owns its `trailingSlash`
+setting independently of whether it listens on a port.
 
 Watt-Extra no longer overrides application ports with `PLT_APP_PORT`. Configure
 `server.port` in each application's `watt.config.js`. To keep using the port supplied

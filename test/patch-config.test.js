@@ -100,7 +100,7 @@ test('should spawn a service app settings labels for metrics', async (t) => {
   assert.deepStrictEqual(metrics, expectedMetrics)
 })
 
-test('should remove server https configs', async (t) => {
+test('should preserve the service listener when the extension sets a different hostname', async (t) => {
   const appName = 'test-app'
   const applicationId = randomUUID()
   const applicationPath = join(__dirname, 'fixtures', 'runtime-service')
@@ -117,6 +117,7 @@ test('should remove server https configs', async (t) => {
     PLT_APP_DIR: applicationPath,
     PLT_ICC_URL: icc.iccUrl,
     PLT_CONTROL_PLANE_URL: 'http://127.0.0.1:3002',
+    PLT_APP_HOSTNAME: '0.0.0.0',
     PLT_APP_PORT: 3043,
     PLT_METRICS_PORT: 9092
   })
@@ -128,18 +129,9 @@ test('should remove server https configs', async (t) => {
     await icc.close()
   })
 
-  {
-    const mainConfig = await app.watt.runtime.getApplicationConfig('main')
-    const { server } = mainConfig
-    assert.strictEqual(server.https, undefined)
-  }
-
-  {
-    const runtimeConfig = await app.watt.runtime.getApplicationConfig('main')
-
-    const { server } = runtimeConfig
-    assert.strictEqual(server.https, undefined)
-  }
+  const { server } = await app.watt.runtime.getApplicationConfig('main')
+  assert.strictEqual(server.hostname, '127.0.0.1')
+  assert.strictEqual(server.trustProxy, false)
 })
 
 test('should configure health options', async (t) => {

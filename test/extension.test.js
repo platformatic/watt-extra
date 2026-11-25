@@ -76,7 +76,7 @@ test('v4 reports a coded error when configure was not called', async () => {
   })
 })
 
-test('v4 registers ICC once and patches capabilities before applications start', async t => {
+test('v4 registers ICC once and preserves the TLS listener before applications start', async t => {
   let registrations = 0
   const icc = await startICC(t, {
     port: 0,
@@ -105,10 +105,7 @@ test('v4 registers ICC once and patches capabilities before applications start',
   const runtime = new ExtensionRuntime(config)
   const extension = await setup({ runtime, logger })
   t.after(() => extension.close())
-  assert.deepEqual(runtime.patches.get('api'), [
-    { op: 'add', path: '/server/trustProxy', value: true },
-    { op: 'remove', path: '/server/https' }
-  ])
+  assert.equal(runtime.patches.has('api'), false)
   assert.equal(registrations, 1)
   await extension.close()
   assert.equal(runtime.eventNames().length, 0)
@@ -163,7 +160,30 @@ test('v4 preserves a hardcoded Service port when PLT_APP_PORT is set', async t =
   const runtime = new ExtensionRuntime(config)
   const extension = await setup({ runtime, logger })
   t.after(() => extension.close())
-  assert.deepEqual(runtime.patches.get('api'), [{ op: 'add', path: '/server/trustProxy', value: true }])
+  assert.equal(runtime.patches.has('api'), false)
+})
+
+test('listening applications retain their own HTTP and Next.js settings', async t => {
+  const config = { applications: [] }
+  await configure(config, {
+    root,
+    options: { env: { PLT_ICC_URL: '', PLT_APP_HOSTNAME: '0.0.0.0', PLT_LOG_LEVEL: 'silent' } }
+  })
+  for (const type of ['service', 'db', 'gateway', 'next']) {
+    config.applications.push({
+      id: type,
+      type: `@platformatic/${type}`,
+      path: root,
+      resolvedConfig: {
+        server: { port: 3000 + config.applications.length, hostname: '127.0.0.1', trustProxy: false, https: {} },
+        next: { trailingSlash: false }
+      }
+    })
+  }
+  const runtime = new ExtensionRuntime(config)
+  const extension = await setup({ runtime, logger })
+  t.after(() => extension.close())
+  assert.equal(runtime.patches.size, 0)
 })
 
 for (const listenerCount of [1, 2]) {
