@@ -454,3 +454,59 @@ test('the objects of the pod are listed over its Lavoratore applications', async
   const legacy = await createApp(createMockRuntime([{ id: 'legacy', type: '@platformatic/lavoratore' }]))
   assert.deepStrictEqual(await legacy.sendDurableObjectsCommand('durable-objects-list'), { total: 0, truncated: false, applications: [], objects: [], skipped: ['legacy'] })
 })
+
+test('the commands which read are forwarded with their parameters, to one application when ICC names it', async () => {
+  const page = { status: 'ok', className: 'Counter', total: 12, inMemory: 3, truncated: false, complete: true, objects: [{ id: 'a1', name: 'cart-1', memberId: 'pod-1', state: 'idle' }] }
+  const members = { status: 'ok', memberId: 'pod-1', members: [{ memberId: 'pod-1', placed: 12, inMemory: 3 }] }
+  const runtime = createMockRuntime([
+    { id: 'objects', type: '@platformatic/lavoratore' },
+    { id: 'rooms', type: '@platformatic/lavoratore' },
+    { id: 'legacy', type: '@platformatic/lavoratore' }
+  ], {
+    objects: page,
+    rooms: { status: 'unknown_class' }
+    // legacy has no handler: a Lavoratore which predates the index
+  })
+  const app = await createApp(runtime)
+  const query = { className: 'Counter', prefix: 'cart-', offset: 0, limit: 20 }
+
+  // The application is for the agent: only that one is asked, without the parameter
+  assert.deepStrictEqual(await app.sendDurableObjectsCommand('durable-objects-index', { application: 'objects', ...query }), { applications: { objects: page } })
+  assert.deepStrictEqual(runtime.commands, [{ id: 'objects', name: 'plt:lavoratore:objects:index', params: query }])
+
+  // Without it every application answers for itself
+  assert.deepStrictEqual(await app.sendDurableObjectsCommand('durable-objects-index', query), {
+    applications: { objects: page, rooms: { status: 'unknown_class' } },
+    skipped: ['legacy']
+  })
+
+  // A version of Lavoratore without the index is skipped, and an application which is not there is an error
+  assert.deepStrictEqual(await app.sendDurableObjectsCommand('durable-objects-index', { application: 'legacy', ...query }), { applications: {}, skipped: ['legacy'] })
+  await assert.rejects(app.sendDurableObjectsCommand('durable-objects-index', { application: 'missing', ...query }), /"missing" is not a Lavoratore application/)
+
+  // The list of the objects of the pod can be asked to one application too, with the page it shows
+  const listed = createMockRuntime([{ id: 'objects', type: '@platformatic/lavoratore' }, { id: 'rooms', type: '@platformatic/lavoratore' }], {
+    objects: { status: 'ok', memberId: 'pod-1', total: 5, truncated: true, objects: [] },
+    rooms: { status: 'ok', memberId: 'pod-1', total: 1, truncated: false, objects: [] }
+  })
+  assert.deepStrictEqual(await (await createApp(listed)).sendDurableObjectsCommand('durable-objects-list', { application: 'objects', className: 'Counter', order: 'name', offset: 20, limit: 20 }), { total: 5, truncated: true, applications: ['objects'], objects: [] })
+  assert.deepStrictEqual(listed.commands, [{ id: 'objects', name: 'plt:lavoratore:objects', params: { className: 'Counter', order: 'name', offset: 20, limit: 20 } }])
+
+  // The members and what the pod reaches
+  const cluster = createMockRuntime([{ id: 'objects', type: '@platformatic/lavoratore' }], { objects: members })
+  const clustered = await createApp(cluster)
+  assert.deepStrictEqual(await clustered.sendDurableObjectsCommand('durable-objects-members'), { applications: { objects: members } })
+  assert.deepStrictEqual(await clustered.sendDurableObjectsCommand('durable-objects-diagnose', { application: 'objects' }), { applications: { objects: members } })
+  assert.deepStrictEqual(cluster.commands.map(({ name, params }) => ({ name, params })), [
+    { name: 'plt:lavoratore:members', params: {} },
+    { name: 'plt:lavoratore:diagnose', params: {} }
+  ])
+
+  // The commands which change something reach every application, whatever the parameters say
+  const changed = createMockRuntime([{ id: 'objects', type: '@platformatic/lavoratore' }, { id: 'rooms', type: '@platformatic/lavoratore' }], { objects: { promoted: true }, rooms: { promoted: true } })
+  await (await createApp(changed)).sendDurableObjectsCommand('durable-objects-promote', { generation: 1, application: 'objects' })
+  assert.deepStrictEqual(changed.commands.map(({ id, params }) => ({ id, params })), [
+    { id: 'objects', params: { generation: 1, application: 'objects' } },
+    { id: 'rooms', params: { generation: 1, application: 'objects' } }
+  ])
+})

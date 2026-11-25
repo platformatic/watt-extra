@@ -1,4 +1,4 @@
-import { aggregateDrain, aggregateObjects, aggregatePromotion, aggregateResume, COMMANDS, isLavoratoreApplication } from '../lib/durable-objects.js'
+import { aggregateAnswers, aggregateDrain, aggregateObjects, aggregatePromotion, aggregateResume, COMMANDS, isLavoratoreApplication, READ_COMMANDS } from '../lib/durable-objects.js'
 
 // Forwards the Durable Objects commands of ICC to the Lavoratore applications of the runtime, see lib/durable-objects.js
 async function durableObjects (app, _opts) {
@@ -97,8 +97,22 @@ async function durableObjects (app, _opts) {
     const results = {}
     const skipped = []
     const errors = []
+    let ids = await lavoratoreApplications()
 
-    for (const id of await lavoratoreApplications()) {
+    // A command which reads can ask one application of the pod: the page of the objects of a class belongs to the
+    // application of the class. The parameter is for this agent, and is not forwarded.
+    if (READ_COMMANDS.has(command) && typeof params?.application === 'string') {
+      const { application, ...rest } = params
+
+      if (!ids.includes(application)) {
+        throw new Error(`The application "${application}" is not a Lavoratore application of the runtime`)
+      }
+
+      ids = [application]
+      params = rest
+    }
+
+    for (const id of ids) {
       try {
         const result = await app.watt.runtime.sendCommandToApplication(id, name, params)
 
@@ -125,6 +139,8 @@ async function durableObjects (app, _opts) {
       aggregate = aggregatePromotion(results)
     } else if (command === 'durable-objects-list') {
       aggregate = aggregateObjects(results)
+    } else if (command === 'durable-objects-index' || command === 'durable-objects-members' || command === 'durable-objects-diagnose') {
+      aggregate = aggregateAnswers(results)
     } else if (command === 'durable-objects-resume') {
       aggregate = aggregateResume(results, skipped)
     } else {
