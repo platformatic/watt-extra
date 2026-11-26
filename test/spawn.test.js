@@ -65,6 +65,10 @@ test('should spawn a service app sending the state', async (t) => {
     platformaticVersion
   )
 
+  // What this watt-extra is and can do goes with the state
+  assert.match(state.state.metadata.wattExtra.version, /^\d+\.\d+\.\d+/)
+  assert.deepStrictEqual(state.state.metadata.wattExtra.capabilities, ['application-command'])
+
   assert.strictEqual(state.state.services.length, 1)
   const [service] = state.state.services
 

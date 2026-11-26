@@ -1,7 +1,7 @@
 import WebSocket from 'ws'
 import { once } from 'node:events'
 import { setTimeout as sleep } from 'node:timers/promises'
-import { COMMANDS as DURABLE_OBJECTS_COMMANDS, READ_COMMANDS as DURABLE_OBJECTS_READ_COMMANDS } from '../lib/durable-objects.js'
+import { APPLICATION_COMMAND, CAPABILITIES } from '../lib/application-commands.js'
 
 function createWebSocketUrl (httpUrl, path, queryParams = {}) {
   const url = new URL(httpUrl)
@@ -114,30 +114,30 @@ async function updatePlugin (app) {
         return
       }
 
-      // Handle the Durable Objects commands of ICC: the promotion of a staged version, with the generation of the
-      // approval, the drain of a retiring one or of a pod about to be removed, the resume of a drained pod which
-      // stays, and the list of the objects the pod holds. They are forwarded to the Lavoratore applications and
-      // answered with their result, so that ICC knows what happened (see lib/durable-objects.js).
-      if (Object.hasOwn(DURABLE_OBJECTS_COMMANDS, command)) {
-        // The lists are read again and again while somebody looks at them, and change nothing: they are not logged
-        const logged = !DURABLE_OBJECTS_READ_COMMANDS.has(command)
+      // Handle the commands of ICC for the applications: a message the applications handle, with its payload, for
+      // one application or for all. It is forwarded as it is, and answered with what the applications answered,
+      // which ICC reads (see lib/application-commands.js).
+      if (command === APPLICATION_COMMAND) {
+        const { application, name, payload, queue, silent } = message.params ?? {}
+        // ICC says which commands are not worth a log, i.e. the ones it repeats while somebody looks at a page
+        const logged = silent !== true
 
         if (logged) {
-          app.log.info({ command, params: message.params }, 'Received Durable Objects command from ICC')
+          app.log.info({ application, name, payload }, 'Received application command from ICC')
         }
 
         try {
-          const result = await app.sendDurableObjectsCommand(command, message.params ?? {})
+          const result = await app.sendApplicationCommand({ application, name, payload, queue })
 
           if (logged) {
-            // What the applications answered: a promotion or a drain which did nothing is found here
-            app.log.info({ command, params: message.params, result }, 'Answered the Durable Objects command of ICC')
+            // What the applications answered: a command which did nothing is found here
+            app.log.info({ application, name, result }, 'Answered the application command of ICC')
           }
 
           if (message.requestId) {
             socket.send(JSON.stringify({
               requestId: message.requestId,
-              // The command ran: whether it promoted the pod is in the result, which ICC reads
+              // The command ran: what it did is in the result, which ICC reads
               success: true,
               result
             }))
@@ -186,7 +186,7 @@ async function updatePlugin (app) {
     }
 
     const runtimeId = app.getRuntimeId()
-    const wsUrl = createWebSocketUrl(iccUrl, `api/updates/applications/${applicationId}`, { runtimeId })
+    const wsUrl = createWebSocketUrl(iccUrl, `api/updates/applications/${applicationId}`, { runtimeId, capabilities: CAPABILITIES.join(',') })
     app.log.info({ runtimeId }, `Connecting to updates websocket at ${wsUrl}`)
 
     try {
