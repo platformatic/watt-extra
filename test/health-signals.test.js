@@ -188,3 +188,97 @@ test('should send health signals when service becomes unhealthy', async (t) => {
   const profile = Profile.decode(receivedFlamegraph)
   assert.ok(profile, 'Profile should be decoded')
 })
+
+test('should send the signals of an application to ICC, under their type', async (t) => {
+  const applicationName = 'test-app'
+  const applicationId = randomUUID()
+  const applicationPath = join(__dirname, 'fixtures', 'service-1')
+  const receivedSignalReqs = []
+
+  const icc = await startICC(t, {
+    applicationId,
+    applicationName,
+    scaler: { version: 'v2' },
+    processReady: () => ({ success: true }),
+    processSignals: (req) => {
+      receivedSignalReqs.push(req.body)
+      return { alerts: [] }
+    }
+  })
+
+  setUpEnvironment({
+    PLT_APP_NAME: applicationName,
+    PLT_APP_DIR: applicationPath,
+    PLT_ICC_URL: 'http://127.0.0.1:3000',
+    PLT_DISABLE_FLAMEGRAPHS: true,
+    PLT_HEALTH_SIGNALS_SHORT_BATCH_TIMEOUT: 2000,
+    PLT_HEALTH_SIGNALS_LONG_BATCH_TIMEOUT: 4000
+  })
+
+  const app = await start()
+  app.getAuthorizationHeaders = async (headers) => ({ ...headers, authorization: 'Bearer test-token' })
+
+  t.after(async () => {
+    await app.close()
+    await icc.close()
+  })
+
+  const send = async body => {
+    const { statusCode } = await request('http://127.0.0.1:3042/custom-health-signal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    assert.strictEqual(statusCode, 200)
+  }
+
+  // A batch without the signal is the one ICC always received
+  await sleep(6000)
+  assert.ok(receivedSignalReqs.length >= 1, 'A batch should have been received')
+
+  for (const { signals } of receivedSignalReqs) {
+    assert.deepStrictEqual(Object.keys(signals.main).sort(), ['elu', 'heap'])
+  }
+
+  // A threshold which is not a positive number is not sent: ICC uses its own
+  const first = receivedSignalReqs.length
+  await send({ type: 'saturation', value: 0.4, threshold: 0 })
+  await send({ type: 'saturation', value: 0.4, threshold: -1 })
+  await sleep(6000)
+
+  const withoutThreshold = receivedSignalReqs.slice(first).filter(({ signals }) => signals.main.saturation)
+  assert.ok(withoutThreshold.length >= 1, 'A batch should carry the saturation signal')
+
+  for (const { signals } of withoutThreshold) {
+    assert.deepStrictEqual(signals.main.saturation.options, {})
+  }
+
+  // Every signal of the application is sent under its type, with its threshold when it has one: ICC says which ones
+  // it scales on. Those which are not numbers are not sent, and the signals of Watt cannot be replaced.
+  const before = receivedSignalReqs.length
+  await send({ type: 'custom', value: 42 })
+  await send({ type: 'saturation', value: 'high' })
+  await send({ type: 'elu', value: 77 })
+  await send({ type: 'memory', value: 0.95, threshold: 0.9 })
+  await send({ type: 'saturation', value: 1.5, threshold: 0.9 })
+  await sleep(6000)
+
+  const sent = {}
+
+  for (const { signals } of receivedSignalReqs.slice(before)) {
+    for (const [type, { options, workers }] of Object.entries(signals.main)) {
+      const values = Object.values(workers).flatMap(worker => worker.values)
+      sent[type] ??= { options, values: [] }
+      sent[type].values.push(...values.map(([timestamp, value]) => {
+        assert.ok(typeof timestamp === 'number')
+        return value
+      }))
+    }
+  }
+
+  assert.deepStrictEqual(Object.keys(sent).sort(), ['custom', 'elu', 'heap', 'memory', 'saturation'])
+  assert.deepStrictEqual(sent.custom, { options: {}, values: [42] })
+  assert.deepStrictEqual(sent.memory, { options: { threshold: 0.9 }, values: [0.95] })
+  assert.deepStrictEqual(sent.saturation, { options: { threshold: 0.9 }, values: [1.5] })
+  assert.ok(sent.elu.values.every(value => value <= 1), 'The ELU is the one of Watt')
+})

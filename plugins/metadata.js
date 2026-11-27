@@ -5,6 +5,23 @@ import {
   MetadataAppIdError,
   MetadataRuntimeNotStartedError
 } from '../lib/errors.js'
+import { readFile } from 'node:fs/promises'
+import { CAPABILITIES } from '../lib/application-commands.js'
+
+// The version of this watt-extra, read once, or null when its package.json cannot be read
+let ownVersion
+
+async function getOwnVersion () {
+  if (ownVersion === undefined) {
+    try {
+      ownVersion = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')).version ?? null
+    } catch {
+      ownVersion = null
+    }
+  }
+
+  return ownVersion
+}
 
 async function metadata (app, _opts) {
   async function sendMetadata () {
@@ -71,7 +88,8 @@ async function metadata (app, _opts) {
           await controlPlaneClient.saveApplicationInstanceState({
             id: app.instanceId,
             services,
-            metadata: runtimeMetadata,
+            // With what this watt-extra is and can do: ICC tells from it what the image of the pod supports
+            metadata: { ...runtimeMetadata, wattExtra: { version: await getOwnVersion(), capabilities: CAPABILITIES } },
             ...(scheduler ? { scheduler } : {})
           }, {
             headers: await app.getAuthorizationHeaders()

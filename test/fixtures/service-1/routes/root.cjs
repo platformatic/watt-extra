@@ -56,11 +56,12 @@ module.exports = async function (fastify) {
   })
 
   fastify.post('/custom-health-signal', async (req) => {
-    const { type, value, description } = req.body
+    const { type, value, description, threshold } = req.body
     await globalThis.platformatic.sendHealthSignal({
       type,
       value,
-      description
+      description,
+      threshold
     })
   })
 }
